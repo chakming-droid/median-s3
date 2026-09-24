@@ -272,6 +272,111 @@
     };
   }
 
+  function classifyQuota(body) {
+    const text = JSON.stringify(body || {}).toLowerCase();
+    const minute = /rate_limit_exceeded|perminute|per_minute|retry|retrydelay/.test(text);
+    const daily = /quota_exceeded|perday|per_day|daily/.test(text);
+    if (minute && !daily) return "minute";
+    return "daily";
+  }
+
+  function monotoneSpline(points) {
+    const n = points.length;
+    if (n < 2) return null;
+    const h = [];
+    const delta = [];
+    for (let i = 0; i < n - 1; i += 1) {
+      h[i] = points[i + 1].x - points[i].x;
+      if (!(h[i] > 0)) return null;
+      delta[i] = (points[i + 1].y - points[i].y) / h[i];
+    }
+    const m = new Array(n);
+    m[0] = delta[0];
+    m[n - 1] = delta[n - 2];
+    for (let i = 1; i < n - 1; i += 1) {
+      if (delta[i - 1] === 0 || delta[i] === 0 || delta[i - 1] * delta[i] < 0) m[i] = 0;
+      else m[i] = (delta[i - 1] + delta[i]) / 2;
+    }
+    for (let i = 0; i < n - 1; i += 1) {
+      if (delta[i] === 0) {
+        m[i] = 0;
+        m[i + 1] = 0;
+        continue;
+      }
+      const a = m[i] / delta[i];
+      const b = m[i + 1] / delta[i];
+      const s = a * a + b * b;
+      if (s > 9) {
+        const t = 3 / Math.sqrt(s);
+        m[i] = t * a * delta[i];
+        m[i + 1] = t * b * delta[i];
+      }
+    }
+    return { points, h, m };
+  }
+
+  function hermite(y0, y1, m0, m1, h, t) {
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return (2 * t3 - 3 * t2 + 1) * y0
+      + (t3 - 2 * t2 + t) * h * m0
+      + (-2 * t3 + 3 * t2) * y1
+      + (t3 - t2) * h * m1;
+  }
+
+  function splineY(spline, x) {
+    const pts = spline.points;
+    if (x <= pts[0].x) return pts[0].y;
+    if (x >= pts[pts.length - 1].x) return pts[pts.length - 1].y;
+    let i = 0;
+    while (i < pts.length - 2 && x > pts[i + 1].x) i += 1;
+    const t = (x - pts[i].x) / spline.h[i];
+    return hermite(pts[i].y, pts[i + 1].y, spline.m[i], spline.m[i + 1], spline.h[i], t);
+  }
+
+  function splineXForY(spline, y) {
+    const pts = spline.points;
+    if (y <= pts[0].y) return pts[0].x;
+    if (y >= pts[pts.length - 1].y) return pts[pts.length - 1].x;
+    let lo = pts[0].x;
+    let hi = pts[pts.length - 1].x;
+    for (let step = 0; step < 60; step += 1) {
+      const mid = (lo + hi) / 2;
+      if (splineY(spline, mid) < y) lo = mid;
+      else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  function curveSamples(points, step) {
+    const spline = monotoneSpline(points);
+    if (!spline) return [];
+    const gap = step || 0.25;
+    const samples = [];
+    const last = points[points.length - 1].x;
+    for (let x = points[0].x; x < last; x += gap) {
+      samples.push({ x, y: splineY(spline, x) });
+    }
+    samples.push({ x: last, y: points[points.length - 1].y });
+    return samples;
+  }
+
+  function curveMedian(points) {
+    const spline = monotoneSpline(points);
+    if (!spline) return null;
+    const total = points[points.length - 1].y - points[0].y;
+    if (!(total > 0)) return null;
+    const half = total / 2;
+    const targetY = points[0].y + half;
+    const rawX = splineXForY(spline, targetY);
+    return {
+      total,
+      half,
+      rawX,
+      minute: Math.round(rawX)
+    };
+  }
+
   root.MedianMath = {
     parseFreqToken,
     normalizeRows,
@@ -283,6 +388,11 @@
     parseExprFromText,
     sameExpr,
     describeProblem,
-    sameNumber
+    sameNumber,
+    classifyQuota,
+    monotoneSpline,
+    splineY,
+    curveSamples,
+    curveMedian
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);
