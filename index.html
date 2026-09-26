@@ -277,20 +277,19 @@
       rows: [
         { val: 55, freq: "2" },
         { val: 56, freq: "8" },
-        { val: 57, freq: "x" },
+        { val: 57, freq: "5" },
         { val: 58, freq: "4" },
         { val: 59, freq: "7" },
         { val: 60, freq: "4" }
       ],
-      target: 58,
       structure: 0
     },
     {
       id: "commute",
       kind: "continuous",
       title: "連續數據",
-      chartTitle: "一組人於今早由家前往工作地點所需的交通時間",
-      stem: "以下的累積頻數曲線顯示一組人於今早由家前往工作地點所需的交通時間（準確至最接近的分鐘）。可改組界、頻數或累積頻數。拖動紅線對位，再求中位數。",
+      chartTitle: "累積頻數曲線",
+      stem: "以下是一組數據的累積頻數曲線。可改組界、頻數或累積頻數。拖動紅線對位，再求中位數。",
       structure: 0,
       bounds: ["24.5", "29.5", "34.5", "39.5", "44.5", "49.5"],
       freqs: ["", "8", "27", "65", "140", "60"],
@@ -304,6 +303,8 @@
   let tutor = freshTutor();
   let fieldDrafts = {};
   let experiment = null;
+  let showBlocks = false;
+  let discreteRevealed = false;
   let asking = false;
   let authFailed = false;
   let teacherNote = "";
@@ -485,6 +486,8 @@
     tutor = freshTutor();
     fieldDrafts = {};
     experiment = null;
+    showBlocks = false;
+    discreteRevealed = false;
     asking = false;
     const card = document.getElementById("pictureCard");
     if (card) card.dataset.key = "";
@@ -520,6 +523,8 @@
     tutor = freshTutor();
     fieldDrafts = {};
     experiment = null;
+    showBlocks = false;
+    discreteRevealed = false;
     asking = false;
     const card = document.getElementById("pictureCard");
     if (card) card.dataset.key = "";
@@ -735,9 +740,77 @@
       target.appendChild(targetInput);
       row.append(trial, target, makeButton("看看這個 x", "btn", tryX));
     }
+    if (current().kind !== "continuous" && wanted !== "x") {
+      const blocksButton = makeButton("由小到大排開", "btn", toggleBlocks);
+      blocksButton.id = "toggleBlocks";
+      row.appendChild(blocksButton);
+    }
     slot.appendChild(row);
     if (wanted === "x") slot.appendChild(rangeChecker());
     if (current().kind === "continuous") slot.appendChild(medianChecker());
+    else if (wanted !== "x") slot.appendChild(discreteMedianChecker());
+  }
+
+  function toggleBlocks() {
+    showBlocks = !showBlocks;
+    const button = document.getElementById("toggleBlocks");
+    if (button) button.textContent = showBlocks ? "收起排列" : "由小到大排開";
+    renderQueue();
+  }
+
+  function discreteMedianChecker() {
+    const wrap = document.createElement("div");
+    const row = document.createElement("div");
+    row.className = "action-row";
+    const input = document.createElement("input");
+    input.id = "checkDiscreteMedian";
+    input.type = "text";
+    input.placeholder = "如 6.5";
+    input.autocomplete = "off";
+    const label = document.createElement("label");
+    label.append(document.createTextNode("中位數 = "), input);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        checkDiscreteMedian();
+      }
+    });
+    row.append(label, makeButton("對答案", "btn", checkDiscreteMedian));
+    const note = document.createElement("p");
+    note.id = "discreteMedianNote";
+    note.className = "problem-text";
+    note.textContent = "一開始就可以填中位數。對了才會顯示綠色和答案。";
+    wrap.append(row, note);
+    return wrap;
+  }
+
+  function checkDiscreteMedian() {
+    const note = document.getElementById("discreteMedianNote");
+    if (!note) return;
+    const view = knownView();
+    if (!view) {
+      note.textContent = "請先填好數值和頻數。";
+      return;
+    }
+    const value = Number(normalizeTyped(document.getElementById("checkDiscreteMedian").value));
+    if (!Number.isFinite(value)) {
+      note.textContent = "請填中位數。雙數可能要寫小數。";
+      return;
+    }
+    if (MedianMath.sameNumber(value, view.median)) {
+      discreteRevealed = true;
+      showBlocks = true;
+      const button = document.getElementById("toggleBlocks");
+      if (button) button.textContent = "收起排列";
+      note.textContent = "對。中位數是 " + formatMedian(view.median) + "。";
+      renderQueue();
+      return;
+    }
+    if (!view.odd && view.values.some((item) => MedianMath.sameNumber(value, item))) {
+      note.textContent = "這是中間其中一個數值。雙數要把兩個數值平均。";
+      return;
+    }
+    note.textContent = "還未對。先判斷總數是單數還是雙數，再找中間的位置。";
   }
 
   function medianChecker() {
@@ -750,7 +823,7 @@
     input.placeholder = "整數";
     input.autocomplete = "off";
     const label = document.createElement("label");
-    label.append(document.createTextNode("中位數 = "), input, document.createTextNode(" 分鐘"));
+    label.append(document.createTextNode("中位數 = "), input);
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -761,7 +834,7 @@
     const note = document.createElement("p");
     note.id = "medianNote";
     note.className = "problem-text";
-    note.textContent = "拖紅線讀出最接近的分鐘後，可以直接核對，不用先看提示。";
+    note.textContent = "拖紅線讀出最接近的數值後，可以直接核對，不用先看提示。";
     wrap.append(row, note);
     return wrap;
   }
@@ -776,15 +849,15 @@
     }
     const value = Number(normalizeTyped(document.getElementById("checkMinute").value));
     if (!Number.isFinite(value)) {
-      note.textContent = "請填最接近的整數分鐘。";
+      note.textContent = "請填最接近的整數。";
       return;
     }
     if (value === answer.minute) {
-      note.textContent = "對。中位數是 " + answer.minute + " 分鐘。";
+      note.textContent = "對。中位數是 " + answer.minute + "。";
       return;
     }
     if (Math.abs(value - answer.minute) === 1 || Math.abs(value - answer.rawX) <= 1.2) {
-      note.textContent = "差一點。把紅線拖到總頻數的一半，再讀最接近的整數分鐘。";
+      note.textContent = "差一點。把紅線拖到總頻數的一半，再讀最接近的整數。";
       return;
     }
     note.textContent = "還未對。中位數對應總頻數的 50%。拖紅線到那個高度，再讀橫軸。";
@@ -937,7 +1010,7 @@
     box.className = "sheet";
     ["數據的總頻數 = " + (showTotal ? answer.total : "______"),
       "對應中位數的累積頻數 = 總頻數 × 50% = " + (showHalf ? answer.half : "______"),
-      "中位數 = " + (tutor.solved ? answer.minute : "______") + " 分鐘"
+      "中位數 = " + (tutor.solved ? answer.minute : "______")
     ].forEach((line) => {
       const p = document.createElement("p");
       p.textContent = line;
@@ -969,7 +1042,7 @@
       lesson.rows = vals.map((val, index) => ({ val, freq: freqs[index] }));
     }
     const slot = document.getElementById("extraSlot");
-    const wanted = lessonHasX() ? "x" : "plain";
+    const wanted = lesson.kind === "continuous" ? "plain" : (lessonHasX() ? "x" : "plain");
     if (slot && slot.dataset.mode !== wanted) slot.dataset.mode = "";
     renderExtras();
     renderCurveSlot();
@@ -1016,11 +1089,13 @@
   }
 
   function markEdited() {
-    if (tutor.solved || tutor.stale) return;
-    if (phase === "steps" || tutor.blocked) {
-      tutor.stale = true;
-      renderTutor();
-    }
+    if (tutor.stale && !tutor.solved) return;
+    if (!(phase === "steps" || tutor.blocked || tutor.solved)) return;
+    tutor.stale = true;
+    tutor.solved = false;
+    discreteRevealed = false;
+    renderTutor();
+    renderQueue();
   }
 
   function plotFrame(points) {
@@ -1110,7 +1185,7 @@
       '<path d="' + fill + '" fill="#dbeafe" opacity="0.7"/>' +
       '<path d="' + line + '" fill="none" stroke="#0f172a" stroke-width="2.5"/>' +
       dots + guideSvg +
-      '<text x="' + ((pad.l + w - pad.r) / 2) + '" y="' + (h - 16) + '" text-anchor="middle" font-size="13" fill="#334155">交通時間（分鐘）</text>' +
+      '<text x="' + ((pad.l + w - pad.r) / 2) + '" y="' + (h - 16) + '" text-anchor="middle" font-size="13" fill="#334155">數值</text>' +
       '<text x="18" y="' + midY + '" text-anchor="middle" font-size="13" fill="#334155" transform="rotate(-90 18 ' + midY + ')">累積頻數</text>' +
       "</svg>";
   }
@@ -1176,7 +1251,7 @@
     dot.setAttribute("cx", String(x));
     dot.setAttribute("cy", String(y));
     const label = group.querySelector("#reader-label");
-    label.textContent = "累積頻數 " + Math.round(reading.y) + " → " + formatReadingMinute(reading.x) + " 分鐘";
+    label.textContent = "累積頻數 " + Math.round(reading.y) + " → " + formatReadingMinute(reading.x);
     label.setAttribute("x", String(x > frame.w * 0.62 ? frame.pad.l + 8 : x + 8));
     label.setAttribute("y", String(Math.max(frame.pad.t + 16, y - 8)));
   }
@@ -1212,6 +1287,12 @@
       card.hidden = true;
       return;
     }
+    const modelPreview = modelOf(lesson);
+    const reveal = discreteRevealed || tutor.solved;
+    if (!modelPreview.hasX && !showBlocks && !reveal) {
+      card.hidden = true;
+      return;
+    }
     card.hidden = false;
     const wrapper = document.getElementById("blocksWrapper");
     const resultBox = document.getElementById("resultBox");
@@ -1219,7 +1300,7 @@
     wrapper.innerHTML = "";
     result.innerHTML = "";
     resultBox.hidden = false;
-    const model = modelOf(lesson);
+    const model = modelPreview;
     if (model.error === "multi-x") {
       result.textContent = "只可以有一個 x。";
       return;
@@ -1241,10 +1322,15 @@
       result.textContent = "請輸入有效的數據與頻數。";
       return;
     }
+    const highlight = model.hasX || reveal;
     if (view.N > 400) {
       wrapper.textContent = "這個 x 的隊列很長，不逐格畫出。下面仍寫出 N 和中位數。";
     } else {
-      renderBlocks(expandRows(model.rows, x), view.positions.map((position) => position - 1));
+      renderBlocks(expandRows(model.rows, x), highlight ? view.positions.map((position) => position - 1) : []);
+    }
+    if (!highlight) {
+      resultBox.hidden = true;
+      return;
     }
     if (model.hasX) result.append(stepLine("今次代入 x = " + x + "。"));
     if (view.odd) {
@@ -1465,7 +1551,10 @@
     else if (tutor.mode === "known" && tutor.step === 2 && knownView() && !knownView().odd) {
       row.append(fieldLabel("第", "pos1"), text(" 項及第 "), fieldLabel("", "pos2"), text(" 項"));
     } else if (tutor.mode === "known" && tutor.step === 2) row.append(fieldLabel("第", "pos1"), text(" 項"));
-    else if (tutor.mode === "known" && tutor.step === 3) row.append(fieldLabel("中位數 =", "knownMedian"));
+    else if (tutor.mode === "known" && tutor.step === 3 && knownView() && !knownView().odd) {
+      row.append(fieldLabel("較前那個位置的數值 =", "knownVal1"), fieldLabel("較後那個位置的數值 =", "knownVal2"));
+    } else if (tutor.mode === "known" && tutor.step === 3) row.append(fieldLabel("中間那個位置的數值 =", "knownVal1"));
+    else if (tutor.mode === "known" && tutor.step === 4) row.append(fieldLabel("中位數 =", "knownMedian"));
     else if (tutor.mode === "unknown" && tutor.step === 1) row.append(fieldLabel("N =", "exprN"));
     else if (tutor.mode === "unknown" && tutor.step === 2) {
       const target = current().target;
@@ -1481,7 +1570,7 @@
       else row.append(fieldLabel("最小 x =", "ansMin"), fieldLabel("最大 x =", "ansMax"));
     } else if (tutor.mode === "continuous" && tutor.step === 1) row.append(fieldLabel("總頻數 =", "cfTotal"));
     else if (tutor.mode === "continuous" && tutor.step === 2) row.append(fieldLabel("累積頻數 =", "cfHalf"));
-    else if (tutor.mode === "continuous" && tutor.step === 3) row.append(fieldLabel("中位數 =", "minute"), text(" 分鐘"));
+    else if (tutor.mode === "continuous" && tutor.step === 3) row.append(fieldLabel("中位數 =", "minute"));
     return row;
   }
 
@@ -1533,15 +1622,16 @@
       const view = knownView();
       if (!view) return "請先填好頻數表。";
       if (tutor.step === 1) return "單看頻數表，這批數據一共有多少個？";
-      if (tutor.step === 2) {
-        return view.odd ? "N 是奇數還是偶數？中間那個位置是第幾項？" : "N 是偶數。中間要看哪兩項？";
-      }
-      return view.odd ? "中間那一項的數值就是中位數。它是多少？" : "中間那兩項要先平均。中位數是多少？";
+      if (tutor.step === 2) return "總數是單數還是雙數？單數只找第 (N+1)/2 項；雙數找第 N/2 項和第 N/2+1 項。中間是第幾項？";
+      if (tutor.step === 3) return view.odd
+        ? "不用畫出每一格。由最小的數值起累積頻數，中間那一項是哪個數值？"
+        : "不用畫出每一格。由最小的數值起累積頻數。較前的中間位置是哪個數值？較後的又是哪個？";
+      return "總數是雙數。把這兩個數值加起來再除以 2。中位數是多少？";
     }
     if (tutor.mode === "continuous") {
       if (tutor.step === 1) return "曲線終點的高度就是數據的總頻數。總頻數是多少？";
       if (tutor.step === 2) return "連續數據的中位數，對應總頻數的 50%。這個累積頻數是多少？";
-      return "在縱軸找到這個累積頻數，水平碰到曲線，再讀橫軸最接近的分鐘。中位數是多少分鐘？";
+      return "在縱軸找到這個累積頻數，水平碰到曲線，再讀橫軸最接近的數值。中位數是多少？";
     }
     const model = modelOf(lesson);
     const names = neighborValues(model.rows, lesson.target);
@@ -1566,13 +1656,14 @@
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
-      if (tutor.step === 2) return "幫他由奇數或偶數決定看中間一項還是兩項。不要說出第幾項。";
-      return "幫他從中間位置讀數值；偶數要先平均。不要說出中位數。";
+      if (tutor.step === 2) return "幫他由單數或雙數決定看中間一項還是兩項。不要說出第幾項。";
+      if (tutor.step === 3) return "幫他用累積頻數數位置，不要說出落在哪個數值。";
+      return "幫他明白雙數要把中間兩個數值平均。不要說出中位數。";
     }
     if (tutor.mode === "continuous") {
       if (tutor.step === 1) return "幫他從曲線終點的高度讀總頻數。不要說出那個數。";
       if (tutor.step === 2) return "幫他明白連續數據取總頻數的 50% 作累積頻數，不是第 (N+1)/2 項。不要說出算出來的數。";
-      return "幫他在一半的高度看曲線交點，再讀橫軸最接近的分鐘。不要說出分鐘。";
+      return "幫他在一半的高度看曲線交點，再讀橫軸最接近的數值。不要說出那個數。";
     }
     if (tutor.step === 1) return "幫他把總人數寫成含 x 的式子，不要先代入數字，也不要寫出整條式子。";
     if (tutor.step === 2) return "幫他找出中位數那一組由第幾項到第幾項。不要寫出完整式子。";
@@ -1615,9 +1706,14 @@
       if (level === 2) return view.odd ? "位置是第 (N+1)/2 項。" : "位置是第 N/2 項和第 N/2+1 項。";
       return view.odd ? "把 N 代入 (N+1)/2，算出來的第幾項才填。" : "把 N 代入 N/2 和 N/2+1，兩個位置都要自己算出來再填。";
     }
-    if (level === 1) return "看中間位置上的數值。";
-    if (level === 2) return view.odd ? "奇數時，中位數就是那一項的數值。" : "偶數時，把那兩項加起來再除以 2。";
-    return view.odd ? "到隊列裡讀出中間那一格的紅色數值，再填進去。" : "讀出中間兩格的紅色數值，加起來再除以 2。算出來的才填。";
+    if (tutor.step === 3) {
+      if (level === 1) return "由最小的數值開始。它的頻數就是它佔開頭的多少個位置。";
+      if (level === 2) return "一路累積過去，看到中間那個位置停在哪一個數值。雙數要數兩個位置，它們可能相同，也可能跨到下一個數值。";
+      return "沿表由左數到你求出的位置，看停在哪個數值。自己填，不用等圖。";
+    }
+    if (level === 1) return view.odd ? "單數時，中位數就是中間那一個數值。" : "雙數時，不要只取其中一個數值。";
+    if (level === 2) return view.odd ? "把上一格的數值再填一次，它就是中位數。" : "把兩個中間數值相加，再除以 2。";
+    return view.odd ? "中位數就是中間那一個數值。填進去就可以。" : "兩個數值相加後除以 2，算出來的才填。不要只填其中一個。";
   }
 
   function bracketBounds(points, rawX) {
@@ -1647,7 +1743,7 @@
     }
     if (level === 1) return "在縱軸找到一半的累積頻數，看水平線會碰到曲線的哪裡。";
     if (level === 2) return "把紅線拖到那個高度，看垂直線落在哪兩個組界之間。";
-    return "看垂直線靠近哪一分鐘，填最接近的整數。不要填小數，也不要填組界上的 .5。";
+    return "看垂直線靠近哪一個整數，填最接近的整數。不要填小數，也不要填組界上的 .5。";
   }
 
   function unknownHint(level) {
@@ -1736,7 +1832,7 @@
       kind: "tutor",
       text: lesson.kind === "continuous"
         ? "對。這是連續數據。數據被分組，中位數要在累積頻數曲線上，對應總頻數的 50%，而不是第 (N+1)/2 項。"
-        : "對。這是離散數據。每個數值是分開點算的，中位數要在由小到大的隊列裡找位置，不是在曲線上取 50%。"
+        : "對。這是離散數據。先把頻數加起來。總數是單數，只取最中間一項；是雙數，取最中間兩項再平均。可以沿表累積來數，不必先畫出每一格。"
     });
     tutor.log.push({ kind: "tutor", text: questionText() });
     render();
@@ -1744,7 +1840,8 @@
 
   function advance(message) {
     tutor.log.push({ kind: "tutor", text: message });
-    const maxStep = tutor.mode === "unknown" ? 5 : 3;
+    const knownViewNow = tutor.mode === "known" ? knownView() : null;
+    const maxStep = tutor.mode === "unknown" ? 5 : tutor.mode === "known" && knownViewNow && !knownViewNow.odd ? 4 : 3;
     tutor.step += 1;
     tutor.trap = false;
     if (tutor.step > maxStep) {
@@ -1792,14 +1889,33 @@
         text: view.odd ? "第 " + first + " 項" : "第 " + first + " 項及第 " + second + " 項"
       });
       const ok = view.odd ? first === view.positions[0] : first === view.positions[0] && second === view.positions[1];
-      if (ok) advance(view.odd ? "對，就是最中間的那一項。" : "對，偶數要看中間這兩項。");
-      else tutor.log.push({ kind: "tutor", text: "位置還未對。先判斷 N 是奇數還是偶數，再寫第幾項。" });
+      if (ok) advance(view.odd ? "對。總數是單數，只看最中間那一項。" : "對。總數是雙數，要看最中間這兩項。");
+      else tutor.log.push({ kind: "tutor", text: "位置還未對。先判斷總數是單數還是雙數，再寫第幾項。" });
     } else if (tutor.step === 3) {
+      const first = Number(normalizeTyped(document.getElementById("knownVal1").value));
+      const secondInput = document.getElementById("knownVal2");
+      const second = secondInput ? Number(normalizeTyped(secondInput.value)) : null;
+      tutor.log.push({
+        kind: "student",
+        text: view.odd ? "數值 = " + first : "較前 " + first + "，較後 " + second
+      });
+      const firstOk = MedianMath.sameNumber(first, view.values[0]);
+      const secondOk = view.odd || MedianMath.sameNumber(second, view.values[1]);
+      if (firstOk && secondOk) {
+        if (view.odd) markSolved("正確。總數是單數，中位數就是中間那一個數值。");
+        else advance("對。這兩個位置的數值都找到了。總數是雙數，還要把它們平均。");
+      } else if (firstOk || secondOk) {
+        tutor.log.push({ kind: "tutor", text: "有一個位置對了。沿表再數另一個位置落在哪個數值。" });
+      } else tutor.log.push({ kind: "tutor", text: "還未對。由最小的數值起累積頻數，看到中間的位置停在哪裡。" });
+    } else if (tutor.step === 4) {
       const raw = normalizeTyped(document.getElementById("knownMedian").value);
+      const value = Number(raw);
       tutor.log.push({ kind: "student", text: "中位數 = " + raw });
-      if (MedianMath.sameNumber(Number(raw), view.median)) {
-        markSolved("正確。中位數是 " + formatMedian(view.median) + "。" + (view.odd ? "" : "中間兩項是 " + view.values[0] + " 和 " + view.values[1] + "，平均後就是它。"));
-      } else tutor.log.push({ kind: "tutor", text: "還未對。偶數時記得把中間兩項加起來再除以 2。" });
+      if (MedianMath.sameNumber(value, view.median)) {
+        markSolved("正確。中位數是 " + formatMedian(view.median) + "。");
+      } else if (view.values.some((item) => MedianMath.sameNumber(value, item))) {
+        tutor.log.push({ kind: "tutor", text: "這是中間其中一個數值。雙數要把兩個數值加起來再除以 2。" });
+      } else tutor.log.push({ kind: "tutor", text: "還未對。把兩個中間數值相加，再除以 2。" });
     }
     render();
   }
@@ -1827,10 +1943,10 @@
     } else if (tutor.step === 3) {
       const raw = normalizeTyped(document.getElementById("minute").value);
       const value = Number(raw);
-      tutor.log.push({ kind: "student", text: "中位數 = " + raw + " 分鐘" });
-      if (value === answer.minute) markSolved("正確。中位數是 " + answer.minute + " 分鐘。累積頻數 " + answer.half + " 的水平線交到曲線後，讀到的就是這個分鐘。");
+      tutor.log.push({ kind: "student", text: "中位數 = " + raw });
+      if (value === answer.minute) markSolved("正確。中位數是 " + answer.minute + "。累積頻數 " + answer.half + " 的水平線交到曲線後，讀到的就是這個數值。");
       else if (Number.isFinite(value) && Math.abs(value - answer.rawX) <= 1.2 && value !== answer.minute) {
-        tutor.log.push({ kind: "tutor", text: "很接近。題目要最接近的整數分鐘。" });
+        tutor.log.push({ kind: "tutor", text: "很接近。題目要最接近的整數。" });
       } else if (Number.isFinite(value) && Math.abs(value - answer.minute) === 1) {
         tutor.log.push({ kind: "tutor", text: "差一點。再看交點落在兩個組界的什麼位置。" });
       } else tutor.log.push({ kind: "tutor", text: "還未對。先在縱軸找到一半的累積頻數，水平碰到曲線，再垂直讀橫軸。" });
