@@ -82,7 +82,9 @@
   }
 
   function sameNumber(a, b) {
-    return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 1e-9;
+    const left = typeof a === "number" ? a : Number(a);
+    const right = typeof b === "number" ? b : Number(b);
+    return Number.isFinite(left) && Number.isFinite(right) && Math.abs(left - right) < 1e-9;
   }
 
   function matchesTarget(result, target) {
@@ -348,6 +350,15 @@
     return (lo + hi) / 2;
   }
 
+  function valueAtCumulative(points, y) {
+    const spline = monotoneSpline(points);
+    if (!spline) return null;
+    const low = points[0].y;
+    const high = points[points.length - 1].y;
+    const clamped = Math.min(Math.max(y, low), high);
+    return { y: clamped, x: splineXForY(spline, clamped) };
+  }
+
   function curveSamples(points, step) {
     const spline = monotoneSpline(points);
     if (!spline) return [];
@@ -392,6 +403,7 @@
     classifyQuota,
     monotoneSpline,
     splineY,
+    valueAtCumulative,
     curveSamples,
     curveMedian
   };

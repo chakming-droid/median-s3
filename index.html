@@ -94,6 +94,23 @@
       min-width: 100px;
     }
     .static-cell { font-weight: bold; min-width: 48px; }
+    table.horizontal-table input {
+      width: 64px;
+      text-align: center;
+      padding: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: 1px solid #94a3b8;
+      border-radius: 6px;
+    }
+    .remove-col {
+      color: #dc2626;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-weight: bold;
+      font-size: 1rem;
+    }
 
     .curve-wrap {
       overflow-x: auto;
@@ -101,7 +118,7 @@
       border-radius: 8px;
       border: 1px solid #cbd5e1;
     }
-    .curve-wrap svg { width: 100%; height: auto; min-width: 640px; display: block; }
+    .curve-wrap svg { width: 100%; height: auto; min-width: 640px; display: block; touch-action: none; cursor: ns-resize; }
 
     .btn {
       background: #2563eb;
@@ -183,7 +200,7 @@
 
     .action-row, .form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
     .form-row input[type="text"], .form-row input[type="number"] {
-      width: 120px;
+      width: 140px;
       padding: 8px;
       font-size: 1rem;
       border: 1px solid #94a3b8;
@@ -252,53 +269,35 @@
 
   const lessons = [
     {
-      id: "cafe",
-      kind: "discrete-known",
-      title: "咖啡店的顧客人數",
-      header: "顧客人數",
-      stem: "下表顯示咖啡店某時段的顧客人數。",
+      id: "discrete",
+      kind: "discrete",
+      title: "離散數據",
+      header: "數值",
+      stem: "下表是一組數據的頻數。",
       rows: [
-        { val: 55, freq: 2 },
-        { val: 56, freq: 8 },
-        { val: 57, freq: 5 },
-        { val: 58, freq: 4 },
-        { val: 59, freq: 7 },
-        { val: 60, freq: 4 }
-      ]
+        { val: 55, freq: "2" },
+        { val: 56, freq: "8" },
+        { val: 57, freq: "x" },
+        { val: 58, freq: "4" },
+        { val: 59, freq: "7" },
+        { val: 60, freq: "4" }
+      ],
+      target: 58,
+      structure: 0
     },
     {
-      id: "days",
-      kind: "discrete-unknown",
-      title: "運動多於 30 分鐘的日數",
-      header: "日數",
-      stem: "下表顯示一組學生上學期運動多於 30 分鐘的日數。已知 x 是一個正整數。若中位數是 3，求 x 的最小和最大可取值。",
-      image: "question12.png",
-      target: 3,
-      rows: [
-        { val: 1, freq: 4 },
-        { val: 2, freq: "x" },
-        { val: 3, freq: 14 },
-        { val: 4, freq: 7 },
-        { val: 5, freq: 14 }
-      ]
-    },
-    {
-      id: "travel",
+      id: "commute",
       kind: "continuous",
-      title: "回校交通時間",
-      stem: "以下的累積頻數曲線顯示一組中三學生今早由家前往學校所需的交通時間（準確至最接近的分鐘）。求這些交通時間的中位數，準確至最接近的分鐘。",
-      points: [
-        { x: 9.5, y: 0 },
-        { x: 14.5, y: 6 },
-        { x: 19.5, y: 16 },
-        { x: 24.5, y: 30 },
-        { x: 27, y: 50 },
-        { x: 29.5, y: 72 },
-        { x: 34.5, y: 90 },
-        { x: 39.5, y: 100 }
-      ]
+      title: "連續數據",
+      chartTitle: "一組人於今早由家前往工作地點所需的交通時間",
+      stem: "以下的累積頻數曲線顯示一組人於今早由家前往工作地點所需的交通時間（準確至最接近的分鐘）。可改組界、頻數或累積頻數。拖動紅線對位，再求中位數。",
+      structure: 0,
+      bounds: ["24.5", "29.5", "34.5", "39.5", "44.5", "49.5"],
+      freqs: ["", "8", "27", "65", "140", "60"],
+      cums: ["0", "8", "35", "100", "240", "300"]
     }
   ];
+  const lessonTemplates = JSON.parse(JSON.stringify(lessons));
 
   let lessonIndex = 0;
   let phase = "type";
@@ -309,9 +308,10 @@
   let authFailed = false;
   let teacherNote = "";
   let askWasOpen = false;
+  let readerCf = null;
 
   function freshTutor() {
-    return { mode: "type", step: 1, log: [], hints: {}, trials: [], trap: false, solved: false };
+    return { mode: "type", step: 1, log: [], hints: {}, trials: [], trap: false, solved: false, stale: false, blocked: false };
   }
 
   function current() {
@@ -376,8 +376,97 @@
     return MedianMath.medianForX(model.rows, 1);
   }
 
+  function parseCell(raw) {
+    const text = normalizeTyped(raw).toLowerCase().replace(/\s+/g, "");
+    if (!text) return null;
+    if (text === "x") return { c: 0, k: 1 };
+    const parsed = MedianMath.parseExpr(text);
+    if (parsed) return parsed;
+    const neg = text.match(/^-(\d+)$/);
+    if (neg) return { c: -Number(neg[1]), k: 0 };
+    return null;
+  }
+
+  function addExpr(a, b) {
+    return { c: a.c + b.c, k: a.k + b.k };
+  }
+
+  function subExpr(a, b) {
+    return { c: a.c - b.c, k: a.k - b.k };
+  }
+
+  function lessonHasX() {
+    const lesson = current();
+    const cells = lesson.kind === "continuous"
+      ? lesson.cums.concat(lesson.freqs)
+      : lesson.rows.map((row) => row.freq);
+    return cells.some((cell) => {
+      const expr = parseCell(cell);
+      return expr && expr.k !== 0;
+    });
+  }
+
+  function trialNumber() {
+    const raw = document.getElementById("trialX");
+    if (raw && String(raw.value).trim() !== "") return Number(raw.value);
+    return experiment ? experiment.x : NaN;
+  }
+
+  function continuousState(trialX) {
+    const lesson = current();
+    const bounds = lesson.bounds.map((value) => Number(value));
+    const exprs = lesson.cums.map(parseCell);
+    if (lesson.cums.concat(lesson.freqs).some((cell) => {
+      const expr = parseCell(cell);
+      return expr && expr.k !== 0;
+    })) return { error: "no-x" };
+    const freqExprs = lesson.freqs.slice(1).map(parseCell);
+    if (bounds.some((value) => !Number.isFinite(value)) || exprs.some((expr) => !expr) || freqExprs.some((expr) => !expr)) return { error: "invalid" };
+    const positive = freqExprs.filter((expr) => expr.k > 0).length;
+    const negative = freqExprs.filter((expr) => expr.k < 0).length;
+    if (positive > 1 || negative > 1) return { error: "multi-x" };
+    const hasX = positive + negative > 0;
+    if (hasX && (!Number.isInteger(trialX) || trialX <= 0)) return { error: "need-x", hasX: true };
+    const x = hasX ? trialX : 0;
+    const points = bounds.map((bound, index) => ({ x: bound, y: exprs[index].c + exprs[index].k * x }));
+    for (let i = 1; i < points.length; i += 1) {
+      if (!(points[i].x > points[i - 1].x) || points[i].y < points[i - 1].y - 1e-9) return { error: "order", hasX };
+    }
+    return { points, hasX, totalExpr: exprs[exprs.length - 1] };
+  }
+
   function travelAnswer() {
-    return MedianMath.curveMedian(current().points);
+    if (current().kind !== "continuous") return null;
+    const state = continuousState(trialNumber());
+    if (!state.points) return null;
+    return MedianMath.curveMedian(state.points);
+  }
+
+  function recomputeCumsFromFreqs(lesson) {
+    if (!parseCell(lesson.cums[0])) lesson.cums[0] = "0";
+    for (let i = 1; i < lesson.freqs.length; i += 1) {
+      const freq = parseCell(lesson.freqs[i]);
+      const prev = parseCell(lesson.cums[i - 1]);
+      if (!freq || !prev) continue;
+      lesson.cums[i] = MedianMath.formatExpr(addExpr(prev, freq));
+    }
+  }
+
+  function recomputeFreqsFromCums(lesson) {
+    lesson.freqs[0] = "";
+    for (let i = 1; i < lesson.cums.length; i += 1) {
+      const cur = parseCell(lesson.cums[i]);
+      const prev = parseCell(lesson.cums[i - 1]);
+      if (!cur || !prev) continue;
+      lesson.freqs[i] = MedianMath.formatExpr(subExpr(cur, prev));
+    }
+  }
+
+  function writeInputValues(selector, values) {
+    document.querySelectorAll(selector).forEach((input, index) => {
+      if (document.activeElement === input) return;
+      if (values[index] != null) input.value = values[index];
+    });
   }
 
   function normalizeTyped(raw) {
@@ -390,13 +479,16 @@
   }
 
   function loadLesson(index) {
+    lessons[index] = JSON.parse(JSON.stringify(lessonTemplates[index]));
     lessonIndex = index;
     phase = "type";
     tutor = freshTutor();
     fieldDrafts = {};
     experiment = null;
     asking = false;
-    document.querySelectorAll("input[id]").forEach((input) => { input.value = ""; });
+    const card = document.getElementById("pictureCard");
+    if (card) card.dataset.key = "";
+    document.querySelectorAll("#tutorForm input, #tutorActions input, #extraSlot input").forEach((input) => { input.value = ""; });
     tutor.log.push({ kind: "tutor", text: "做之前，先判斷：這是離散數據還是連續數據？" });
     render();
   }
@@ -421,9 +513,28 @@
     askWasOpen = aiOpen();
   }
 
+  function showMode(index) {
+    if (index === lessonIndex) return;
+    lessonIndex = index;
+    phase = "type";
+    tutor = freshTutor();
+    fieldDrafts = {};
+    experiment = null;
+    asking = false;
+    const card = document.getElementById("pictureCard");
+    if (card) card.dataset.key = "";
+    tutor.log.push({ kind: "tutor", text: "做之前，先判斷：這是離散數據還是連續數據？" });
+    render();
+  }
+
   function renderProgress() {
-    const lesson = current();
-    document.getElementById("progress").textContent = "第 " + (lessonIndex + 1) + " 題，共 " + lessons.length + " 題：" + lesson.title;
+    const bar = document.getElementById("progress");
+    bar.textContent = "";
+    bar.className = "progress action-row";
+    lessons.forEach((lesson, index) => {
+      const button = makeButton(lesson.title, index === lessonIndex ? "btn" : "btn btn-secondary", () => showMode(index));
+      bar.appendChild(button);
+    });
   }
 
   function teacherStatusText() {
@@ -466,69 +577,360 @@
   function renderPicture() {
     const card = document.getElementById("pictureCard");
     const lesson = current();
-    card.innerHTML = "";
-    const title = document.createElement("div");
-    title.className = "card-title";
-    title.textContent = lesson.title;
-    const stem = document.createElement("p");
-    stem.className = "problem-text";
-    stem.textContent = lesson.stem;
-    card.append(title, stem);
-    if (lesson.image) {
-      const img = document.createElement("img");
-      img.src = lesson.image;
-      img.alt = lesson.stem;
-      img.className = "problem-img";
-      card.appendChild(img);
+    const key = lessonIndex + ":" + (lesson.structure || 0);
+    if (card.dataset.key !== key) {
+      card.dataset.key = key;
+      card.innerHTML = "";
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = lesson.title;
+      const stem = document.createElement("p");
+      stem.className = "problem-text";
+      stem.textContent = lesson.stem;
+      card.append(title, stem);
+      if (lesson.image) {
+        const img = document.createElement("img");
+        img.src = lesson.image;
+        img.alt = lesson.stem;
+        img.className = "problem-img";
+        card.appendChild(img);
+      }
+      card.appendChild(buildEditableTable(lesson));
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = lesson.kind === "continuous"
+        ? "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用 x。"
+        : "可改數值和頻數。頻數可填正整數，整個表只可以有一個 x。";
+      card.appendChild(note);
+      const extras = document.createElement("div");
+      extras.id = "extraSlot";
+      card.appendChild(extras);
+      const curve = document.createElement("div");
+      curve.id = "curveSlot";
+      card.appendChild(curve);
+      const reading = document.createElement("div");
+      reading.id = "readingSlot";
+      card.appendChild(reading);
     }
-    if (lesson.kind === "continuous") {
-      const wrap = document.createElement("div");
-      wrap.className = "curve-wrap";
-      wrap.innerHTML = curveSvg(lesson.points, phase === "steps" && tutor.solved);
-      card.appendChild(wrap);
-      if (phase === "steps") card.appendChild(sheetBlock());
-    } else {
-      card.appendChild(staticTable(lesson));
-    }
-    if (lesson.kind === "discrete-unknown" && phase === "steps" && tutor.step >= 4 && !tutor.solved) {
-      card.appendChild(trialControls());
-    }
+    renderExtras();
+    renderCurveSlot();
+    renderReading();
   }
 
-  function staticTable(lesson) {
+  function cellInput(className, value, label) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = className;
+    input.value = value == null ? "" : String(value);
+    input.setAttribute("aria-label", label);
+    input.autocomplete = "off";
+    input.addEventListener("input", onTableInput);
+    return input;
+  }
+
+  function buildEditableTable(lesson) {
     const wrap = document.createElement("div");
     wrap.className = "table-wrapper";
     const table = document.createElement("table");
     table.className = "horizontal-table";
-    const values = document.createElement("tr");
-    const freq = document.createElement("tr");
-    const valueHeader = document.createElement("th");
-    valueHeader.className = "row-header";
-    valueHeader.textContent = lesson.header;
-    const freqHeader = document.createElement("th");
-    freqHeader.className = "row-header";
-    freqHeader.textContent = "頻數";
-    values.appendChild(valueHeader);
-    freq.appendChild(freqHeader);
-    lesson.rows.forEach((row) => {
-      const valueCell = document.createElement("td");
-      valueCell.className = "static-cell";
-      valueCell.textContent = String(row.val);
-      const freqCell = document.createElement("td");
-      freqCell.className = "static-cell";
-      freqCell.textContent = String(row.freq);
-      values.appendChild(valueCell);
-      freq.appendChild(freqCell);
-    });
     const body = document.createElement("tbody");
-    body.append(values, freq);
+    if (lesson.kind === "continuous") {
+      body.append(
+        inputRow("組界", lesson.bounds, "input-bound", "組界"),
+        inputRow("頻數", lesson.freqs, "input-cfreq", "頻數", true),
+        inputRow("累積頻數", lesson.cums, "input-cum", "累積頻數"),
+        removeRow(lesson.bounds.length)
+      );
+    } else {
+      body.append(
+        inputRow(lesson.header, lesson.rows.map((row) => row.val), "input-val", "數值"),
+        inputRow("頻數", lesson.rows.map((row) => row.freq), "input-freq", "頻數"),
+        removeRow(lesson.rows.length)
+      );
+    }
     table.appendChild(body);
     wrap.appendChild(table);
     return wrap;
   }
 
-  function sheetBlock() {
+  function inputRow(header, values, className, label, blankFirst) {
+    const row = document.createElement("tr");
+    const head = document.createElement("th");
+    head.className = "row-header";
+    head.textContent = header;
+    row.appendChild(head);
+    values.forEach((value, index) => {
+      const cell = document.createElement("td");
+      if (blankFirst && index === 0) {
+        cell.textContent = "—";
+      } else {
+        cell.appendChild(cellInput(className, value, label));
+      }
+      row.appendChild(cell);
+    });
+    return row;
+  }
+
+  function removeRow(count) {
+    const row = document.createElement("tr");
+    const head = document.createElement("th");
+    head.className = "row-header";
+    head.textContent = "操作";
+    row.appendChild(head);
+    for (let index = 0; index < count; index += 1) {
+      const cell = document.createElement("td");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "remove-col";
+      button.textContent = "✕";
+      button.setAttribute("aria-label", "刪去這一欄");
+      button.addEventListener("click", () => removeColumn(index));
+      cell.appendChild(button);
+      row.appendChild(cell);
+    }
+    return row;
+  }
+
+  function renderExtras() {
+    const slot = document.getElementById("extraSlot");
+    if (!slot) return;
+    const wanted = current().kind === "continuous" ? "plain" : (lessonHasX() ? "x" : "plain");
+    if (slot.dataset.mode === wanted && slot.childElementCount) return;
+    slot.dataset.mode = wanted;
+    slot.innerHTML = "";
+    const row = document.createElement("div");
+    row.className = "action-row";
+    row.append(
+      makeButton("+ 新增一欄", "btn btn-secondary", addColumn),
+      makeButton("重置這一題", "btn btn-secondary", () => loadLesson(lessonIndex))
+    );
+    if (wanted === "x") {
+      const trial = document.createElement("label");
+      trial.append(document.createTextNode("試 x = "));
+      const trialInput = document.createElement("input");
+      trialInput.id = "trialX";
+      trialInput.type = "number";
+      trialInput.min = "1";
+      trialInput.step = "1";
+      if (experiment && experiment.x) trialInput.value = String(experiment.x);
+      trialInput.addEventListener("input", () => renderCurveSlot() || renderQueue() || renderReading());
+      trialInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          tryX();
+        }
+      });
+      trial.appendChild(trialInput);
+      const target = document.createElement("label");
+      target.append(document.createTextNode("題目的中位數 = "));
+      const targetInput = document.createElement("input");
+      targetInput.id = "targetMedian";
+      targetInput.type = "text";
+      targetInput.value = current().target == null ? "" : String(current().target);
+      targetInput.addEventListener("input", () => {
+        current().target = targetInput.value.trim();
+        markEdited();
+        renderReading();
+      });
+      target.appendChild(targetInput);
+      row.append(trial, target, makeButton("看看這個 x", "btn", tryX));
+    }
+    slot.appendChild(row);
+    if (wanted === "x") slot.appendChild(rangeChecker());
+    if (current().kind === "continuous") slot.appendChild(medianChecker());
+  }
+
+  function medianChecker() {
+    const wrap = document.createElement("div");
+    const row = document.createElement("div");
+    row.className = "action-row";
+    const input = document.createElement("input");
+    input.id = "checkMinute";
+    input.type = "text";
+    input.placeholder = "整數";
+    input.autocomplete = "off";
+    const label = document.createElement("label");
+    label.append(document.createTextNode("中位數 = "), input, document.createTextNode(" 分鐘"));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        checkMedian();
+      }
+    });
+    row.append(label, makeButton("核對中位數", "btn", checkMedian));
+    const note = document.createElement("p");
+    note.id = "medianNote";
+    note.className = "problem-text";
+    note.textContent = "拖紅線讀出最接近的分鐘後，可以直接核對，不用先看提示。";
+    wrap.append(row, note);
+    return wrap;
+  }
+
+  function checkMedian() {
+    const note = document.getElementById("medianNote");
+    if (!note) return;
     const answer = travelAnswer();
+    if (!answer) {
+      note.textContent = "先把組界和累積頻數填好。";
+      return;
+    }
+    const value = Number(normalizeTyped(document.getElementById("checkMinute").value));
+    if (!Number.isFinite(value)) {
+      note.textContent = "請填最接近的整數分鐘。";
+      return;
+    }
+    if (value === answer.minute) {
+      note.textContent = "對。中位數是 " + answer.minute + " 分鐘。";
+      return;
+    }
+    if (Math.abs(value - answer.minute) === 1 || Math.abs(value - answer.rawX) <= 1.2) {
+      note.textContent = "差一點。把紅線拖到總頻數的一半，再讀最接近的整數分鐘。";
+      return;
+    }
+    note.textContent = "還未對。中位數對應總頻數的 50%。拖紅線到那個高度，再讀橫軸。";
+  }
+
+  function rangeChecker() {
+    const wrap = document.createElement("div");
+    const row = document.createElement("div");
+    row.className = "action-row";
+    const minInput = document.createElement("input");
+    minInput.id = "rangeMin";
+    minInput.type = "text";
+    minInput.placeholder = "最小";
+    minInput.autocomplete = "off";
+    const maxInput = document.createElement("input");
+    maxInput.id = "rangeMax";
+    maxInput.type = "text";
+    maxInput.placeholder = "最大";
+    maxInput.autocomplete = "off";
+    const minLabel = document.createElement("label");
+    minLabel.append(document.createTextNode("最小 x = "), minInput);
+    const maxLabel = document.createElement("label");
+    maxLabel.append(document.createTextNode("最大 x = "), maxInput);
+    const button = makeButton("核對範圍", "btn", checkRange);
+    [minInput, maxInput].forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          checkRange();
+        }
+      });
+    });
+    row.append(minLabel, maxLabel, button);
+    const note = document.createElement("p");
+    note.id = "rangeNote";
+    note.className = "problem-text";
+    note.textContent = "填好題目的中位數後，可以直接核對 x 的最小和最大，不用先看提示。";
+    wrap.append(row, note);
+    return wrap;
+  }
+
+  function answerRange() {
+    const lesson = current();
+    const target = Number(lesson.target);
+    if (!Number.isFinite(target)) return { error: "need-target" };
+    if (lesson.kind !== "continuous") {
+      const model = modelOf(lesson);
+      if (model.error) return { error: model.error };
+      return MedianMath.rangeForTarget(model.rows, target);
+    }
+    const hits = [];
+    for (let x = 1; x <= 400; x += 1) {
+      const state = continuousState(x);
+      if (!state.points) continue;
+      const answer = MedianMath.curveMedian(state.points);
+      if (answer && answer.minute === target) hits.push(x);
+    }
+    if (!hits.length) return { none: true };
+    const last = hits[hits.length - 1];
+    const unbounded = last === 400 && [401, 420, 500].every((x) => {
+      const state = continuousState(x);
+      if (!state.points) return false;
+      const answer = MedianMath.curveMedian(state.points);
+      return answer && answer.minute === target;
+    });
+    return { min: hits[0], max: unbounded ? null : last, unbounded, none: false, intervals: [] };
+  }
+
+  function checkRange() {
+    const note = document.getElementById("rangeNote");
+    if (!note) return;
+    const range = answerRange();
+    if (range.error === "need-target") {
+      note.textContent = "先填題目的中位數。";
+      return;
+    }
+    if (range.error === "multi-x") {
+      note.textContent = "只可以有一個 x。";
+      return;
+    }
+    if (range.error || range.none) {
+      note.textContent = "按現在這張表，沒有正整數 x 能使中位數等於題目。";
+      return;
+    }
+    const min = Number(normalizeTyped(document.getElementById("rangeMin").value));
+    const max = Number(normalizeTyped(document.getElementById("rangeMax").value));
+    if (!Number.isInteger(min) || min <= 0 || (!range.unbounded && (!Number.isInteger(max) || max <= 0))) {
+      note.textContent = "最小和最大都要填正整數。";
+      return;
+    }
+    const minOk = min === range.min;
+    const maxOk = range.unbounded ? true : max === range.max;
+    if (minOk && maxOk) {
+      note.textContent = range.unbounded
+        ? "對。最小是 " + range.min + "，沒有最大可取值。"
+        : "對。最小是 " + range.min + "，最大是 " + range.max + "。";
+      return;
+    }
+    const notes = [];
+    if (!minOk && min < range.min) notes.push("最小值偏小。");
+    if (!minOk && min > range.min) notes.push("最小值偏大，還有更小的正整數也可以。");
+    if (!range.unbounded && !maxOk && max > range.max) notes.push("最大值偏大。");
+    if (!range.unbounded && !maxOk && max < range.max) notes.push("最大值偏小，還有更大的正整數也可以。");
+    if (minOk) notes.unshift("最小值對了。");
+    if (maxOk && !range.unbounded) notes.unshift("最大值對了。");
+    note.textContent = notes.join("");
+  }
+
+  function renderCurveSlot() {
+    const slot = document.getElementById("curveSlot");
+    if (!slot || current().kind !== "continuous") {
+      if (slot) slot.innerHTML = "";
+      return;
+    }
+    const state = continuousState(trialNumber());
+    if (!state.points) {
+      const messages = {
+        "multi-x": "只可以有一個 x。",
+        "need-x": "表裡有 x。輸入一個正整數後，曲線和中位數會跟著變。",
+        "no-x": "連續數據請填數字，不用 x。",
+        order: "組界要由左到右變大，累積頻數不可以變小。",
+        invalid: "組界要是數字。累積頻數也要是數字。"
+      };
+      slot.innerHTML = "<p class=\"problem-text\">" + (messages[state.error] || messages.invalid) + "</p>";
+      return;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "curve-wrap";
+    wrap.innerHTML = curveSvg(state.points, tutor.solved);
+    const svg = wrap.querySelector("svg");
+    if (svg) bindReader(svg, state.points);
+    const hint = document.createElement("p");
+    hint.className = "problem-text";
+    hint.textContent = "拖動紅線，對準累積頻數，垂直線會落到橫軸。";
+    slot.innerHTML = "";
+    slot.append(wrap, hint);
+  }
+
+  function renderReading() {
+    const slot = document.getElementById("readingSlot");
+    if (!slot) return;
+    slot.innerHTML = "";
+    if (current().kind !== "continuous") return;
+    const answer = travelAnswer();
+    if (!answer) return;
+    if (phase !== "steps" && !tutor.solved) return;
     const showTotal = tutor.step > 1 || tutor.solved;
     const showHalf = tutor.step > 2 || tutor.solved;
     const box = document.createElement("div");
@@ -536,78 +938,174 @@
     ["數據的總頻數 = " + (showTotal ? answer.total : "______"),
       "對應中位數的累積頻數 = 總頻數 × 50% = " + (showHalf ? answer.half : "______"),
       "中位數 = " + (tutor.solved ? answer.minute : "______") + " 分鐘"
-    ].forEach((text) => {
-      const line = document.createElement("p");
-      line.textContent = text;
-      box.appendChild(line);
+    ].forEach((line) => {
+      const p = document.createElement("p");
+      p.textContent = line;
+      box.appendChild(p);
     });
-    return box;
+    slot.appendChild(box);
   }
 
-  function trialControls() {
-    const row = document.createElement("div");
-    row.className = "action-row";
-    const label = document.createElement("label");
-    label.append(document.createTextNode("試 x = "));
-    const input = document.createElement("input");
-    input.id = "trialX";
-    input.type = "number";
-    input.min = "1";
-    input.step = "1";
-    input.inputMode = "numeric";
-    restoreField(input);
-    label.appendChild(input);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "btn";
-    button.textContent = "看看這個 x";
-    button.addEventListener("click", tryX);
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        tryX();
+  function onTableInput(event) {
+    const lesson = current();
+    if (lesson.kind === "continuous") {
+      lesson.bounds = [...document.querySelectorAll(".input-bound")].map((input) => input.value.trim());
+      const freqs = [...document.querySelectorAll(".input-cfreq")].map((input) => input.value.trim());
+      const cums = [...document.querySelectorAll(".input-cum")].map((input) => input.value.trim());
+      lesson.freqs = [""].concat(freqs);
+      lesson.cums = cums;
+      if (event.target.classList.contains("input-cfreq")) {
+        lesson.freqs = [""].concat(freqs);
+        recomputeCumsFromFreqs(lesson);
+        writeInputValues(".input-cum", lesson.cums);
+      } else if (event.target.classList.contains("input-cum")) {
+        lesson.cums = cums;
+        recomputeFreqsFromCums(lesson);
+        writeInputValues(".input-cfreq", lesson.freqs.slice(1));
       }
-    });
-    row.append(label, button);
-    return row;
+    } else {
+      const vals = [...document.querySelectorAll(".input-val")].map((input) => input.value.trim());
+      const freqs = [...document.querySelectorAll(".input-freq")].map((input) => input.value.trim());
+      lesson.rows = vals.map((val, index) => ({ val, freq: freqs[index] }));
+    }
+    const slot = document.getElementById("extraSlot");
+    const wanted = lessonHasX() ? "x" : "plain";
+    if (slot && slot.dataset.mode !== wanted) slot.dataset.mode = "";
+    renderExtras();
+    renderCurveSlot();
+    renderReading();
+    renderQueue();
+    const medianNote = document.getElementById("medianNote");
+    if (medianNote && lesson.kind === "continuous") medianNote.textContent = "數據已改。再讀一次，然後核對中位數。";
+    markEdited();
+  }
+
+  function addColumn() {
+    const lesson = current();
+    if (lesson.kind === "continuous") {
+      const last = Number(lesson.bounds[lesson.bounds.length - 1]);
+      lesson.bounds.push(String(Number.isFinite(last) ? last + 5 : ""));
+      lesson.freqs.push("0");
+      lesson.cums.push(lesson.cums[lesson.cums.length - 1] || "0");
+    } else {
+      lesson.rows.push({ val: "", freq: "" });
+    }
+    lesson.structure = (lesson.structure || 0) + 1;
+    document.getElementById("pictureCard").dataset.key = "";
+    markEdited();
+    render();
+  }
+
+  function removeColumn(index) {
+    const lesson = current();
+    const count = lesson.kind === "continuous" ? lesson.bounds.length : lesson.rows.length;
+    if (count <= 2) return;
+    if (lesson.kind === "continuous") {
+      lesson.bounds.splice(index, 1);
+      lesson.freqs.splice(index, 1);
+      lesson.cums.splice(index, 1);
+      if (index === 0) lesson.freqs[0] = "";
+      recomputeFreqsFromCums(lesson);
+    } else {
+      lesson.rows.splice(index, 1);
+    }
+    lesson.structure = (lesson.structure || 0) + 1;
+    document.getElementById("pictureCard").dataset.key = "";
+    markEdited();
+    render();
+  }
+
+  function markEdited() {
+    if (tutor.solved || tutor.stale) return;
+    if (phase === "steps" || tutor.blocked) {
+      tutor.stale = true;
+      renderTutor();
+    }
+  }
+
+  function plotFrame(points) {
+    const w = 720;
+    const h = 470;
+    const pad = { l: 72, r: 24, t: 36, b: 86 };
+    const xmin = points[0].x;
+    const xmax = points[points.length - 1].x;
+    const ymax = Math.max(...points.map((point) => point.y), 1);
+    const plotW = w - pad.l - pad.r;
+    const plotH = h - pad.t - pad.b;
+    return {
+      w: w,
+      h: h,
+      pad: pad,
+      xmin: xmin,
+      xmax: xmax,
+      ymax: ymax,
+      X: (x) => pad.l + (x - xmin) / (xmax - xmin) * plotW,
+      Y: (y) => pad.t + (1 - y / ymax) * plotH,
+      yAt: (py) => (1 - (py - pad.t) / plotH) * ymax
+    };
+  }
+
+  function formatAxis(value) {
+    if (Math.abs(value - Math.round(value)) < 0.05) return String(Math.round(value));
+    return String(Math.round(value * 10) / 10);
+  }
+
+  function formatReadingMinute(value) {
+    const rounded = Math.round(value * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
   }
 
   function curveSvg(points, guide) {
-    const w = 720;
-    const h = 440;
-    const pad = { l: 70, r: 28, t: 36, b: 72 };
-    const xmin = points[0].x;
-    const xmax = points[points.length - 1].x;
-    const ymax = points[points.length - 1].y;
-    const X = (x) => pad.l + (x - xmin) / (xmax - xmin) * (w - pad.l - pad.r);
-    const Y = (y) => pad.t + (1 - y / ymax) * (h - pad.t - pad.b);
+    const frame = plotFrame(points);
+    const w = frame.w;
+    const h = frame.h;
+    const pad = frame.pad;
+    const xmin = frame.xmin;
+    const xmax = frame.xmax;
+    const ymax = frame.ymax;
+    if (!(xmax > xmin)) return "<p class=\"problem-text\">組界要由左到右變大。</p>";
+    const X = frame.X;
+    const Y = frame.Y;
     const samples = MedianMath.curveSamples(points, 0.15);
     const line = samples.map((p, i) => (i ? "L" : "M") + X(p.x).toFixed(1) + " " + Y(p.y).toFixed(1)).join(" ");
     const fill = line + " L" + X(xmax).toFixed(1) + " " + Y(0).toFixed(1) + " L" + X(xmin).toFixed(1) + " " + Y(0).toFixed(1) + " Z";
     let grid = "";
-    for (let y = 0; y <= ymax; y += 10) {
-      grid += '<line x1="' + pad.l + '" y1="' + Y(y).toFixed(1) + '" x2="' + (w - pad.r) + '" y2="' + Y(y).toFixed(1) + '" stroke="#e2e8f0"/>';
-      grid += '<text x="' + (pad.l - 8) + '" y="' + (Y(y) + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="#475569">' + y + "</text>";
+    const yGrid = ymax >= 100 ? 10 : ymax >= 40 ? 5 : 1;
+    const yLabel = ymax >= 200 ? 50 : ymax >= 80 ? 10 : yGrid;
+    for (let y = 0; y <= ymax + 0.01; y += yGrid) {
+      const major = Math.abs(y / yLabel - Math.round(y / yLabel)) < 0.01;
+      grid += '<line x1="' + pad.l + '" y1="' + Y(y).toFixed(1) + '" x2="' + (w - pad.r) + '" y2="' + Y(y).toFixed(1) + '" stroke="' + (major ? "#e2e8f0" : "#f1f5f9") + '"/>';
+      if (major) grid += '<text x="' + (pad.l - 8) + '" y="' + (Y(y) + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="#475569">' + formatAxis(y) + "</text>";
+    }
+    for (let x = Math.ceil(xmin); x <= Math.floor(xmax); x += 1) {
+      grid += '<line x1="' + X(x).toFixed(1) + '" y1="' + pad.t + '" x2="' + X(x).toFixed(1) + '" y2="' + (h - pad.b) + '" stroke="#f1f5f9"/>';
+      const nearBoundary = points.some((point) => Math.abs(point.x - x) < 1.2);
+      if (x % 5 === 0 && !nearBoundary) {
+        grid += '<text x="' + X(x).toFixed(1) + '" y="' + (h - pad.b + 34) + '" text-anchor="middle" font-size="11" fill="#64748b">' + x + "</text>";
+      }
     }
     let dots = "";
     points.forEach((p) => {
-      if (Math.abs((p.x % 1) - 0.5) > 0.01) return;
+      const label = formatAxis(p.x);
       grid += '<line x1="' + X(p.x).toFixed(1) + '" y1="' + pad.t + '" x2="' + X(p.x).toFixed(1) + '" y2="' + (h - pad.b) + '" stroke="#cbd5e1"/>';
-      grid += '<text x="' + X(p.x).toFixed(1) + '" y="' + (h - pad.b + 18) + '" text-anchor="middle" font-size="12" fill="#334155">' + p.x + "</text>";
+      grid += '<text x="' + X(p.x).toFixed(1) + '" y="' + (h - pad.b + 16) + '" text-anchor="middle" font-size="12" fill="#0f172a">' + label + "</text>";
       dots += '<circle cx="' + X(p.x).toFixed(1) + '" cy="' + Y(p.y).toFixed(1) + '" r="3.5" fill="#0f172a"/>';
     });
     let guideSvg = "";
     if (guide) {
       const answer = MedianMath.curveMedian(points);
+      if (answer) {
       const gx = X(answer.rawX).toFixed(1);
-      const gy = Y(answer.half).toFixed(1);
+      const gy = Y(points[0].y + answer.half).toFixed(1);
       guideSvg = '<line x1="' + pad.l + '" y1="' + gy + '" x2="' + gx + '" y2="' + gy + '" stroke="#16a34a" stroke-dasharray="6 4" stroke-width="2"/>' +
         '<line x1="' + gx + '" y1="' + gy + '" x2="' + gx + '" y2="' + (h - pad.b) + '" stroke="#16a34a" stroke-dasharray="6 4" stroke-width="2"/>' +
         '<circle cx="' + gx + '" cy="' + gy + '" r="4.5" fill="#16a34a"/>';
+      }
     }
     const midY = (pad.t + h - pad.b) / 2;
-    return '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="回校交通時間的累積頻數曲線">' +
-      '<text x="' + ((pad.l + w - pad.r) / 2) + '" y="20" text-anchor="middle" font-size="15" fill="#0f172a">一組學生今早由家前往學校所需的交通時間</text>' +
+    const chartTitle = current().chartTitle || "累積頻數曲線";
+    return '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="' + chartTitle + '">' +
+      '<text x="' + ((pad.l + w - pad.r) / 2) + '" y="20" text-anchor="middle" font-size="15" fill="#0f172a">' + chartTitle + "</text>" +
       grid +
       '<path d="' + fill + '" fill="#dbeafe" opacity="0.7"/>' +
       '<path d="' + line + '" fill="none" stroke="#0f172a" stroke-width="2.5"/>' +
@@ -617,48 +1115,138 @@
       "</svg>";
   }
 
+  function ensureReaderCf(points) {
+    const maxY = points[points.length - 1].y;
+    const minY = points[0].y;
+    if (readerCf == null || readerCf < minY || readerCf > maxY) {
+      readerCf = Math.min(maxY, Math.max(minY, maxY >= 100 ? 50 : Math.round(maxY / 5)));
+    }
+  }
+
+  function svgPoint(svg, event) {
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const matrix = svg.getScreenCTM();
+    if (!matrix) return null;
+    return point.matrixTransform(matrix.inverse());
+  }
+
+  function paintReader(svg, points, frame) {
+    const ns = "http://www.w3.org/2000/svg";
+    let group = svg.querySelector("#readerGroup");
+    if (!group) {
+      group = document.createElementNS(ns, "g");
+      group.id = "readerGroup";
+      ["h", "v"].forEach((name) => {
+        const line = document.createElementNS(ns, "line");
+        line.id = "reader-" + name;
+        line.setAttribute("stroke", "#dc2626");
+        line.setAttribute("stroke-width", "2");
+        group.appendChild(line);
+      });
+      const dot = document.createElementNS(ns, "circle");
+      dot.id = "reader-dot";
+      dot.setAttribute("r", "4.5");
+      dot.setAttribute("fill", "#dc2626");
+      group.appendChild(dot);
+      const label = document.createElementNS(ns, "text");
+      label.id = "reader-label";
+      label.setAttribute("fill", "#dc2626");
+      label.setAttribute("font-size", "13");
+      label.setAttribute("font-weight", "700");
+      group.appendChild(label);
+      svg.appendChild(group);
+    }
+    const reading = MedianMath.valueAtCumulative(points, readerCf);
+    if (!reading) return;
+    const x = frame.X(reading.x);
+    const y = frame.Y(reading.y);
+    const horizontal = group.querySelector("#reader-h");
+    horizontal.setAttribute("x1", String(frame.pad.l));
+    horizontal.setAttribute("y1", String(y));
+    horizontal.setAttribute("x2", String(x));
+    horizontal.setAttribute("y2", String(y));
+    const vertical = group.querySelector("#reader-v");
+    vertical.setAttribute("x1", String(x));
+    vertical.setAttribute("y1", String(y));
+    vertical.setAttribute("x2", String(x));
+    vertical.setAttribute("y2", String(frame.h - frame.pad.b));
+    const dot = group.querySelector("#reader-dot");
+    dot.setAttribute("cx", String(x));
+    dot.setAttribute("cy", String(y));
+    const label = group.querySelector("#reader-label");
+    label.textContent = "累積頻數 " + Math.round(reading.y) + " → " + formatReadingMinute(reading.x) + " 分鐘";
+    label.setAttribute("x", String(x > frame.w * 0.62 ? frame.pad.l + 8 : x + 8));
+    label.setAttribute("y", String(Math.max(frame.pad.t + 16, y - 8)));
+  }
+
+  function bindReader(svg, points) {
+    const frame = plotFrame(points);
+    ensureReaderCf(points);
+    paintReader(svg, points, frame);
+    let dragging = false;
+    const move = (event) => {
+      const local = svgPoint(svg, event);
+      if (!local) return;
+      readerCf = Math.min(frame.ymax, Math.max(points[0].y, frame.yAt(local.y)));
+      paintReader(svg, points, frame);
+    };
+    svg.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      if (svg.setPointerCapture) svg.setPointerCapture(event.pointerId);
+      move(event);
+    });
+    svg.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      move(event);
+    });
+    svg.addEventListener("pointerup", () => { dragging = false; });
+    svg.addEventListener("pointercancel", () => { dragging = false; });
+  }
+
   function renderQueue() {
     const card = document.getElementById("queueCard");
     const lesson = current();
-    const showKnown = lesson.kind === "discrete-known";
-    const showUnknown = lesson.kind === "discrete-unknown" && phase === "steps" && tutor.step >= 4;
-    card.hidden = !(showKnown || showUnknown);
+    if (lesson.kind === "continuous") {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
     const wrapper = document.getElementById("blocksWrapper");
     const resultBox = document.getElementById("resultBox");
     const result = document.getElementById("resultContent");
     wrapper.innerHTML = "";
     result.innerHTML = "";
-    resultBox.hidden = true;
-    if (showKnown) {
-      const view = knownView();
-      const highlight = (tutor.step >= 3 && phase === "steps") || tutor.solved;
-      renderBlocks(expandRows(modelOf(lesson).rows, 1), highlight ? view.positions.map((position) => position - 1) : []);
-      if (tutor.solved) {
-        resultBox.hidden = false;
-        result.append(
-          stepLine("N = " + view.N + (view.odd ? "（奇數）" : "（偶數）")),
-          stepLine(view.odd
-            ? "中間是第 " + view.positions[0] + " 項。"
-            : "中間是第 " + view.positions[0] + " 項和第 " + view.positions[1] + " 項，數值是 " + view.values[0] + " 和 " + view.values[1] + "。"),
-          stepLine("中位數 = " + formatMedian(view.median))
-        );
+    resultBox.hidden = false;
+    const model = modelOf(lesson);
+    if (model.error === "multi-x") {
+      result.textContent = "只可以有一個 x。";
+      return;
+    }
+    if (model.error) {
+      result.textContent = "請輸入有效的數據與頻數。頻數須為正整數，或一個 x。";
+      return;
+    }
+    let x = 1;
+    if (model.hasX) {
+      x = trialNumber();
+      if (!Number.isInteger(x) || x <= 0) {
+        result.textContent = "表裡有 x。輸入一個正整數後，隊列和中位數會跟著變。";
+        return;
       }
+    }
+    const view = MedianMath.medianForX(model.rows, x);
+    if (!view) {
+      result.textContent = "請輸入有效的數據與頻數。";
       return;
     }
-    if (!showUnknown) return;
-    if (!experiment) {
-      resultBox.hidden = false;
-      result.textContent = "輸入一個正整數 x，再看隊列。中位數會不會等於 3，要看過才知道。";
-      return;
-    }
-    const view = experiment.view;
     if (view.N > 400) {
       wrapper.textContent = "這個 x 的隊列很長，不逐格畫出。下面仍寫出 N 和中位數。";
     } else {
-      renderBlocks(expandRows(modelOf(lesson).rows, experiment.x), view.positions.map((position) => position - 1));
+      renderBlocks(expandRows(model.rows, x), view.positions.map((position) => position - 1));
     }
-    resultBox.hidden = false;
-    result.append(stepLine("今次代入 x = " + experiment.x + "。"));
+    if (model.hasX) result.append(stepLine("今次代入 x = " + x + "。"));
     if (view.odd) {
       result.append(
         stepLine("N = " + view.N + "（奇數），中間是第 " + view.positions[0] + " 項。"),
@@ -670,7 +1258,10 @@
         stepLine("這兩項是 " + view.values[0] + " 和 " + view.values[1] + "，中位數 = " + formatMedian(view.median))
       );
     }
-    result.append(stepLine(experiment.hit ? "這個 x 的中位數等於題目所給的數。" : "這個 x 的中位數還不是題目所給的數。"));
+    const target = Number(lesson.target);
+    if (model.hasX && Number.isFinite(target)) {
+      result.append(stepLine(MedianMath.sameNumber(view.median, target) ? "這個 x 的中位數等於題目所給的數。" : "這個 x 的中位數還不是題目所給的數。"));
+    }
   }
 
   function stepLine(text) {
@@ -730,19 +1321,32 @@
 
   function tryX() {
     const input = document.getElementById("trialX");
-    const x = Number(input.value);
+    const x = Number(input && input.value);
     if (!Number.isInteger(x) || x <= 0) {
       tutor.log.push({ kind: "tutor", text: "x 要是正整數。" });
       render();
       return;
     }
-    const model = modelOf(current());
-    const view = MedianMath.medianForX(model.rows, x);
-    const hit = MedianMath.sameNumber(view.median, current().target);
-    experiment = { x, view, hit };
-    const previous = tutor.trials[tutor.trials.length - 1];
-    if (!previous || previous.x !== x || previous.median !== view.median) {
-      tutor.trials.push({ x, median: view.median, hit });
+    const lesson = current();
+    let median = null;
+    let hit = false;
+    if (lesson.kind === "continuous") {
+      const answer = travelAnswer();
+      median = answer ? answer.minute : null;
+      hit = median != null && median === Number(lesson.target);
+      experiment = { x, answer, hit, median };
+    } else {
+      const model = modelOf(lesson);
+      const view = model.error ? null : MedianMath.medianForX(model.rows, x);
+      median = view ? view.median : null;
+      hit = median != null && MedianMath.sameNumber(median, Number(lesson.target));
+      experiment = { x, view, hit, median };
+    }
+    if (median != null) {
+      const previous = tutor.trials[tutor.trials.length - 1];
+      if (!previous || previous.x !== x || previous.median !== median) {
+        tutor.trials.push({ x, median, hit });
+      }
     }
     render();
   }
@@ -753,9 +1357,23 @@
     const actions = document.getElementById("tutorActions");
     form.innerHTML = "";
     actions.innerHTML = "";
+    if (tutor.stale && !tutor.solved) {
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = "表已改過。重新開始後，會用現在的數字。";
+      form.appendChild(note);
+      actions.appendChild(makeButton("重新開始", "btn", beginSteps));
+      if (aiOpen()) actions.appendChild(askRow());
+      return;
+    }
+    if (tutor.blocked && !tutor.solved) {
+      actions.appendChild(makeButton("繼續", "btn", beginSteps));
+      if (aiOpen()) actions.appendChild(askRow());
+      return;
+    }
     if (tutor.solved) {
-      if (lessonIndex < lessons.length - 1) actions.appendChild(makeButton("下一題", "btn", () => loadLesson(lessonIndex + 1)));
-      else actions.appendChild(makeButton("回到第一題", "btn btn-secondary", () => loadLesson(0)));
+      if (current().kind !== "continuous") actions.appendChild(makeButton("去看連續數據", "btn", () => showMode(1)));
+      else actions.appendChild(makeButton("回到離散數據", "btn btn-secondary", () => showMode(0)));
       return;
     }
     if (phase === "type") {
@@ -850,7 +1468,13 @@
     else if (tutor.mode === "known" && tutor.step === 3) row.append(fieldLabel("中位數 =", "knownMedian"));
     else if (tutor.mode === "unknown" && tutor.step === 1) row.append(fieldLabel("N =", "exprN"));
     else if (tutor.mode === "unknown" && tutor.step === 2) {
-      row.append(fieldLabel("由第", "spanStart"), text(" 項到第 "), fieldLabel("", "spanEnd"), text(" 項"));
+      const target = current().target;
+      row.style.flexDirection = "column";
+      row.style.alignItems = "flex-start";
+      row.append(
+        fieldLabel("「" + target + "」的第一項 = 前面的個數 + 1 =", "spanStart", "如 4+x"),
+        fieldLabel("「" + target + "」的最後一項 = 前面的個數 + 這一組的個數 =", "spanEnd", "如 9+x")
+      );
     } else if (tutor.mode === "unknown" && tutor.step === 5) {
       const range = MedianMath.rangeForTarget(modelOf(current()).rows, current().target);
       if (range && range.unbounded) row.append(fieldLabel("最小 x =", "ansMin"), text(" 沒有最大可取值"));
@@ -861,13 +1485,14 @@
     return row;
   }
 
-  function fieldLabel(caption, id) {
+  function fieldLabel(caption, id, placeholder) {
     const label = document.createElement("label");
     if (caption) label.append(document.createTextNode(caption + " "));
     const input = document.createElement("input");
     input.type = "text";
     input.id = id;
     input.autocomplete = "off";
+    if (placeholder) input.placeholder = placeholder;
     restoreField(input);
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -906,6 +1531,7 @@
     const lesson = current();
     if (tutor.mode === "known") {
       const view = knownView();
+      if (!view) return "請先填好頻數表。";
       if (tutor.step === 1) return "單看頻數表，這批數據一共有多少個？";
       if (tutor.step === 2) {
         return view.odd ? "N 是奇數還是偶數？中間那個位置是第幾項？" : "N 是偶數。中間要看哪兩項？";
@@ -920,7 +1546,7 @@
     const model = modelOf(lesson);
     const names = neighborValues(model.rows, lesson.target);
     if (tutor.step === 1) return "先不要猜 x 是幾。全部數據的個數 N，應該怎樣用 x 寫出來？";
-    if (tutor.step === 2) return "中位數是 " + lesson.target + "，代表排好之後，中間位置要落在「" + lesson.target + "」這一組。這一組由第幾項開始，到第幾項結束？式子可以含 x。";
+    if (tutor.step === 2) return "中位數是 " + lesson.target + "，所以中間位置要落在「" + lesson.target + "」。下面兩格都寫成式子，可以含 x。第一項不是前面的個數本身，要再加 1。";
     if (tutor.step === 3) {
       if (tutor.trap) {
         return names.prev != null && names.next != null
@@ -969,7 +1595,7 @@
       const continuous = lesson.kind === "continuous";
       if (level === 1) return "先看數據長什麼樣子：一個個分開的數值，還是一段段範圍畫成的曲線。";
       if (level === 2) return continuous ? "看橫軸的組界（有 .5），和一路向上累積的縱軸。" : "看每一欄是不是一個分開的數值，加上它出現的次數。";
-      return continuous ? "這是連續數據。" : "這是離散數據。";
+      return "畫面上是頻數表，就選離散。畫面上是累積頻數曲線，就選連續。看清楚再按。";
     }
     if (tutor.mode === "known") return knownHint(level);
     if (tutor.mode === "continuous") return continuousHint(level);
@@ -978,29 +1604,29 @@
 
   function knownHint(level) {
     const view = knownView();
+    if (!view) return "請先填好頻數表。";
     if (tutor.step === 1) {
       if (level === 1) return "頻數是每個數值出現的次數。總數是全部頻數相加。";
       if (level === 2) return "把頻數那一列的數字逐個相加。";
-      return "N = " + view.N + "。";
+      return "每一格頻數都加完，得到的數就是 N。自己算完再填。";
     }
     if (tutor.step === 2) {
       if (level === 1) return view.odd ? "奇數個數據，只取最中間的一項。" : "偶數個數據，要取最中間的兩項。";
       if (level === 2) return view.odd ? "位置是第 (N+1)/2 項。" : "位置是第 N/2 項和第 N/2+1 項。";
-      return view.odd ? "中間是第 " + view.positions[0] + " 項。" : "中間是第 " + view.positions[0] + " 項和第 " + view.positions[1] + " 項。";
+      return view.odd ? "把 N 代入 (N+1)/2，算出來的第幾項才填。" : "把 N 代入 N/2 和 N/2+1，兩個位置都要自己算出來再填。";
     }
     if (level === 1) return "看中間位置上的數值。";
     if (level === 2) return view.odd ? "奇數時，中位數就是那一項的數值。" : "偶數時，把那兩項加起來再除以 2。";
-    return view.odd ? "中位數是 " + formatMedian(view.median) + "。" : "中位數 = (" + view.values[0] + " + " + view.values[1] + ") / 2 = " + formatMedian(view.median) + "。";
+    return view.odd ? "到隊列裡讀出中間那一格的紅色數值，再填進去。" : "讀出中間兩格的紅色數值，加起來再除以 2。算出來的才填。";
   }
 
   function bracketBounds(points, rawX) {
-    const bounds = points.filter((point) => Math.abs((point.x % 1) - 0.5) < 0.01).map((point) => point.x);
-    let left = bounds[0];
-    let right = bounds[bounds.length - 1];
-    for (let i = 0; i < bounds.length - 1; i += 1) {
-      if (rawX >= bounds[i] && rawX <= bounds[i + 1]) {
-        left = bounds[i];
-        right = bounds[i + 1];
+    let left = points[0].x;
+    let right = points[points.length - 1].x;
+    for (let i = 0; i < points.length - 1; i += 1) {
+      if (rawX >= points[i].x && rawX <= points[i + 1].x) {
+        left = points[i].x;
+        right = points[i + 1].x;
       }
     }
     return { left, right };
@@ -1008,20 +1634,20 @@
 
   function continuousHint(level) {
     const answer = travelAnswer();
-    const bounds = bracketBounds(current().points, answer.rawX);
+    if (!answer) return "先把組界和累積頻數填好。";
     if (tutor.step === 1) {
       if (level === 1) return "看曲線最右、最高的那一點。";
       if (level === 2) return "這一點的縱座標就是全部數據的個數。";
-      return "總頻數是 " + answer.total + "。";
+      return "終點對準的縱軸數字就是總頻數。自己讀完再填。";
     }
     if (tutor.step === 2) {
       if (level === 1) return "連續數據不是找第 (N+1)/2 項，而是取總頻數的一半。";
-      if (level === 2) return "用總頻數乘 50%。";
-      return answer.total + " × 50% = " + answer.half + "。";
+      if (level === 2) return "用總頻數乘 50%，或除以 2。";
+      return "用你上一格求出的總頻數計算 50%。算出來的數才填，不要填 50% 或 0.5。";
     }
     if (level === 1) return "在縱軸找到一半的累積頻數，看水平線會碰到曲線的哪裡。";
-    if (level === 2) return "交點在 " + bounds.left + " 和 " + bounds.right + " 這兩個組界之間。看它靠近中間還是靠近某一邊，再寫最接近的分鐘。";
-    return "中位數是 " + answer.minute + " 分鐘。";
+    if (level === 2) return "把紅線拖到那個高度，看垂直線落在哪兩個組界之間。";
+    return "看垂直線靠近哪一分鐘，填最接近的整數。不要填小數，也不要填組界上的 .5。";
   }
 
   function unknownHint(level) {
@@ -1031,13 +1657,14 @@
     const names = neighborValues(model.rows, lesson.target);
     if (tutor.step === 1) {
       if (level === 1) return "把每一格頻數加起來。未知的那一格繼續寫 x，不要先代入數字。";
-      if (level === 2) return "先把不是 x 的頻數加起來，總和是 " + info.total.c + "，然後再加上 x。";
-      return "N = " + info.totalText + "。x 是正整數，所以 N 會變，有時是奇數，有時是偶數。";
+      if (level === 2) return "先把不是 x 的頻數加起來，再在後面寫上 + x。";
+      return "空格要留著 x，不要先代入數字。加完的式子就是 N。";
     }
     if (tutor.step === 2) {
-      if (level === 1) return "先數「" + lesson.target + "」前面有多少個數據，再數這一組自己有多少個。";
-      if (level === 2) return "這一組前面有 " + info.beforeText + " 個數據，這一組自己有 " + info.countText + " 個。";
-      return "由第 " + info.startText + " 項開始，到第 " + info.endText + " 項結束。";
+      if (level === 1) return "先數「" + lesson.target + "」前面有多少個，再數「" + lesson.target + "」自己有多少個。";
+      if (level === 2) return "前面的個數和這一組的個數都寫成式子，可以含 x。先不要算成第一項和最後一項。";
+      if (!info.span.found) return "題目的中位數要等於表裡其中一個數值，先核對「題目的中位數」。";
+      return "第一項 = 前面的個數 + 1。最後一項 = 前面的個數 + 這一組的個數。兩個空格都自己寫成式子。";
     }
     if (tutor.step === 3) {
       if (level === 1) return "相鄰指兩個位置中間沒有其他數據。";
@@ -1046,21 +1673,16 @@
           ? "排序後，" + names.prev + " 和 " + names.next + " 中間還有「" + lesson.target + "」。"
           : "這一組的左右如果還有數據，就不會和對面那一組緊貼。";
       }
-      return "沒有可能。這一組至少有一個數據，兩邊不會緊貼。偶數時，中間兩項都必須是 " + lesson.target + "。";
+      return "先看左右兩個數中間還有沒有這一組。有的話，它們不是緊貼，就不能拿來平均。想清楚再選。";
     }
     if (tutor.step === 4) {
       if (level === 1) return "不要一次就找範圍。先令中位數等於題目，再向左右各試一個。";
       if (level === 2) return "看綠色的位置落在哪一個數值。不符合時，留意它變成了比題目大還是小。";
-      return "符合的 x 把範圍夾在中間。太小或太大時，中間位置會滑出「" + lesson.target + "」這一組。";
+      return "再試一個小一點和一個大一點的 x。看中位數從哪裡開始不再等於題目，範圍就夾在中間。";
     }
-    const oddWord = info.total.c % 2 === 0 ? "奇數" : "偶數";
-    const evenWord = info.total.c % 2 === 0 ? "偶數" : "奇數";
     if (level === 1) return "邊界通常是：中間位置剛好是這一組的第一個，或剛好是最後一個。";
-    if (level === 2) return "奇數看第 (N+1)/2 項。偶數看第 N/2 項和第 N/2+1 項，而且這兩項都要是 " + lesson.target + "。";
-    return "設 N = " + info.totalText + "，「" + lesson.target + "」佔第 " + info.startText + " 項到第 " + info.endText + " 項。\n" +
-      oddWord + "的 x（這時 N 是奇數）：" + info.startText + " ≤ (N+1)/2 ≤ " + info.endText + "。\n" +
-      evenWord + "的 x（這時 N 是偶數）：" + info.startText + " ≤ N/2，而且 N/2+1 ≤ " + info.endText + "。\n" +
-      "在正整數中，同時符合的最小和最大就是答案。";
+    if (level === 2) return "奇數看第 (N+1)/2 項。偶數看第 N/2 項和第 N/2+1 項，而且這兩項都要落在中位數那一組。";
+    return "奇數的 N，中間那一項要在這一組裡面。偶數的 N，中間兩項都要在這一組裡面。分別解出 x，再在正整數裡取最小和最大，然後按核對範圍。";
   }
 
   function showHint(level) {
@@ -1094,12 +1716,22 @@
 
   function beginSteps() {
     const lesson = current();
-    phase = "steps";
-    tutor.mode = lesson.kind === "continuous" ? "continuous" : lesson.kind === "discrete-unknown" ? "unknown" : "known";
-    tutor.step = 1;
+    const hasX = lessonHasX();
+    tutor.stale = false;
+    tutor.blocked = false;
     tutor.hints = {};
     tutor.trap = false;
     tutor.solved = false;
+    tutor.trials = [];
+    if (hasX && !Number.isFinite(Number(lesson.target))) {
+      tutor.blocked = true;
+      tutor.log.push({ kind: "tutor", text: "表裡有 x。請先填「題目的中位數」，再按繼續。" });
+      render();
+      return;
+    }
+    phase = "steps";
+    tutor.mode = lesson.kind === "continuous" ? "continuous" : hasX ? "unknown" : "known";
+    tutor.step = 1;
     tutor.log.push({
       kind: "tutor",
       text: lesson.kind === "continuous"
@@ -1142,6 +1774,11 @@
 
   function submitKnown() {
     const view = knownView();
+    if (!view) {
+      tutor.log.push({ kind: "tutor", text: "請先填好頻數表。" });
+      render();
+      return;
+    }
     if (tutor.step === 1) {
       const raw = normalizeTyped(document.getElementById("knownN").value);
       tutor.log.push({ kind: "student", text: "N = " + raw });
@@ -1169,6 +1806,11 @@
 
   function submitContinuous() {
     const answer = travelAnswer();
+    if (!answer) {
+      tutor.log.push({ kind: "tutor", text: "請先填好組界和累積頻數。如果有 x，先輸入一個正整數。" });
+      render();
+      return;
+    }
     if (tutor.step === 1) {
       const raw = normalizeTyped(document.getElementById("cfTotal").value);
       tutor.log.push({ kind: "student", text: "總頻數 = " + raw });
@@ -1211,17 +1853,22 @@
   function submitSpan() {
     const model = modelOf(current());
     const info = MedianMath.describeProblem(model.rows, current().target);
+    if (!info.span.found) {
+      tutor.log.push({ kind: "tutor", text: "題目的中位數要等於表裡其中一個數值。請核對「題目的中位數」，再填第一項和最後一項。" });
+      render();
+      return;
+    }
     const startRaw = normalizeTyped(document.getElementById("spanStart").value);
     const endRaw = normalizeTyped(document.getElementById("spanEnd").value);
     const start = MedianMath.parseExprFromText(startRaw);
     const end = MedianMath.parseExprFromText(endRaw);
-    tutor.log.push({ kind: "student", text: "由第 " + startRaw + " 項到第 " + endRaw + " 項" });
+    tutor.log.push({ kind: "student", text: "第一項 " + startRaw + "，最後一項 " + endRaw });
     const startOk = MedianMath.sameExpr(start, info.span.start);
     const endOk = MedianMath.sameExpr(end, info.span.end);
-    if (startOk && endOk) advance("對。「" + current().target + "」佔第 " + info.startText + " 項到第 " + info.endText + " 項。中間位置要落在這裡面。");
-    else if (startOk) tutor.log.push({ kind: "tutor", text: "開始的位置對了，結束的位置還未對。開始之後，還要加上這一組自己的個數，再減 1 才是最後一項。" });
-    else if (endOk) tutor.log.push({ kind: "tutor", text: "結束的位置對了，開始的位置還未對。前面有多少個數據，下一項就是這一組的第一項。" });
-    else tutor.log.push({ kind: "tutor", text: "兩端都還未對。先寫出這一組前面有多少個，再寫這一組有多少個。" });
+    if (startOk && endOk) advance("對。「" + current().target + "」由第 " + info.startText + " 項到第 " + info.endText + " 項。中間位置要落在這裡面。");
+    else if (startOk) tutor.log.push({ kind: "tutor", text: "第一項對了。最後一項要寫成前面的個數，加上這一組的個數。" });
+    else if (endOk) tutor.log.push({ kind: "tutor", text: "最後一項對了。第一項不是前面的個數本身，要再加 1。" });
+    else tutor.log.push({ kind: "tutor", text: "兩格都還未對。第一項填「前面的個數 + 1」，最後一項填「前面的個數 + 這一組的個數」。可以先看提示二。" });
     render();
   }
 
