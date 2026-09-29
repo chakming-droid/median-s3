@@ -236,6 +236,56 @@
       font-weight: 800;
       line-height: 1.45;
     }
+    .cut-demo { margin: 0 0 10px; padding: 8px 8px 10px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 10px; }
+    .cut-kicker { margin: 0 0 8px; color: #9a3412; font-weight: 800; }
+    .cut-board {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 0;
+      padding-top: 1.15em;
+      transition: gap 0.65s ease;
+    }
+    .cut-board.is-open { gap: 12px; }
+    .cut-side, .cut-mid { display: flex; gap: 6px; }
+    .cut-chip {
+      min-width: 2.7rem;
+      padding: 4px 4px 3px;
+      border: 2px solid #334155;
+      border-radius: 8px;
+      background: white;
+      text-align: center;
+    }
+    .cut-chip strong { display: block; font-size: 1.15rem; line-height: 1.2; }
+    .cut-chip span { display: block; margin-top: 2px; color: #475569; font-size: 0.72rem; font-weight: 700; }
+    .cut-mid .cut-chip { border-color: #2563eb; background: #eff6ff; }
+    .cut-mid .cut-chip span { color: #1d4ed8; }
+    .cut-knife { position: relative; width: 3px; }
+    .cut-knife::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 2px;
+      background: #dc2626;
+      transform: scaleY(0);
+      transform-origin: top;
+      transition: transform 0.4s ease 0.12s;
+    }
+    .cut-knife::after {
+      content: "斬";
+      position: absolute;
+      top: -1.15em;
+      left: 50%;
+      color: #dc2626;
+      font-size: 0.75rem;
+      font-weight: 800;
+      opacity: 0;
+      transform: translateX(-50%);
+      transition: opacity 0.25s ease 0.35s;
+    }
+    .cut-board.is-open .cut-knife::before { transform: scaleY(1); }
+    .cut-board.is-open .cut-knife::after { opacity: 1; }
+    .cut-caption { margin: 8px 0 0; line-height: 1.55; }
     .chat-log:empty { display: none; }
     .past-log { background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
     .past-log summary { font-weight: bold; cursor: pointer; }
@@ -381,6 +431,7 @@
     @media (prefers-reduced-motion: reduce) {
       .walk-chip { transition: none !important; }
       #pictureCard td.hl-walk-now { animation: none; }
+      .cut-board, .cut-knife::before, .cut-knife::after { transition: none !important; }
     }
 
     @media (max-width: 640px) {
@@ -1619,8 +1670,10 @@
 
   function runLabel(val, count) {
     const text = String(val);
-    if (typeof count !== "number" || count > 8) return text + ", …, " + text + "（" + count + " 個）";
-    return Array.from({ length: count }, () => text).join(", ");
+    const n = Number(count);
+    // Ellipsis only for an unknown frequency (s, x, or an expression). 2000 keeps a mistyped huge count from freezing the page.
+    if (!Number.isInteger(n) || n < 0 || n > 2000) return text + ", …, " + text + "（" + count + " 個）";
+    return Array.from({ length: n }, () => text).join(", ");
   }
 
   function compressValues(values) {
@@ -1854,6 +1907,82 @@
     const caption = stepCaption();
     const body = found ? found.item.text : "";
     line.textContent = caption ? caption + body : body;
+    syncCutDemo(line);
+  }
+
+  function cutHintOpen() {
+    if (tutor.mode !== "known" || tutor.step !== 2 || tutor.solved) return false;
+    const seen = tutor.hints[2];
+    return !!(seen && (seen[2] || seen[3]));
+  }
+
+  function cutSample(odd) {
+    if (odd) {
+      return {
+        left: [[1, 1], [4, 2]],
+        mid: [[7, 3]],
+        right: [[9, 4], [12, 5]],
+        caption: "例子：5 個數據，斬開後左右各有 2 個。中間剩下第 3 項，數值是 7，中位數就是 7。回到這題，自己數中間是第幾項。"
+      };
+    }
+    return {
+      left: [[1, 1], [3, 2]],
+      mid: [[4, 3], [8, 4]],
+      right: [[9, 5], [10, 6]],
+      caption: "例子：6 個數據，斬開後左右各有 2 個。中間剩下第 3 項和第 4 項。中位數 = (4 + 8) / 2 = 6。回到這題，自己數中間是第幾項。"
+    };
+  }
+
+  function cutGroup(pairs, mid) {
+    const group = document.createElement("div");
+    group.className = mid ? "cut-mid" : "cut-side";
+    pairs.forEach((pair) => {
+      const chip = document.createElement("div");
+      chip.className = "cut-chip";
+      const num = document.createElement("strong");
+      num.textContent = String(pair[0]);
+      const pos = document.createElement("span");
+      pos.textContent = "第" + pair[1] + "項";
+      chip.append(num, pos);
+      group.appendChild(chip);
+    });
+    return group;
+  }
+
+  function cutKnife() {
+    const knife = document.createElement("div");
+    knife.className = "cut-knife";
+    knife.setAttribute("aria-hidden", "true");
+    return knife;
+  }
+
+  function syncCutDemo(line) {
+    const existing = document.getElementById("cutDemo");
+    if (!cutHintOpen()) {
+      if (existing) existing.remove();
+      return;
+    }
+    const demo = existing || document.createElement("div");
+    demo.id = "cutDemo";
+    demo.className = "cut-demo";
+    if (demo.previousElementSibling !== line) line.insertAdjacentElement("afterend", demo);
+    const view = knownView();
+    const sample = cutSample(!!(view && view.odd));
+    demo.innerHTML = "";
+    const kicker = document.createElement("p");
+    kicker.className = "cut-kicker";
+    kicker.textContent = "斬一半";
+    const board = document.createElement("div");
+    board.className = "cut-board";
+    board.setAttribute("aria-hidden", "true");
+    board.append(cutGroup(sample.left, false), cutKnife(), cutGroup(sample.mid, true), cutKnife(), cutGroup(sample.right, false));
+    const caption = document.createElement("p");
+    caption.className = "cut-caption";
+    caption.textContent = sample.caption;
+    demo.append(kicker, board, caption);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) board.classList.add("is-open");
+    else requestAnimationFrame(() => requestAnimationFrame(() => board.classList.add("is-open")));
   }
 
   function logBubble(item) {
@@ -1977,7 +2106,7 @@
       const view = knownView();
       if (!view) return "請先填好頻數表。";
       if (tutor.step === 1) return "單看頻數表，這批數據一共有多少個？";
-      if (tutor.step === 2) return "數據的數目是奇數還是偶數？奇數，中位數是第 (N+1)/2 個數據；偶數，是第 N/2 個和第 N/2+1 個數據的平均。中間是第幾項？";
+      if (tutor.step === 2) return "把由小至大的數據斬成兩半，左右一樣多。奇數，中間剩下一個；偶數，中間剩下兩個。中間是第幾項？";
       if (tutor.step === 3) return view.odd
         ? "不用畫出每一格。由最小的數值起累積頻數，中間那一項是哪個數值？"
         : "不用畫出每一格。由最小的數值起累積頻數。較前的中間位置是哪個數值？較後的又是哪個？";
@@ -1992,26 +2121,26 @@
     const target = formatMedian(Number(lesson.target));
     if (tutor.step === 1) return "先寫數據的總數目。頻數裡的 " + letter + " 留在式子裡。";
     if (tutor.step === 2) return "中位數是 " + target + "。這個數值由第幾項到第幾項？";
-    return letter + " 的最小和最大可取值是多少？中間位置要落在第 2 步那一段裡面。奇數看第 (N+1)/2 項；偶數看第 N/2 項和第 N/2+1 項。";
+    return letter + " 的最小和最大可取值是多少？把數據斬成兩半，中間位置要落在第 2 步那一段裡面。奇數剩下中間一項；偶數中間兩項都要落在這一組。";
   }
 
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
-      if (tutor.step === 2) return "幫他由單數或雙數決定看中間一項還是兩項。不要說出第幾項。";
+      if (tutor.step === 2) return "幫他用斬半：左右一樣多，奇數剩中間一項，偶數剩中間兩項。不要說出第幾項。";
       if (tutor.step === 3) return "幫他用累積頻數數位置，不要說出落在哪個數值。";
       return "幫他明白雙數要把中間兩個數值平均。不要說出中位數。";
     }
     if (tutor.mode === "continuous") {
       if (tutor.step === 1) return "幫他從曲線終點的高度讀總頻數。不要說出那個數。";
-      if (tutor.step === 2) return "幫他明白連續數據取總頻數的 50% 作累積頻數，不是第 (N+1)/2 項。不要說出算出來的數。";
+      if (tutor.step === 2) return "幫他明白連續數據取總頻數的 50% 作累積頻數，不是把逐個數據斬半。不要說出算出來的數。";
       return "幫他在一半的高度看曲線交點，再讀橫軸最接近的數值。不要說出那個數。";
     }
     const letter = unknownLetter();
     if (tutor.step === 1) return "幫他把頻數加起來，未知數留在式裡。不要寫出那條式。";
     if (tutor.step === 2) return "幫他找出中位數那個數值由第幾項到第幾項。不要說出項數，也不要說出 " + letter + "。";
-    return "幫他用第 (N+1)/2 項，或偶數時的兩個位置，夾出 " + letter + " 的最小和最大。不要說出這兩個數。";
+    return "幫他用斬半，讓中間位置仍落在中位數那一組，從而夾出最小和最大。不要說出這兩個數。";
   }
 
   function neighborValues(rows, target) {
@@ -2044,9 +2173,9 @@
       return "每一格頻數都加完，得到的數就是 N。自己算完再填。";
     }
     if (tutor.step === 2) {
-      if (level === 1) return view.odd ? "數據的數目是奇數，中位數是最中間的一個數據。" : "數據的數目是偶數，中位數是最中間兩個數據的平均。";
-      if (level === 2) return view.odd ? "那個數據是第 (N+1)/2 個。" : "那兩個數據是第 N/2 個和第 N/2+1 個。";
-      return view.odd ? "把 N 代入 (N+1)/2，自己算出第幾項再填。提示不寫出項數。" : "把 N 代入 N/2 和 N/2+1，兩個位置都要自己算出來再填。提示不寫出項數。";
+      if (level === 1) return view.odd ? "數據的數目是奇數。斬成兩半，左右一樣多，中間剩下一個數據。" : "數據的數目是偶數。斬成兩半，左右一樣多，中間剩下兩個數據。";
+      if (level === 2) return "看下面斬開的例子。中間剩下的寫著第幾項。例子不是這題的數字。";
+      return "回到這題，自己數中間是第幾項再填。提示不寫出這題的項數。";
     }
     if (tutor.step === 3) {
       if (level === 1) return "由最小的數值開始。它的頻數就是它佔開頭的多少個位置。";
@@ -2079,7 +2208,7 @@
       return "終點對準的縱軸數字就是總頻數。自己讀完再填。";
     }
     if (tutor.step === 2) {
-      if (level === 1) return "連續數據不是找第 (N+1)/2 項，而是取總頻數的一半。";
+      if (level === 1) return "連續數據不是把逐個數據斬半，而是取總頻數的一半。";
       if (level === 2) return "用總頻數乘 50%，或除以 2。";
       return "用你上一格求出的總頻數計算 50%。算出來的數才填，不要填 50% 或 0.5。";
     }
@@ -2132,7 +2261,7 @@
       if (place === "mid") return letter + " 就在中位數這一組。太小，中間位置會滑到較大的數值；太大，會滑到較小的數值。";
       return "最小和最大，就是中間位置仍能落在這一組的兩個端點。";
     }
-    return "奇數把第 (N+1)/2 項對住那一端；偶數兩個位置都要落在這一組。自己解出最小和最大。提示不寫出 " + letter + "。";
+    return "斬成兩半後，中間位置要剛好落在這一組的端點。自己解出最小和最大。提示不寫出 " + letter + "。";
   }
 
   function pileText(rows) {
@@ -2223,10 +2352,10 @@
     tutor.log.push({
       kind: "tutor",
       text: lesson.kind === "continuous"
-        ? "對。這是連續數據。數據被分組，中位數要在累積頻數曲線上，對應總頻數的 50%，而不是第 (N+1)/2 項。"
+        ? "對。這是連續數據。數據被分組，中位數要在累積頻數曲線上，對應總頻數的 50%，而不是把逐個數據斬半。"
         : hasX
-          ? "對。這是離散數據。先寫數據的總數目，未知數留在式裡。再找出中位數那個數值由第幾項到第幾項。奇數看第 (N+1)/2 個數據；偶數看第 N/2 個和第 N/2+1 個數據。"
-          : "對。這是離散數據。先把頻數加起來。數目是奇數，中位數是第 (N+1)/2 個數據；是偶數，是第 N/2 個和第 N/2+1 個數據的平均。"
+          ? "對。這是離散數據。先寫數據的總數目，未知數留在式裡。再找出中位數那個數值由第幾項到第幾項。中間位置就是斬成兩半後剩下的位置。"
+          : "對。這是離散數據。先把頻數加起來。再把由小至大的數據斬成兩半：奇數剩下中間一個，偶數剩下中間兩個，再把這兩個平均。"
     });
     tutor.log.push({ kind: "tutor", text: questionText() });
     render();
@@ -2379,7 +2508,7 @@
     } else if (tutor.step === 2 && view.odd) {
       tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
       if (value === view.positions[0]) advance("對。總數是單數，只看最中間那一項。");
-      else tutor.log.push({ kind: "tutor", text: "位置還未對。先判斷總數是單數還是雙數，再寫第幾項。" });
+      else tutor.log.push({ kind: "tutor", text: "位置還未對。把數據斬成兩半，左右一樣多，再數中間是第幾項。" });
     } else if (tutor.step === 2 && tutor.held == null) {
       tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
       if (value === view.positions[0]) {
