@@ -92,7 +92,10 @@
       background-color: #f8fafc;
       font-weight: bold;
       color: #334155;
-      min-width: 100px;
+      min-width: 72px;
+      max-width: 5.5em;
+      white-space: normal;
+      line-height: 1.25;
     }
     .static-cell { font-weight: bold; min-width: 48px; }
     table.horizontal-table input {
@@ -423,15 +426,14 @@
       id: "discrete",
       kind: "discrete",
       title: "離散數據",
-      header: "數值",
-      stem: "下表是一組數據的頻數。",
+      header: "觀看的電影數目",
+      stem: "（參考書 P10.23 例 10.12）下表所示為某班學生在暑假期間所觀看的電影數目。",
       rows: [
-        { val: 55, freq: "2" },
-        { val: 56, freq: "8" },
-        { val: 57, freq: "5" },
-        { val: 58, freq: "4" },
-        { val: 59, freq: "7" },
-        { val: 60, freq: "4" }
+        { val: 0, freq: "4" },
+        { val: 1, freq: "6" },
+        { val: 2, freq: "9" },
+        { val: 3, freq: "12" },
+        { val: 4, freq: "5" }
       ],
       structure: 0
     },
