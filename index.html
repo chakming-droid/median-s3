@@ -200,7 +200,8 @@
     .formula-step { font-size: 1.05rem; margin: 8px 0; line-height: 1.6; }
 
     .action-row, .form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
-    .form-row input[type="text"], .form-row input[type="number"] {
+    .form-row input[type="text"], .form-row input[type="number"],
+    .action-row input[type="text"], .action-row input[type="number"] {
       width: 140px;
       padding: 8px;
       font-size: 1rem;
@@ -957,46 +958,30 @@
     renderQueue();
   }
 
-  function mountNumberPad(parent, options) {
-    const wrap = document.createElement("div");
-    wrap.className = "digit-wrap";
-    let buffer = "";
-    const display = document.createElement("div");
-    display.className = "entry-display";
-    const paint = () => {
-      display.textContent = (options.label ? options.label + " " : "") + (buffer || "—");
-    };
-    const press = (digit) => {
-      if (digit === ".") {
-        if (!options.decimal || buffer.includes(".")) return;
-        buffer = buffer ? buffer + "." : "0.";
-      } else if (digit === "del") {
-        buffer = buffer.slice(0, -1);
-      } else if (buffer.length < 8) {
-        buffer += digit;
+  function medianBox(id, placeholder, inputMode, onOk) {
+    const input = document.createElement("input");
+    input.id = id;
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.inputMode = inputMode;
+    input.autocomplete = "off";
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        onOk();
       }
-      paint();
-    };
-    paint();
-    const grid = document.createElement("div");
-    grid.className = "digit-grid";
-    ["1", "2", "3", "4", "5", "6", "7", "8", "9"].forEach((digit) => {
-      grid.appendChild(makeButton(digit, "btn", () => press(digit)));
     });
-    if (options.decimal) grid.appendChild(makeButton(".", "btn", () => press(".")));
-    grid.appendChild(makeButton("0", "btn", () => press("0")));
-    grid.appendChild(makeButton("刪", "btn", () => press("del")));
-    const ok = makeButton(options.okLabel || "確定", "btn digit-ok", () => options.onOk(buffer));
-    grid.appendChild(ok);
-    wrap.append(display, grid);
-    parent.appendChild(wrap);
+    return input;
   }
 
   function discreteMedianChecker() {
     const wrap = document.createElement("div");
     const row = document.createElement("div");
     row.className = "action-row";
-    mountNumberPad(row, { label: "中位數", decimal: true, okLabel: "對答案", onOk: checkDiscreteMedian });
+    const input = medianBox("checkDiscreteMedian", "如 6.5", "decimal", checkDiscreteMedian);
+    const label = document.createElement("label");
+    label.append(document.createTextNode("中位數 = "), input);
+    row.append(label, makeButton("對答案", "btn", checkDiscreteMedian));
     const note = document.createElement("p");
     note.id = "discreteMedianNote";
     note.className = "problem-text";
@@ -1005,15 +990,16 @@
     return wrap;
   }
 
-  function checkDiscreteMedian(raw) {
+  function checkDiscreteMedian() {
     const note = document.getElementById("discreteMedianNote");
-    if (!note) return;
+    const field = document.getElementById("checkDiscreteMedian");
+    if (!note || !field) return;
     const view = knownView();
     if (!view) {
       note.textContent = "請先填好數值和頻數。";
       return;
     }
-    const typed = normalizeTyped(raw);
+    const typed = normalizeTyped(field.value);
     const value = Number(typed);
     if (!typed || !Number.isFinite(value)) {
       note.textContent = "請填中位數。雙數可能要寫小數。";
@@ -1039,7 +1025,10 @@
     const wrap = document.createElement("div");
     const row = document.createElement("div");
     row.className = "action-row";
-    mountNumberPad(row, { label: "中位數", decimal: false, okLabel: "核對中位數", onOk: checkMedian });
+    const input = medianBox("checkMinute", "整數", "numeric", checkMedian);
+    const label = document.createElement("label");
+    label.append(document.createTextNode("中位數 = "), input);
+    row.append(label, makeButton("核對中位數", "btn", checkMedian));
     const note = document.createElement("p");
     note.id = "medianNote";
     note.className = "problem-text";
@@ -1048,15 +1037,16 @@
     return wrap;
   }
 
-  function checkMedian(raw) {
+  function checkMedian() {
     const note = document.getElementById("medianNote");
-    if (!note) return;
+    const field = document.getElementById("checkMinute");
+    if (!note || !field) return;
     const answer = travelAnswer();
     if (!answer) {
       note.textContent = "先把組界和累積頻數填好。";
       return;
     }
-    const typed = normalizeTyped(raw);
+    const typed = normalizeTyped(field.value);
     const value = Number(typed);
     if (!typed || !Number.isFinite(value)) {
       note.textContent = "請填最接近的整數。";
