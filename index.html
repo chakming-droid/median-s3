@@ -306,7 +306,7 @@
     .digit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .digit-grid .btn { min-height: 48px; background: #e2e8f0; color: #0f172a; }
     .entry-display { font-size: 1.35rem; font-weight: 800; text-align: center; padding: 6px 0 8px; }
-    .chip-builder { flex: 1 1 100%; min-width: 100%; }
+    .chip-builder, .answer-box { flex: 1 1 100%; min-width: 100%; }
     .chip-row {
       display: flex;
       gap: 6px;
@@ -774,24 +774,18 @@
       line.id = "questionLine";
       line.className = "question-line";
       line.setAttribute("aria-live", "polite");
-      card.appendChild(line);
-      card.appendChild(buildEditableTable(lesson));
-      const problem = document.createElement("details");
-      problem.className = "more-box";
-      const problemSummary = document.createElement("summary");
-      problemSummary.textContent = "看題目";
       const stem = document.createElement("p");
       stem.className = "problem-text";
       stem.textContent = lesson.stem;
-      problem.append(problemSummary, stem);
+      card.append(line, stem);
       if (lesson.image) {
         const img = document.createElement("img");
         img.src = lesson.image;
         img.alt = lesson.stem;
         img.className = "problem-img";
-        problem.appendChild(img);
+        card.appendChild(img);
       }
-      card.appendChild(problem);
+      card.appendChild(buildEditableTable(lesson));
       const balance = document.createElement("div");
       balance.id = "balanceSlot";
       card.appendChild(balance);
@@ -903,15 +897,7 @@
       blocksButton.id = "toggleBlocks";
       row.appendChild(blocksButton);
     }
-    slot.appendChild(row);
-    const more = document.createElement("details");
-    more.className = "more-box";
-    const summary = document.createElement("summary");
-    summary.textContent = "更多";
-    more.appendChild(summary);
-    const moreRow = document.createElement("div");
-    moreRow.className = "action-row";
-    moreRow.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
+    row.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
     if (wanted === "x") {
       const trial = document.createElement("label");
       trial.append(document.createTextNode("試 x = "));
@@ -943,19 +929,18 @@
         renderReading();
       });
       target.appendChild(targetInput);
-      moreRow.append(trial, target, makeButton("看看這個 x", "btn", tryX));
+      row.append(trial, target, makeButton("看看這個 x", "btn", tryX));
     }
-    more.appendChild(moreRow);
+    slot.appendChild(row);
     const note = document.createElement("p");
     note.className = "problem-text";
     note.textContent = current().kind === "continuous"
       ? "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用 x。"
       : "可改數值和頻數。頻數可填正整數，整個表只可以有一個 x。";
-    more.appendChild(note);
-    if (wanted === "x") more.appendChild(rangeChecker());
-    if (current().kind === "continuous") more.appendChild(medianChecker());
-    else if (wanted !== "x") more.appendChild(discreteMedianChecker());
-    slot.appendChild(more);
+    slot.appendChild(note);
+    if (wanted === "x") slot.appendChild(rangeChecker());
+    if (current().kind === "continuous") slot.appendChild(medianChecker());
+    else if (wanted !== "x") slot.appendChild(discreteMedianChecker());
   }
 
   function toggleBlocks() {
@@ -1680,7 +1665,7 @@
     } else if (tutor.mode === "unknown") {
       renderUnknownControls(form, actions);
     } else {
-      actions.appendChild(digitPad(confirmDigits));
+      actions.appendChild(answerBox(confirmDigits));
     }
     const hintRow = document.createElement("div");
     hintRow.className = "form-row";
@@ -2631,7 +2616,7 @@
       return;
     }
     if (tutor.phase === "solve") {
-      actions.appendChild(digitPad(confirmSolve));
+      actions.appendChild(answerBox(confirmSolve));
       return;
     }
     actions.appendChild(chipBuilder());
@@ -2858,59 +2843,51 @@
     return "中位數";
   }
 
-  function entryReadout() {
-    const display = document.createElement("div");
-    display.className = "entry-display";
-    display.id = "entryDisplay";
-    display.textContent = entryCaption() + " " + (tutor.entry || "—");
-    return display;
-  }
-
   function allowDecimal() {
     if (tutor.mode === "known" && (tutor.step === 3 || tutor.step === 4)) return true;
     return tutor.mode === "continuous" && tutor.step === 2;
   }
 
-  function pressDigit(digit) {
-    if (digit === ".") {
-      if (!allowDecimal() || tutor.entry.includes(".")) return;
-      tutor.entry = tutor.entry ? tutor.entry + "." : "0.";
-    } else if (digit === "del") {
-      tutor.entry = tutor.entry.slice(0, -1);
-    } else if (tutor.entry.length < 6) {
-      tutor.entry += digit;
-    }
-    const display = document.getElementById("entryDisplay");
-    if (display) display.textContent = entryCaption() + " " + (tutor.entry || "—");
-  }
-
-  function digitPad(onOk) {
-    const wrap = document.createElement("div");
-    wrap.className = "digit-wrap";
-    const grid = document.createElement("div");
-    grid.className = "digit-grid";
-    ["1", "2", "3", "4", "5", "6", "7", "8", "9"].forEach((digit) => {
-      grid.appendChild(makeButton(digit, "btn dock-btn", () => pressDigit(digit)));
+  function answerBox(onOk) {
+    const row = document.createElement("div");
+    row.className = "form-row answer-box";
+    const input = document.createElement("input");
+    input.id = "stepAnswer";
+    input.type = "text";
+    input.inputMode = allowDecimal() ? "decimal" : "numeric";
+    input.autocomplete = "off";
+    input.placeholder = entryCaption();
+    input.value = tutor.entry;
+    const commit = () => { tutor.entry = input.value.trim(); };
+    input.addEventListener("input", commit);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commit();
+        onOk();
+      }
     });
-    if (allowDecimal()) grid.appendChild(makeButton(".", "btn dock-btn", () => pressDigit(".")));
-    grid.appendChild(makeButton("0", "btn dock-btn", () => pressDigit("0")));
-    grid.appendChild(makeButton("刪", "btn dock-btn", () => pressDigit("del")));
+    const label = document.createElement("label");
+    label.append(document.createTextNode(entryCaption() + " = "), input);
+    row.appendChild(label);
     if (tutor.held != null) {
-      grid.appendChild(makeButton("重按上一個", "btn btn-secondary dock-btn", () => {
+      row.appendChild(makeButton("重按上一個", "btn btn-secondary", () => {
         tutor.held = null;
         tutor.entry = "";
         tutor.log.push({ kind: "tutor", text: tutor.step === 3 ? "回到較前的數值。再按一次。" : "回到較前的位置。再按一次。" });
         render();
       }));
     }
-    grid.appendChild(makeButton("確定", "btn dock-btn digit-ok", onOk));
-    wrap.append(entryReadout(), grid);
-    return wrap;
+    row.appendChild(makeButton("確定", "btn", () => {
+      commit();
+      onOk();
+    }));
+    return row;
   }
 
   function confirmDigits() {
     if (!tutor.entry) {
-      tutor.log.push({ kind: "tutor", text: "先按數字。" });
+      tutor.log.push({ kind: "tutor", text: "先填數字。" });
       render();
       return;
     }
@@ -2929,7 +2906,7 @@
     const raw = normalizeTyped(tutor.entry);
     const value = Number(raw);
     if (!raw || !Number.isInteger(value) || value <= 0) {
-      tutor.log.push({ kind: "tutor", text: "請按正整數。" });
+      tutor.log.push({ kind: "tutor", text: "請填正整數。" });
       render();
       return;
     }
