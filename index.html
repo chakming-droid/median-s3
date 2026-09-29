@@ -2986,24 +2986,21 @@
         if (now) cell.classList.add("hl-walk-now");
       });
     };
-    const clearNow = () => {
-      document.querySelectorAll("#pictureCard td.hl-walk-now").forEach((cell) => cell.classList.remove("hl-walk-now"));
-    };
-    const finish = () => {
-      clearNow();
-      mark(midIndex, "mid", true);
+    const clearLamps = () => {
+      document.querySelectorAll("#pictureCard td").forEach((cell) => {
+        cell.classList.remove("hl-walk-left", "hl-walk-right", "hl-walk-mid", "hl-walk-now");
+      });
     };
     if (reduce) {
-      left.forEach((index) => mark(index, "left", false));
-      right.forEach((index) => mark(index, "right", false));
-      finish();
+      clearLamps();
+      mark(midIndex, "mid", true);
       return;
     }
     const token = walkSerial;
     let step = 0;
     const tick = () => {
       if (token !== walkSerial) return;
-      clearNow();
+      clearLamps();
       if (step < steps) {
         if (left[step] != null) mark(left[step], "left", true);
         if (right[step] != null) mark(right[step], "right", true);
@@ -3011,7 +3008,7 @@
         walkTimer = setTimeout(tick, 700);
         return;
       }
-      finish();
+      mark(midIndex, "mid", true);
     };
     tick();
   }
