@@ -306,7 +306,7 @@
     .digit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .digit-grid .btn { min-height: 48px; background: #e2e8f0; color: #0f172a; }
     .entry-display { font-size: 1.35rem; font-weight: 800; text-align: center; padding: 6px 0 8px; }
-    .chip-builder, .answer-box { flex: 1 1 100%; min-width: 100%; }
+    .chip-builder { flex: 1 1 100%; min-width: 100%; }
     .chip-row {
       display: flex;
       gap: 6px;
@@ -342,6 +342,11 @@
     .baskets { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
     .basket { flex: 1 1 90px; min-height: 88px; border-radius: 10px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
     .basket-pool { flex: 1 1 100%; background: #f8fafc; border: 2px dashed #94a3b8; }
+    #pictureCard td.hl-walk-left { background: #93c5fd; box-shadow: inset 0 0 0 3px #1d4ed8; }
+    #pictureCard td.hl-walk-right { background: #fdba74; box-shadow: inset 0 0 0 3px #c2410c; }
+    #pictureCard td.hl-walk-mid { background: #86efac; box-shadow: inset 0 0 0 3px #15803d; }
+    #pictureCard td.hl-walk-now { outline: 3px solid #0f172a; outline-offset: -3px; animation: walk-glow 0.7s ease; }
+    @keyframes walk-glow { from { filter: brightness(1.45); } to { filter: brightness(1); } }
     .walk-layer { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
     .walk-chip {
       position: absolute;
@@ -363,6 +368,7 @@
     .dock-btn, .digit-grid .btn, .chip-btn { touch-action: manipulation; }
     @media (prefers-reduced-motion: reduce) {
       .walk-chip { transition: none !important; }
+      #pictureCard td.hl-walk-now { animation: none; }
     }
 
     @media (max-width: 640px) {
@@ -456,6 +462,7 @@
   let askWasOpen = false;
   let readerCf = null;
   let walkSerial = 0;
+  let walkTimer = 0;
 
   function freshTutor() {
     return {
@@ -896,7 +903,15 @@
       blocksButton.id = "toggleBlocks";
       row.appendChild(blocksButton);
     }
-    row.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
+    slot.appendChild(row);
+    const more = document.createElement("details");
+    more.className = "more-box";
+    const summary = document.createElement("summary");
+    summary.textContent = "更多";
+    more.appendChild(summary);
+    const moreRow = document.createElement("div");
+    moreRow.className = "action-row";
+    moreRow.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
     if (wanted === "x") {
       const trial = document.createElement("label");
       trial.append(document.createTextNode("試 x = "));
@@ -928,18 +943,19 @@
         renderReading();
       });
       target.appendChild(targetInput);
-      row.append(trial, target, makeButton("看看這個 x", "btn", tryX));
+      moreRow.append(trial, target, makeButton("看看這個 x", "btn", tryX));
     }
-    slot.appendChild(row);
+    more.appendChild(moreRow);
     const note = document.createElement("p");
     note.className = "problem-text";
     note.textContent = current().kind === "continuous"
       ? "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用 x。"
       : "可改數值和頻數。頻數可填正整數，整個表只可以有一個 x。";
-    slot.appendChild(note);
-    if (wanted === "x") slot.appendChild(rangeChecker());
-    if (current().kind === "continuous") slot.appendChild(medianChecker());
-    else if (wanted !== "x") slot.appendChild(discreteMedianChecker());
+    more.appendChild(note);
+    if (wanted === "x") more.appendChild(rangeChecker());
+    if (current().kind === "continuous") more.appendChild(medianChecker());
+    else if (wanted !== "x") more.appendChild(discreteMedianChecker());
+    slot.appendChild(more);
   }
 
   function toggleBlocks() {
@@ -1664,7 +1680,7 @@
     } else if (tutor.mode === "unknown") {
       renderUnknownControls(form, actions);
     } else {
-      actions.appendChild(answerBox(confirmDigits));
+      actions.appendChild(digitPad(confirmDigits));
     }
     const hintRow = document.createElement("div");
     hintRow.className = "form-row";
@@ -2471,6 +2487,7 @@
     const mode = balanceMode();
     paintTable(mode);
     if (tutor.phase !== "shown") {
+      clearTimeout(walkTimer);
       document.querySelectorAll("#pictureCard .walk-layer").forEach((node) => node.remove());
       document.body.style.paddingBottom = "";
     }
@@ -2542,7 +2559,7 @@
 
   function paintTable(mode) {
     document.querySelectorAll("#pictureCard td").forEach((cell) => {
-      cell.classList.remove("hl-left", "hl-mid", "hl-right", "hl-join-left", "hl-join-right", "hl-join-both", "hl-ask");
+      cell.classList.remove("hl-left", "hl-mid", "hl-right", "hl-join-left", "hl-join-right", "hl-join-both", "hl-ask", "hl-walk-left", "hl-walk-right", "hl-walk-mid", "hl-walk-now");
     });
     if (current().kind === "continuous") return;
     const target = Number(current().target);
@@ -2614,7 +2631,7 @@
       return;
     }
     if (tutor.phase === "solve") {
-      actions.appendChild(answerBox(confirmSolve));
+      actions.appendChild(digitPad(confirmSolve));
       return;
     }
     actions.appendChild(chipBuilder());
@@ -2841,51 +2858,59 @@
     return "中位數";
   }
 
+  function entryReadout() {
+    const display = document.createElement("div");
+    display.className = "entry-display";
+    display.id = "entryDisplay";
+    display.textContent = entryCaption() + " " + (tutor.entry || "—");
+    return display;
+  }
+
   function allowDecimal() {
     if (tutor.mode === "known" && (tutor.step === 3 || tutor.step === 4)) return true;
     return tutor.mode === "continuous" && tutor.step === 2;
   }
 
-  function answerBox(onOk) {
-    const row = document.createElement("div");
-    row.className = "form-row answer-box";
-    const input = document.createElement("input");
-    input.id = "stepAnswer";
-    input.type = "text";
-    input.inputMode = allowDecimal() ? "decimal" : "numeric";
-    input.autocomplete = "off";
-    input.placeholder = entryCaption();
-    input.value = tutor.entry;
-    const commit = () => { tutor.entry = input.value.trim(); };
-    input.addEventListener("input", commit);
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        commit();
-        onOk();
-      }
+  function pressDigit(digit) {
+    if (digit === ".") {
+      if (!allowDecimal() || tutor.entry.includes(".")) return;
+      tutor.entry = tutor.entry ? tutor.entry + "." : "0.";
+    } else if (digit === "del") {
+      tutor.entry = tutor.entry.slice(0, -1);
+    } else if (tutor.entry.length < 6) {
+      tutor.entry += digit;
+    }
+    const display = document.getElementById("entryDisplay");
+    if (display) display.textContent = entryCaption() + " " + (tutor.entry || "—");
+  }
+
+  function digitPad(onOk) {
+    const wrap = document.createElement("div");
+    wrap.className = "digit-wrap";
+    const grid = document.createElement("div");
+    grid.className = "digit-grid";
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9"].forEach((digit) => {
+      grid.appendChild(makeButton(digit, "btn dock-btn", () => pressDigit(digit)));
     });
-    const label = document.createElement("label");
-    label.append(document.createTextNode(entryCaption() + " = "), input);
-    row.appendChild(label);
+    if (allowDecimal()) grid.appendChild(makeButton(".", "btn dock-btn", () => pressDigit(".")));
+    grid.appendChild(makeButton("0", "btn dock-btn", () => pressDigit("0")));
+    grid.appendChild(makeButton("刪", "btn dock-btn", () => pressDigit("del")));
     if (tutor.held != null) {
-      row.appendChild(makeButton("重按上一個", "btn btn-secondary", () => {
+      grid.appendChild(makeButton("重按上一個", "btn btn-secondary dock-btn", () => {
         tutor.held = null;
         tutor.entry = "";
         tutor.log.push({ kind: "tutor", text: tutor.step === 3 ? "回到較前的數值。再按一次。" : "回到較前的位置。再按一次。" });
         render();
       }));
     }
-    row.appendChild(makeButton("確定", "btn", () => {
-      commit();
-      onOk();
-    }));
-    return row;
+    grid.appendChild(makeButton("確定", "btn dock-btn digit-ok", onOk));
+    wrap.append(entryReadout(), grid);
+    return wrap;
   }
 
   function confirmDigits() {
     if (!tutor.entry) {
-      tutor.log.push({ kind: "tutor", text: "先填數字。" });
+      tutor.log.push({ kind: "tutor", text: "先按數字。" });
       render();
       return;
     }
@@ -2904,7 +2929,7 @@
     const raw = normalizeTyped(tutor.entry);
     const value = Number(raw);
     if (!raw || !Number.isInteger(value) || value <= 0) {
-      tutor.log.push({ kind: "tutor", text: "請填正整數。" });
+      tutor.log.push({ kind: "tutor", text: "請按正整數。" });
       render();
       return;
     }
@@ -2953,112 +2978,65 @@
   }
 
   function paintWalk(kind) {
-    const stage = document.querySelector("#pictureCard .table-stage");
     const balance = currentBalance();
-    if (!stage || !balance || !balance.found) return;
-    stage.querySelectorAll(".walk-layer").forEach((node) => node.remove());
+    if (!balance || !balance.found) return;
+    clearTimeout(walkTimer);
+    document.querySelectorAll("#pictureCard td").forEach((cell) => {
+      cell.classList.remove("hl-walk-left", "hl-walk-right", "hl-walk-mid", "hl-walk-now");
+    });
+    document.querySelectorAll("#pictureCard .walk-layer").forEach((node) => node.remove());
     const target = Number(current().target);
     const valInputs = [...document.querySelectorAll("#pictureCard .input-val")];
     const freqInputs = [...document.querySelectorAll("#pictureCard .input-freq")];
     const midIndex = valInputs.findIndex((input) => Number(input.value) === target);
-    if (midIndex < 0 || !freqInputs[midIndex]) return;
-    const midCell = freqInputs[midIndex].parentElement;
-    const stageRect = stage.getBoundingClientRect();
-    const midRect = midCell.getBoundingClientRect();
-    if (midRect.width < 2) return;
-    const layer = document.createElement("div");
-    layer.className = "walk-layer";
-    layer.setAttribute("aria-hidden", "true");
-    stage.appendChild(layer);
+    if (midIndex < 0) return;
+    const left = [];
+    const right = [];
+    valInputs.forEach((input, index) => {
+      const value = Number(input.value);
+      if (!Number.isFinite(value)) return;
+      if (index < midIndex) left.push(index);
+      else if (index > midIndex) right.push(index);
+    });
+    right.reverse();
+    const steps = Math.max(left.length, right.length);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const gold = document.createElement("div");
-    gold.className = "walk-chip walk-gold";
-    gold.dataset.label = "1";
-    const goldText = document.createElement("b");
-    goldText.textContent = "1";
-    const goldNote = document.createElement("small");
-    goldNote.textContent = "中位數";
-    gold.append(goldText, goldNote);
-    layer.appendChild(gold);
-    const goldW = gold.offsetWidth || 46;
-    const goldH = gold.offsetHeight || 36;
-    const midX = midRect.left - stageRect.left;
-    const goldX = kind === "min" ? midX + midRect.width - goldW : midX;
-    const goldY = midRect.top - stageRect.top + Math.max(0, (midRect.height - goldH) / 2);
-    gold.style.left = goldX + "px";
-    gold.style.top = goldY + "px";
-    const chips = equationChips(balance, kind);
-    const items = chips.map((chip) => {
-      const el = document.createElement("div");
-      el.className = "walk-chip";
-      el.dataset.label = chip.label;
-      el.dataset.home = chip.home;
-      if (chip.spare) el.dataset.spare = "1";
-      const strong = document.createElement("b");
-      strong.textContent = chip.label;
-      el.appendChild(strong);
-      layer.appendChild(el);
-      return { chip, el, w: el.offsetWidth || 36, h: el.offsetHeight || 28 };
-    });
-    const spareItem = items.find((item) => item.chip.spare);
-    const spareStartX = kind === "min" ? midX + 2 : midX + midRect.width - spareItem.w - 2;
-    const leftMovers = items.filter((item) => item.chip.home === "left" && !item.chip.spare).reverse();
-    const rightMovers = items.filter((item) => item.chip.home === "right" && !item.chip.spare);
-    const startOf = (item) => {
-      if (item.chip.spare) return { x: spareStartX, y: goldY };
-      const index = valInputs.findIndex((input) => Number(input.value) === Number(item.chip.val));
-      const cell = (index >= 0 && freqInputs[index] ? freqInputs[index] : valInputs[index]).parentElement;
-      const rect = cell.getBoundingClientRect();
-      return {
-        x: rect.left - stageRect.left + Math.max(0, (rect.width - item.w) / 2),
-        y: rect.top - stageRect.top + Math.max(0, (rect.height - item.h) / 2)
-      };
-    };
-    const placeBeside = (group, side) => {
-      group.forEach((item, index) => {
-        const start = startOf(item);
-        const boundary = side === "left"
-          ? (kind === "min" ? spareStartX : goldX)
-          : (kind === "min" ? goldX + goldW : spareStartX);
-        const desired = side === "left"
-          ? boundary - item.w + 12 - index * 8
-          : boundary - 12 + index * 8;
-        const midCenter = midX + midRect.width / 2;
-        const startCenter = start.x + item.w / 2;
-        const desiredCenter = desired + item.w / 2;
-        const dir = midCenter > startCenter ? 1 : -1;
-        const endCenter = (desiredCenter - startCenter) * dir > 8
-          ? desiredCenter
-          : startCenter + dir * Math.max(12, Math.abs(midCenter - startCenter) * 0.7);
-        item.endX = endCenter - item.w / 2;
-        item.endY = goldY;
-        item.startX = start.x;
-        item.startY = start.y;
+    const mark = (index, side, now) => {
+      [valInputs[index], freqInputs[index]].forEach((input) => {
+        if (!input) return;
+        const cell = input.parentElement;
+        cell.classList.add(side === "mid" ? "hl-walk-mid" : side === "left" ? "hl-walk-left" : "hl-walk-right");
+        if (now) cell.classList.add("hl-walk-now");
       });
     };
-    placeBeside(leftMovers, "left");
-    placeBeside(rightMovers, "right");
-    spareItem.endX = spareStartX;
-    spareItem.endY = goldY;
-    spareItem.startX = spareStartX;
-    spareItem.startY = goldY;
-    items.forEach((item) => {
-      const startX = item.startX;
-      const dx = item.endX - startX;
-      const dy = item.endY - item.startY;
-      item.el.style.left = startX + "px";
-      item.el.style.top = item.startY + "px";
-      item.el.style.transition = reduce ? "none" : "transform 1.3s ease";
-      item.el.style.transform = reduce ? "translate(" + dx + "px," + dy + "px)" : "translate(0px,0px)";
-      item.dx = dx;
-      item.dy = dy;
-    });
-    if (reduce) return;
-    requestAnimationFrame(() => {
-      items.forEach((item) => {
-        item.el.style.transform = "translate(" + item.dx + "px," + item.dy + "px)";
-      });
-    });
+    const clearNow = () => {
+      document.querySelectorAll("#pictureCard td.hl-walk-now").forEach((cell) => cell.classList.remove("hl-walk-now"));
+    };
+    const finish = () => {
+      clearNow();
+      mark(midIndex, "mid", true);
+    };
+    if (reduce) {
+      left.forEach((index) => mark(index, "left", false));
+      right.forEach((index) => mark(index, "right", false));
+      finish();
+      return;
+    }
+    const token = walkSerial;
+    let step = 0;
+    const tick = () => {
+      if (token !== walkSerial) return;
+      clearNow();
+      if (step < steps) {
+        if (left[step] != null) mark(left[step], "left", true);
+        if (right[step] != null) mark(right[step], "right", true);
+        step += 1;
+        walkTimer = setTimeout(tick, 700);
+        return;
+      }
+      finish();
+    };
+    tick();
   }
 
   async function askAi() {
