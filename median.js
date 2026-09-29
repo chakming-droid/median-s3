@@ -171,16 +171,21 @@
     return pairs;
   }
 
-  function parseExpr(input) {
-    const source = String(input ?? "")
-      .trim()
+  function softenMath(input) {
+    return String(input ?? "")
       .toLowerCase()
+      .replace(/等於/g, "=")
       .replace(/加/g, "+")
       .replace(/＋/g, "+")
-      .replace(/－/g, "-")
+      .replace(/減/g, "-")
+      .replace(/[－−–—]/g, "-")
+      .replace(/＝/g, "=")
       .replace(/（/g, "(")
-      .replace(/）/g, ")")
-      .replace(/\s+/g, "");
+      .replace(/）/g, ")");
+  }
+
+  function parseExpr(input) {
+    const source = softenMath(input).trim().replace(/\s+/g, "");
     if (!source || !/^[0-9x+\-()]+$/.test(source)) return null;
 
     let i = 0;
@@ -233,14 +238,7 @@
   }
 
   function parseExprFromText(input) {
-    const cleaned = String(input ?? "")
-      .toLowerCase()
-      .replace(/加/g, "+")
-      .replace(/＋/g, "+")
-      .replace(/－/g, "-")
-      .replace(/（/g, "(")
-      .replace(/）/g, ")")
-      .replace(/[^0-9x+\-()]/g, " ");
+    const cleaned = softenMath(input).replace(/[^0-9x+\-()]/g, " ");
     const parts = cleaned.split(/\s+/).filter(Boolean);
     const joined = parseExpr(parts.join(""));
     if (joined) return joined;
@@ -254,6 +252,54 @@
 
   function sameExpr(a, b) {
     return !!a && !!b && a.c === b.c && a.k === b.k;
+  }
+
+  function subFreq(a, b) {
+    return { c: a.c - b.c, k: a.k - b.k };
+  }
+
+  function balanceParts(rows, target) {
+    const leftRows = [];
+    const rightRows = [];
+    let mid = null;
+    rows.forEach((row) => {
+      if (sameNumber(row.val, target)) mid = row;
+      else if (row.val < target) leftRows.push(row);
+      else rightRows.push(row);
+    });
+    if (!mid) return { found: false };
+    const left = leftRows.reduce((sum, row) => addFreq(sum, row.freq), { c: 0, k: 0 });
+    const right = rightRows.reduce((sum, row) => addFreq(sum, row.freq), { c: 0, k: 0 });
+    const spare = subFreq(mid.freq, { c: 1, k: 0 });
+    return {
+      found: true,
+      leftRows,
+      rightRows,
+      mid,
+      left,
+      right,
+      midFreq: mid.freq,
+      spare,
+      minLeft: addFreq(left, spare),
+      minRight: right,
+      maxLeft: left,
+      maxRight: addFreq(spare, right)
+    };
+  }
+
+  function parseEquation(input) {
+    const sides = softenMath(input).trim().split("=").map((side) => side.trim());
+    if (sides.length !== 2 || !sides[0] || !sides[1]) return null;
+    const left = parseExprFromText(sides[0]);
+    const right = parseExprFromText(sides[1]);
+    if (!left || !right) return null;
+    return { left, right };
+  }
+
+  function sameEquation(parsed, leftExpr, rightExpr) {
+    if (!parsed) return false;
+    return (sameExpr(parsed.left, leftExpr) && sameExpr(parsed.right, rightExpr))
+      || (sameExpr(parsed.left, rightExpr) && sameExpr(parsed.right, leftExpr));
   }
 
   function describeProblem(rows, target) {
@@ -397,7 +443,10 @@
     groupSpan,
     parseExpr,
     parseExprFromText,
+    parseEquation,
     sameExpr,
+    sameEquation,
+    balanceParts,
     describeProblem,
     sameNumber,
     classifyQuota,

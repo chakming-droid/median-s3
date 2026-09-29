@@ -230,6 +230,50 @@
     .bubble-label { display: block; font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 2px; }
     .trial-list { margin: 0; padding-left: 1.2rem; }
 
+    #pictureCard td.hl-left { background: #dbeafe; }
+    #pictureCard td.hl-mid { background: #dcfce7; }
+    #pictureCard td.hl-right { background: #ffedd5; }
+    #pictureCard td.hl-join-left { box-shadow: inset 0 0 0 3px #2563eb; }
+    #pictureCard td.hl-join-right { box-shadow: inset 0 0 0 3px #ea580c; }
+    #pictureCard td.hl-join-both { box-shadow: inset 0 0 0 3px #2563eb, inset 0 0 0 6px #ea580c; }
+    .balance-layout { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+    .balance-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+    .pile {
+      flex: 1 1 160px;
+      min-height: 84px;
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-content: flex-start;
+    }
+    .pile-left { background: #dbeafe; border: 2px solid #2563eb; }
+    .pile-mid { background: #dcfce7; border: 2px solid #16a34a; }
+    .pile-right { background: #ffedd5; border: 2px solid #ea580c; }
+    .pile-title { flex: 1 0 100%; font-size: 0.8rem; font-weight: bold; color: #334155; }
+    .chip {
+      background: white;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-weight: bold;
+      min-width: 42px;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .chip small { display: block; font-weight: normal; color: #64748b; font-size: 0.72rem; }
+    .median-slot {
+      margin-top: 6px;
+      background: #fef9c3;
+      border: 2px solid #ca8a04;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: bold;
+      padding: 8px 6px;
+    }
+    .eq-sign { align-self: center; font-size: 1.8rem; font-weight: 800; color: #0f172a; }
+    .form-row input.wide { width: min(100%, 280px); }
+
     @media (max-width: 640px) {
       body { padding: 10px; }
       .container { padding: 14px; }
@@ -312,7 +356,7 @@
   let readerCf = null;
 
   function freshTutor() {
-    return { mode: "type", step: 1, log: [], hints: {}, trials: [], trap: false, solved: false, stale: false, blocked: false };
+    return { mode: "type", step: 1, log: [], hints: {}, trials: [], trap: false, solved: false, stale: false, blocked: false, phase: "ask" };
   }
 
   function current() {
@@ -496,6 +540,33 @@
     render();
   }
 
+  function loadExercise() {
+    const lesson = lessons[0];
+    lesson.header = "日數";
+    lesson.stem = "下表顯示一組學生上學期運動多於 30 分鐘的日數。已知 x 是一個正整數。若中位數是 3，求 x 的最小和最大可取值。";
+    lesson.image = "question12.png";
+    lesson.target = "3";
+    lesson.rows = [
+      { val: "1", freq: "4" },
+      { val: "2", freq: "x" },
+      { val: "3", freq: "14" },
+      { val: "4", freq: "7" },
+      { val: "5", freq: "14" }
+    ];
+    lesson.structure = (lesson.structure || 0) + 1;
+    lessonIndex = 0;
+    phase = "type";
+    tutor = freshTutor();
+    fieldDrafts = {};
+    experiment = null;
+    showBlocks = false;
+    discreteRevealed = false;
+    const card = document.getElementById("pictureCard");
+    if (card) card.dataset.key = "";
+    tutor.log.push({ kind: "tutor", text: "做之前，先判斷：這是離散數據還是連續數據？" });
+    render();
+  }
+
   function rememberFields() {
     document.querySelectorAll("input[id]").forEach((input) => {
       fieldDrafts[input.id] = input.value;
@@ -607,6 +678,9 @@
         ? "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用 x。"
         : "可改數值和頻數。頻數可填正整數，整個表只可以有一個 x。";
       card.appendChild(note);
+      const balance = document.createElement("div");
+      balance.id = "balanceSlot";
+      card.appendChild(balance);
       const extras = document.createElement("div");
       extras.id = "extraSlot";
       card.appendChild(extras);
@@ -709,6 +783,7 @@
       makeButton("+ 新增一欄", "btn btn-secondary", addColumn),
       makeButton("重置這一題", "btn btn-secondary", () => loadLesson(lessonIndex))
     );
+    if (current().kind !== "continuous") row.appendChild(makeButton("載入運動日數題", "btn btn-secondary", loadExercise));
     if (wanted === "x") {
       const trial = document.createElement("label");
       trial.append(document.createTextNode("試 x = "));
@@ -1450,41 +1525,37 @@
       form.appendChild(note);
       actions.appendChild(makeButton("重新開始", "btn", beginSteps));
       if (aiOpen()) actions.appendChild(askRow());
+      updateBalance();
       return;
     }
     if (tutor.blocked && !tutor.solved) {
       actions.appendChild(makeButton("繼續", "btn", beginSteps));
       if (aiOpen()) actions.appendChild(askRow());
+      updateBalance();
       return;
     }
     if (tutor.solved) {
       if (current().kind !== "continuous") actions.appendChild(makeButton("去看連續數據", "btn", () => showMode(1)));
       else actions.appendChild(makeButton("回到離散數據", "btn btn-secondary", () => showMode(0)));
+      updateBalance();
       return;
     }
     if (phase === "type") {
       actions.appendChild(makeButton("離散數據", "btn", () => answerType(false)));
       actions.appendChild(makeButton("連續數據", "btn btn-secondary", () => answerType(true)));
-    } else if (tutor.mode === "unknown" && tutor.step === 3) {
-      actions.appendChild(makeButton("有可能", "btn btn-secondary", () => answerPossibility(true)));
-      actions.appendChild(makeButton("沒有可能", "btn", () => answerPossibility(false)));
-    } else if (tutor.mode === "unknown" && tutor.step === 4) {
-      form.appendChild(trialSummary());
-      actions.appendChild(makeButton("我試完了，去找範圍", "btn", finishExperiment));
-    } else if (tutor.mode === "unknown" && tutor.step === 5) {
-      form.appendChild(trialSummary());
-      form.appendChild(answerFields());
-      actions.appendChild(makeButton("核對", "btn", checkFinalAnswer));
     } else {
       form.appendChild(answerFields());
-      actions.appendChild(makeButton("送出", "btn", submitStep));
+      const solving = tutor.mode === "unknown" && tutor.step === 4 && tutor.phase === "solve";
+      actions.appendChild(makeButton(solving ? "核對" : "送出", "btn", solving ? checkFinalAnswer : submitStep));
     }
     [1, 2, 3].forEach((level) => {
-      const used = tutor.hints[tutor.step] && tutor.hints[tutor.step][level];
+      const bucket = hintBucket();
+      const used = tutor.hints[bucket] && tutor.hints[bucket][level];
       const name = "提示" + "一二三"[level - 1];
       actions.appendChild(makeButton(used ? name + "（已看）" : name, "btn btn-hint" + (level > 1 ? " level-" + level : ""), () => showHint(level)));
     });
     if (aiOpen()) actions.appendChild(askRow());
+    updateBalance();
   }
 
   function askRow() {
@@ -1555,17 +1626,16 @@
       row.append(fieldLabel("較前那個位置的數值 =", "knownVal1"), fieldLabel("較後那個位置的數值 =", "knownVal2"));
     } else if (tutor.mode === "known" && tutor.step === 3) row.append(fieldLabel("中間那個位置的數值 =", "knownVal1"));
     else if (tutor.mode === "known" && tutor.step === 4) row.append(fieldLabel("中位數 =", "knownMedian"));
-    else if (tutor.mode === "unknown" && tutor.step === 1) row.append(fieldLabel("N =", "exprN"));
-    else if (tutor.mode === "unknown" && tutor.step === 2) {
-      const target = current().target;
-      row.style.flexDirection = "column";
-      row.style.alignItems = "flex-start";
-      row.append(
-        fieldLabel("「" + target + "」的第一項 = 前面的個數 + 1 =", "spanStart", "如 4+x"),
-        fieldLabel("「" + target + "」的最後一項 = 前面的個數 + 這一組的個數 =", "spanEnd", "如 9+x")
-      );
-    } else if (tutor.mode === "unknown" && tutor.step === 5) {
-      const range = MedianMath.rangeForTarget(modelOf(current()).rows, current().target);
+    else if (tutor.mode === "unknown" && tutor.step === 1) {
+      row.append(fieldLabel("比中位數小", "leftExpr"), fieldLabel("中間有", "midExpr"), text(" 個 "), fieldLabel("比中位數大", "rightExpr"));
+    } else if (tutor.mode === "unknown" && tutor.step === 2) {
+      row.append(fieldLabel("減 1 後剩下", "spareExpr"), text(" 個"));
+    } else if (tutor.mode === "unknown" && tutor.step === 3) {
+      row.append(fieldLabel("等式", "eqMin"));
+    } else if (tutor.mode === "unknown" && tutor.step === 4 && tutor.phase !== "solve") {
+      row.append(fieldLabel("等式", "eqMax"));
+    } else if (tutor.mode === "unknown" && tutor.step === 4) {
+      const range = answerRange();
       if (range && range.unbounded) row.append(fieldLabel("最小 x =", "ansMin"), text(" 沒有最大可取值"));
       else row.append(fieldLabel("最小 x =", "ansMin"), fieldLabel("最大 x =", "ansMax"));
     } else if (tutor.mode === "continuous" && tutor.step === 1) row.append(fieldLabel("總頻數 =", "cfTotal"));
@@ -1582,11 +1652,12 @@
     input.id = id;
     input.autocomplete = "off";
     if (placeholder) input.placeholder = placeholder;
+    if (id === "eqMin" || id === "eqMax" || id === "leftExpr" || id === "rightExpr") input.className = "wide";
     restoreField(input);
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        if (tutor.step === 5 && tutor.mode === "unknown") checkFinalAnswer();
+        if (tutor.mode === "unknown" && tutor.step === 4 && tutor.phase === "solve") checkFinalAnswer();
         else submitStep();
       }
     });
@@ -1633,23 +1704,15 @@
       if (tutor.step === 2) return "連續數據的中位數，對應總頻數的 50%。這個累積頻數是多少？";
       return "在縱軸找到這個累積頻數，水平碰到曲線，再讀橫軸最接近的數值。中位數是多少？";
     }
-    const model = modelOf(lesson);
-    const names = neighborValues(model.rows, lesson.target);
-    if (tutor.step === 1) return "先不要猜 x 是幾。全部數據的個數 N，應該怎樣用 x 寫出來？";
-    if (tutor.step === 2) return "中位數是 " + lesson.target + "，所以中間位置要落在「" + lesson.target + "」。下面兩格都寫成式子，可以含 x。第一項不是前面的個數本身，要再加 1。";
-    if (tutor.step === 3) {
-      if (tutor.trap) {
-        return names.prev != null && names.next != null
-          ? "再想「相鄰」。" + names.prev + " 和 " + names.next + " 中間還有整組「" + lesson.target + "」。兩個相鄰位置的中間，可以隔著其他數據嗎？所以一個是 " + names.prev + "、一個是 " + names.next + "，有沒有可能？"
-          : "兩個位置若是相鄰，中間就不能還有其他數據。有沒有可能跳過「" + lesson.target + "」那一組？";
-      }
-      return names.prev != null && names.next != null
-        ? "N 有時是奇數，有時是偶數。如果 N 是偶數，中間兩個相鄰位置，有沒有可能一個是 " + names.prev + "、一個是 " + names.next + "，平均之後變成 " + lesson.target + "？"
-        : "如果 N 是偶數，中間兩個相鄰位置，有沒有可能分別落在「" + lesson.target + "」兩邊，平均之後剛好是 " + lesson.target + "？";
+    const target = formatMedian(Number(lesson.target));
+    if (tutor.step === 1) return "先不要算 x。中位數是 " + target + "。比 " + target + " 小的頻數加起來是什麼？等於 " + target + " 的有多少個？比 " + target + " 大的頻數加起來又是什麼？式子可以含 x。";
+    if (tutor.step === 2) return "正中那一個 " + target + " 是中位數，它不歸左邊，也不歸右邊。這一組剩下多少個，才可以拿去跟某一邊一起數？";
+    if (tutor.step === 3) return "x 太小時，中間位置會滑到比 " + target + " 大的數。最小而又仍然是 " + target + "，中位數剛好是這一組的最後一個。這時剩下的那些要算在左邊。請寫出左右相等的式，先不要算出 x。";
+    if (tutor.step === 4 && tutor.phase === "solve") {
+      const range = answerRange();
+      return range && range.unbounded ? "兩條式都寫好了。x 的最小可取值是多少？這一題沒有最大可取值。" : "兩條式都寫好了。x 的最小可取值是多少？最大可取值是多少？";
     }
-    if (tutor.step === 4) return "用「試 x」代入正整數。先找一個中位數剛好是 " + lesson.target + " 的 x，再試小一點和大一點的，看它從哪裡開始不符合。";
-    const range = MedianMath.rangeForTarget(model.rows, lesson.target);
-    return range && range.unbounded ? "x 最小可以是多少？有沒有最大可取值？" : "x 的最小可取值是多少？最大可取值是多少？";
+    return "x 太大時，中間位置會滑到比 " + target + " 小的數。最大而又仍然是 " + target + "，中位數剛好是這一組的第一個。這時剩下的那些要算在右邊。請寫出左右相等的式，先不要算出 x。";
   }
 
   function conceptText() {
@@ -1665,11 +1728,11 @@
       if (tutor.step === 2) return "幫他明白連續數據取總頻數的 50% 作累積頻數，不是第 (N+1)/2 項。不要說出算出來的數。";
       return "幫他在一半的高度看曲線交點，再讀橫軸最接近的數值。不要說出那個數。";
     }
-    if (tutor.step === 1) return "幫他把總人數寫成含 x 的式子，不要先代入數字，也不要寫出整條式子。";
-    if (tutor.step === 2) return "幫他找出中位數那一組由第幾項到第幾項。不要寫出完整式子。";
-    if (tutor.step === 3) return "幫他明白相鄰兩項中間不能還隔著整組數據。不要替他做後面的範圍。";
-    if (tutor.step === 4) return "幫他用不同的正整數試 x，看中位數是否等於題目。不要說出最小或最大可取值。";
-    return "幫他用試過的結果夾出範圍。不要說出 x 的最小或最大可取值。";
+    if (tutor.step === 1) return "幫他把數據分成比中位數小、等於中位數、比中位數大三堆。不要寫出三堆的式子。";
+    if (tutor.step === 2) return "幫他明白正中那一個不歸左右，所以這一組要減 1。不要說出減 1 之後的數目。";
+    if (tutor.step === 3) return "幫他明白最小時，減 1 之後剩下的算在左邊，左右個數相等。不要寫出整條等式，也不要說出 x。";
+    if (tutor.phase === "solve") return "幫他解已經寫好的兩條等式。不要說出 x 的最小或最大可取值。";
+    return "幫他明白最大時，減 1 之後剩下的算在右邊，左右個數相等。不要寫出整條等式，也不要說出 x。";
   }
 
   function neighborValues(rows, target) {
@@ -1748,44 +1811,65 @@
 
   function unknownHint(level) {
     const lesson = current();
-    const model = modelOf(lesson);
-    const info = MedianMath.describeProblem(model.rows, lesson.target);
-    const names = neighborValues(model.rows, lesson.target);
+    const balance = currentBalance();
+    const target = formatMedian(Number(lesson.target));
+    if (!balance || !balance.found) return "請先確認中位數是表裡的其中一個數值。";
+    const leftText = pileText(balance.leftRows);
+    const rightText = pileText(balance.rightRows);
+    const midText = MedianMath.formatExpr(balance.midFreq);
+    const spareText = MedianMath.formatExpr(balance.spare);
     if (tutor.step === 1) {
-      if (level === 1) return "把每一格頻數加起來。未知的那一格繼續寫 x，不要先代入數字。";
-      if (level === 2) return "先把不是 x 的頻數加起來，再在後面寫上 + x。";
-      return "空格要留著 x，不要先代入數字。加完的式子就是 N。";
+      if (level === 1) return "只分成三堆：比 " + target + " 小、等於 " + target + "、比 " + target + " 大。未知數留在原來那一堆。";
+      if (level === 2) return "比 " + target + " 小的是" + valueList(balance.leftRows) + "。等於 " + target + " 的是中間那一組。比 " + target + " 大的是" + valueList(balance.rightRows) + "。這一層先不要把頻數加起來。";
+      return "左邊寫 " + leftText + "，中間寫 " + midText + "，右邊寫 " + rightText + "。";
     }
     if (tutor.step === 2) {
-      if (level === 1) return "先數「" + lesson.target + "」前面有多少個，再數「" + lesson.target + "」自己有多少個。";
-      if (level === 2) return "前面的個數和這一組的個數都寫成式子，可以含 x。先不要算成第一項和最後一項。";
-      if (!info.span.found) return "題目的中位數要等於表裡其中一個數值，先核對「題目的中位數」。";
-      return "第一項 = 前面的個數 + 1。最後一項 = 前面的個數 + 這一組的個數。兩個空格都自己寫成式子。";
+      if (level === 1) return "正中那一個是中位數，它自己不歸左，也不歸右。";
+      if (level === 2) return midText + " 個「" + target + "」裡，拿走 1 個當中位數，剩下的才可以跟某一邊合併。";
+      return midText + " − 1 = " + spareText + "。這 " + spareText + " 個才是可以加到左邊或右邊的數目。";
     }
     if (tutor.step === 3) {
-      if (level === 1) return "相鄰指兩個位置中間沒有其他數據。";
-      if (level === 2) {
-        return names.prev != null && names.next != null
-          ? "排序後，" + names.prev + " 和 " + names.next + " 中間還有「" + lesson.target + "」。"
-          : "這一組的左右如果還有數據，就不會和對面那一組緊貼。";
-      }
-      return "先看左右兩個數中間還有沒有這一組。有的話，它們不是緊貼，就不能拿來平均。想清楚再選。";
+      if (level === 1) return "x 太小時，中間位置會滑出「" + target + "」，跑到比它大的那邊。最小的情況，是中位數剛好仍是最後一個 " + target + "。";
+      if (level === 2) return "最後一個 " + target + " 當中位數。其餘 " + spareText + " 個都在它左邊，要和右邊的 " + rightText + " 一樣多。";
+      return "寫 " + sideText([leftText, "(" + midText + " − 1)"]) + " = " + sideText([rightText]) + "，也就是 " + sideText([leftText, spareText]) + " = " + sideText([rightText]) + "。先不要算出 x。";
     }
-    if (tutor.step === 4) {
-      if (level === 1) return "不要一次就找範圍。先令中位數等於題目，再向左右各試一個。";
-      if (level === 2) return "看綠色的位置落在哪一個數值。不符合時，留意它變成了比題目大還是小。";
-      return "再試一個小一點和一個大一點的 x。看中位數從哪裡開始不再等於題目，範圍就夾在中間。";
+    if (tutor.phase === "solve") {
+      if (level === 1) return "每條式先把沒有 x 的數字加起來，再把常數移到等號另一邊。";
+      if (level === 2) return "最小的式，左邊除了 x 還有比 " + target + " 小的數目和 " + spareText + "，右邊是 " + rightText + "。最大的式，左邊除了 x 只剩比 " + target + " 小的數目，右邊是 " + spareText + " 再加 " + rightText + "。";
+      return "移項後 x 等於一個數。請自己算出最小和最大，提示不會寫出該兩個數。";
     }
-    if (level === 1) return "邊界通常是：中間位置剛好是這一組的第一個，或剛好是最後一個。";
-    if (level === 2) return "奇數看第 (N+1)/2 項。偶數看第 N/2 項和第 N/2+1 項，而且這兩項都要落在中位數那一組。";
-    return "奇數的 N，中間那一項要在這一組裡面。偶數的 N，中間兩項都要在這一組裡面。分別解出 x，再在正整數裡取最小和最大，然後按核對範圍。";
+    if (level === 1) return "x 太大時，中間位置會滑到比 " + target + " 小的那邊。最大的情況，是中位數剛好仍是第一個 " + target + "。";
+    if (level === 2) return "第一個 " + target + " 當中位數。其餘 " + spareText + " 個都在它右邊，左邊只剩 " + leftText + "。";
+    return "寫 " + sideText([leftText]) + " = " + sideText(["(" + midText + " − 1)", rightText]) + "，也就是 " + sideText([leftText]) + " = " + sideText([spareText, rightText]) + "。先不要算出 x。";
+  }
+
+  function pileText(rows) {
+    if (!rows.length) return "0";
+    return rows.map((row) => MedianMath.formatExpr(row.freq)).join(" + ");
+  }
+
+  function valueList(rows) {
+    if (!rows.length) return "沒有";
+    const name = current().header || "數值";
+    return rows.map((row) => name + " " + row.val).join("、");
+  }
+
+  function sideText(parts) {
+    const usable = parts.filter((part) => part && part !== "0");
+    return usable.length ? usable.join(" + ") : "0";
+  }
+
+  function hintBucket() {
+    if (tutor.mode === "unknown" && tutor.step === 4 && tutor.phase === "solve") return "solve";
+    return tutor.step;
   }
 
   function showHint(level) {
     if (tutor.solved) return;
-    tutor.hints[tutor.step] = tutor.hints[tutor.step] || {};
-    if (!tutor.hints[tutor.step][level]) {
-      tutor.hints[tutor.step][level] = true;
+    const bucket = hintBucket();
+    tutor.hints[bucket] = tutor.hints[bucket] || {};
+    if (!tutor.hints[bucket][level]) {
+      tutor.hints[bucket][level] = true;
       tutor.log.push({ kind: "hint", level, text: hintText(level) });
     }
     render();
@@ -1825,14 +1909,32 @@
       render();
       return;
     }
+    if (hasX && lesson.kind !== "continuous") {
+      const model = modelOf(lesson);
+      if (model.error) {
+        tutor.blocked = true;
+        tutor.log.push({ kind: "tutor", text: model.error === "multi-x" ? "只可以有一個 x。請改好再按繼續。" : "頻數表還未有效。請先修正，再按繼續。" });
+        render();
+        return;
+      }
+      if (!MedianMath.groupSpan(model.rows, Number(lesson.target)).found) {
+        tutor.blocked = true;
+        tutor.log.push({ kind: "tutor", text: "你填的中位數不是表裡的其中一個數值。請核對題目的中位數，再按繼續。" });
+        render();
+        return;
+      }
+    }
     phase = "steps";
     tutor.mode = lesson.kind === "continuous" ? "continuous" : hasX ? "unknown" : "known";
+    tutor.phase = "ask";
     tutor.step = 1;
     tutor.log.push({
       kind: "tutor",
       text: lesson.kind === "continuous"
         ? "對。這是連續數據。數據被分組，中位數要在累積頻數曲線上，對應總頻數的 50%，而不是第 (N+1)/2 項。"
-        : "對。這是離散數據。先把頻數加起來。總數是單數，只取最中間一項；是雙數，取最中間兩項再平均。可以沿表累積來數，不必先畫出每一格。"
+        : hasX
+          ? "對。這是離散數據。先不要算 x。比中位數小、等於中位數、比中位數大分成三堆。正中那一個先減去，剩下的跟其中一邊一起數，兩邊相等就得到式。"
+          : "對。這是離散數據。先把頻數加起來。總數是單數，只取最中間一項；是雙數，取最中間兩項再平均。可以沿表累積來數，不必先畫出每一格。"
     });
     tutor.log.push({ kind: "tutor", text: questionText() });
     render();
@@ -1841,7 +1943,7 @@
   function advance(message) {
     tutor.log.push({ kind: "tutor", text: message });
     const knownViewNow = tutor.mode === "known" ? knownView() : null;
-    const maxStep = tutor.mode === "unknown" ? 5 : tutor.mode === "known" && knownViewNow && !knownViewNow.odd ? 4 : 3;
+    const maxStep = tutor.mode === "unknown" ? 4 : tutor.mode === "known" && knownViewNow && !knownViewNow.odd ? 4 : 3;
     tutor.step += 1;
     tutor.trap = false;
     if (tutor.step > maxStep) {
@@ -1865,8 +1967,99 @@
   function submitStep() {
     if (tutor.mode === "known") submitKnown();
     else if (tutor.mode === "continuous") submitContinuous();
-    else if (tutor.step === 1) submitTotal();
-    else if (tutor.step === 2) submitSpan();
+    else if (tutor.step === 1) submitPiles();
+    else if (tutor.step === 2) submitSpare();
+    else if (tutor.step === 3) submitMinEq();
+    else if (tutor.step === 4 && tutor.phase === "solve") checkFinalAnswer();
+    else if (tutor.step === 4) submitMaxEq();
+  }
+
+  function currentBalance() {
+    const lesson = current();
+    if (lesson.kind === "continuous") return null;
+    const model = modelOf(lesson);
+    const target = Number(lesson.target);
+    if (model.error || !model.rows || !Number.isFinite(target)) return null;
+    return MedianMath.balanceParts(model.rows, target);
+  }
+
+  function submitPiles() {
+    const balance = currentBalance();
+    const leftRaw = document.getElementById("leftExpr").value;
+    const midRaw = document.getElementById("midExpr").value;
+    const rightRaw = document.getElementById("rightExpr").value;
+    tutor.log.push({ kind: "student", text: "小：" + leftRaw + "，中：" + midRaw + "，大：" + rightRaw });
+    if (!balance || !balance.found) {
+      tutor.log.push({ kind: "tutor", text: "請先確認中位數是表裡的其中一個數值。" });
+      render();
+      return;
+    }
+    const leftOk = MedianMath.sameExpr(MedianMath.parseExprFromText(leftRaw), balance.left);
+    const midOk = MedianMath.sameExpr(MedianMath.parseExprFromText(midRaw), balance.midFreq);
+    const rightOk = MedianMath.sameExpr(MedianMath.parseExprFromText(rightRaw), balance.right);
+    if (leftOk && midOk && rightOk) {
+      advance("對。左邊是 " + pileText(balance.leftRows) + "，中間是 " + MedianMath.formatExpr(balance.midFreq) + "，右邊是 " + pileText(balance.rightRows) + "。中間這一組先不要加進任何一邊。");
+    } else {
+      const notes = [];
+      if (!leftOk) notes.push("比中位數小的那一堆還未對。");
+      if (!midOk) notes.push("中位數那一組的個數還未對。");
+      if (!rightOk) notes.push("比中位數大的那一堆還未對。");
+      tutor.log.push({ kind: "tutor", text: notes.join("") + "可以先按提示一。" });
+    }
+    render();
+  }
+
+  function submitSpare() {
+    const balance = currentBalance();
+    const raw = document.getElementById("spareExpr").value;
+    const parsed = MedianMath.parseExprFromText(raw);
+    tutor.log.push({ kind: "student", text: "剩下 " + raw + " 個" });
+    if (!balance || !balance.found) {
+      tutor.log.push({ kind: "tutor", text: "請先確認中位數是表裡的其中一個數值。" });
+    } else if (MedianMath.sameExpr(parsed, balance.spare)) {
+      advance("對。拿走正中那 1 個之後，剩下 " + MedianMath.formatExpr(balance.spare) + " 個，才可以跟左邊或右邊一起數。");
+    } else if (MedianMath.sameExpr(parsed, balance.midFreq)) {
+      tutor.log.push({ kind: "tutor", text: "這是還沒減去中位數之前的個數。正中那一個不歸任何一邊。" });
+    } else {
+      tutor.log.push({ kind: "tutor", text: "還未對。這一組的個數先減 1。" });
+    }
+    render();
+  }
+
+  function submitMinEq() {
+    const balance = currentBalance();
+    const raw = document.getElementById("eqMin").value;
+    tutor.log.push({ kind: "student", text: raw });
+    if (!balance || !balance.found) {
+      tutor.log.push({ kind: "tutor", text: "請先確認中位數是表裡的其中一個數值。" });
+    } else if (MedianMath.sameEquation(MedianMath.parseEquation(raw), balance.minLeft, balance.minRight)) {
+      advance("對。這是 x 最小的式：剩下的個數算在左邊，右邊只留比中位數大的數目。");
+    } else if (raw.indexOf("=") === -1 && raw.indexOf("＝") === -1 && raw.indexOf("等於") === -1) {
+      tutor.log.push({ kind: "tutor", text: "請寫出兩邊相等的式，先不要只寫 x 的值。" });
+    } else {
+      tutor.log.push({ kind: "tutor", text: "這條式還未對。最小時，減 1 之後剩下的要加在左邊，右邊不要加它們。" });
+    }
+    render();
+  }
+
+  function submitMaxEq() {
+    const balance = currentBalance();
+    const raw = document.getElementById("eqMax").value;
+    tutor.log.push({ kind: "student", text: raw });
+    if (!balance || !balance.found) {
+      tutor.log.push({ kind: "tutor", text: "請先確認中位數是表裡的其中一個數值。" });
+    } else if (MedianMath.sameEquation(MedianMath.parseEquation(raw), balance.maxLeft, balance.maxRight)) {
+      tutor.phase = "solve";
+      tutor.log.push({ kind: "tutor", text: "對。這是 x 最大的式：剩下的個數算在右邊，左邊只留比中位數小的數目。" });
+      tutor.log.push({ kind: "tutor", text: questionText() });
+    } else if (raw.indexOf("=") === -1 && raw.indexOf("＝") === -1 && raw.indexOf("等於") === -1) {
+      tutor.log.push({ kind: "tutor", text: "請寫出兩邊相等的式，先不要只寫 x 的值。" });
+    } else if (MedianMath.sameEquation(MedianMath.parseEquation(raw), balance.minLeft, balance.minRight)) {
+      tutor.log.push({ kind: "tutor", text: "這是最小的那條式。最大時，減 1 之後剩下的要改放到右邊。" });
+    } else {
+      tutor.log.push({ kind: "tutor", text: "這條式還未對。最大時，左邊只留比中位數小的數目，剩下的個數加到右邊。" });
+    }
+    render();
   }
 
   function submitKnown() {
@@ -2014,7 +2207,7 @@
 
   function checkFinalAnswer() {
     const model = modelOf(current());
-    const range = MedianMath.rangeForTarget(model.rows, current().target);
+    const range = MedianMath.rangeForTarget(model.rows, Number(current().target));
     if (!range || range.none) {
       tutor.log.push({ kind: "tutor", text: "按現在這張表，沒有正整數 x 能使中位數等於題目。" });
       render();
@@ -2044,17 +2237,20 @@
       if (!range.unbounded && !maxOk && max < range.max) notes.push("你填的最大值偏小，還有更大的正整數也可以。");
       if (minOk) notes.unshift("最小值這一側是對的。");
       if (maxOk && !range.unbounded) notes.unshift("最大值這一側是對的。");
-      tutor.log.push({ kind: "tutor", text: notes.join("\n") + "\n還未完成。可以用試過的 x 再夾一次。" });
+      tutor.log.push({ kind: "tutor", text: notes.join("\n") + "\n還未完成。可以按提示，或用「看看這個 x」檢查邊界。我不會直接說出答案。" });
     }
     render();
   }
 
   function successText(model, range) {
-    const target = current().target;
+    const target = Number(current().target);
+    const balance = MedianMath.balanceParts(model.rows, target);
+    const spare = balance.found ? MedianMath.formatExpr(balance.spare) : "";
+    const spareLine = spare ? "最小時，" + spare + " 個算在左邊；最大時，這 " + spare + " 個算在右邊。\n" : "";
     const minStory = boundaryStory(model.rows, range.min, target);
-    if (range.unbounded) return "正確。x 的最小可取值是 " + range.min + "，沒有最大可取值。\n" + minStory;
+    if (range.unbounded) return "正確。x 的最小可取值是 " + range.min + "，沒有最大可取值。\n" + spareLine + minStory;
     const maxStory = boundaryStory(model.rows, range.max, target);
-    return "正確。x 的最小可取值是 " + range.min + "，最大可取值是 " + range.max + "。\n" + minStory + "\n" + maxStory + "\n再出去一個，中間位置就會離開「" + target + "」。";
+    return "正確。x 的最小可取值是 " + range.min + "，最大可取值是 " + range.max + "。\n" + spareLine + minStory + "\n" + maxStory + "\n再出去一個，中間位置就會離開「" + target + "」。";
   }
 
   function boundaryStory(rows, x, target) {
@@ -2068,6 +2264,148 @@
       return "第 " + position + " 項是 " + target;
     });
     return "x = " + x + " 時，N = " + view.N + "，" + places.join("，") + "。";
+  }
+
+  function balanceMode() {
+    if (tutor.mode !== "unknown" || tutor.stale || phase !== "steps") return null;
+    if (tutor.solved) return "both";
+    if (tutor.step === 1) return "piles";
+    if (tutor.step === 2) return "minus";
+    if (tutor.step === 3) return "min";
+    if (tutor.step === 4 && tutor.phase === "solve") return "both";
+    if (tutor.step === 4) return "max";
+    return null;
+  }
+
+  function updateBalance() {
+    const slot = document.getElementById("balanceSlot");
+    const mode = balanceMode();
+    paintTable(mode);
+    const balance = currentBalance();
+    if (!slot) return;
+    if (!mode || !balance || !balance.found) {
+      slot.innerHTML = "";
+      return;
+    }
+    const target = formatMedian(Number(current().target));
+    const wrap = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "card-title";
+    const bar = document.createElement("div");
+    bar.className = "balance-layout";
+    const caption = document.createElement("p");
+    caption.className = "problem-text";
+    if (mode === "piles") {
+      title.textContent = "先分三堆";
+      bar.appendChild(threePiles(balance, target, false));
+      caption.textContent = "藍色是比中位數小，綠色是中位數那一組，橙色是比中位數大。";
+    } else if (mode === "minus") {
+      title.textContent = "先減 1";
+      bar.appendChild(threePiles(balance, target, true));
+      caption.textContent = "正中這 1 個是中位數，兩邊都不算。其餘的先留着，還未決定跟哪一邊。";
+    } else if (mode === "min") {
+      title.textContent = "x 最小的排法";
+      bar.appendChild(equationRow("左邊", rowChips(balance.leftRows).concat([spareChip(balance)]), "右邊", rowChips(balance.rightRows)));
+      caption.textContent = "中位數貼住這一組的最後一個。左邊個數要等於右邊個數。";
+    } else if (mode === "max") {
+      title.textContent = "x 最大的排法";
+      bar.appendChild(equationRow("左邊", rowChips(balance.leftRows), "右邊", [spareChip(balance)].concat(rowChips(balance.rightRows))));
+      caption.textContent = "中位數貼住這一組的第一個。左邊個數要等於右邊個數。";
+    } else {
+      title.textContent = "兩種邊界";
+      bar.appendChild(equationRow("最小：左邊", rowChips(balance.leftRows).concat([spareChip(balance)]), "右邊", rowChips(balance.rightRows)));
+      bar.appendChild(equationRow("最大：左邊", rowChips(balance.leftRows), "右邊", [spareChip(balance)].concat(rowChips(balance.rightRows))));
+      caption.textContent = "上面是最小的排法，下面是最大的排法。請用這兩條式解 x。";
+    }
+    wrap.append(title, bar, caption);
+    slot.innerHTML = "";
+    slot.appendChild(wrap);
+  }
+
+  function threePiles(balance, target, splitMedian) {
+    const row = document.createElement("div");
+    row.className = "balance-row";
+    const midChips = splitMedian
+      ? [{ label: "1", note: "中位數，不計" }, { label: "其餘", note: "先不要寫出減 1 後的數" }]
+      : [{ label: MedianMath.formatExpr(balance.midFreq), note: "先不要減 1" }];
+    row.append(
+      makePile("比 " + target + " 小", rowChips(balance.leftRows), "left"),
+      makePile("等於 " + target, midChips, "mid"),
+      makePile("比 " + target + " 大", rowChips(balance.rightRows), "right")
+    );
+    return row;
+  }
+
+  function equationRow(leftTitle, leftChips, rightTitle, rightChips) {
+    const wrap = document.createElement("div");
+    const row = document.createElement("div");
+    row.className = "balance-row";
+    const sign = document.createElement("div");
+    sign.className = "eq-sign";
+    sign.textContent = "=";
+    const slot = document.createElement("div");
+    slot.className = "median-slot";
+    slot.textContent = "1 個中位數兩邊都不算";
+    row.append(makePile(leftTitle, leftChips, "left"), sign, makePile(rightTitle, rightChips, "right"));
+    wrap.append(row, slot);
+    return wrap;
+  }
+
+  function makePile(title, chips, kind) {
+    const pile = document.createElement("div");
+    pile.className = "pile pile-" + kind;
+    const heading = document.createElement("div");
+    heading.className = "pile-title";
+    heading.textContent = title;
+    pile.appendChild(heading);
+    chips.forEach((chip) => pile.appendChild(makeChip(chip.label, chip.note)));
+    return pile;
+  }
+
+  function makeChip(label, note) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    const strong = document.createElement("b");
+    strong.textContent = label;
+    chip.appendChild(strong);
+    if (note) {
+      const small = document.createElement("small");
+      small.textContent = note;
+      chip.appendChild(small);
+    }
+    return chip;
+  }
+
+  function rowChips(rows) {
+    const name = current().header || "數值";
+    return rows.map((row) => ({ label: MedianMath.formatExpr(row.freq), note: name + " " + row.val }));
+  }
+
+  function spareChip(balance) {
+    return { label: MedianMath.formatExpr(balance.spare), note: MedianMath.formatExpr(balance.midFreq) + "−1" };
+  }
+
+  function paintTable(mode) {
+    document.querySelectorAll("#pictureCard td").forEach((cell) => {
+      cell.classList.remove("hl-left", "hl-mid", "hl-right", "hl-join-left", "hl-join-right", "hl-join-both");
+    });
+    if (!mode || current().kind === "continuous") return;
+    const target = Number(current().target);
+    if (!Number.isFinite(target)) return;
+    const vals = document.querySelectorAll(".input-val");
+    const freqs = document.querySelectorAll(".input-freq");
+    vals.forEach((input, index) => {
+      const value = Number(input.value);
+      if (!Number.isFinite(value) || !freqs[index]) return;
+      const cls = value < target ? "hl-left" : value > target ? "hl-right" : "hl-mid";
+      input.parentElement.classList.add(cls);
+      freqs[index].parentElement.classList.add(cls);
+      if (cls !== "hl-mid") return;
+      const join = mode === "min" ? "hl-join-left" : mode === "max" ? "hl-join-right" : mode === "both" ? "hl-join-both" : "";
+      if (!join) return;
+      input.parentElement.classList.add(join);
+      freqs[index].parentElement.classList.add(join);
+    });
   }
 
   async function askAi() {
