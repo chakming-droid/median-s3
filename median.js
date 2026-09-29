@@ -3,7 +3,7 @@
 
   function parseFreqToken(raw) {
     const text = String(raw ?? "").trim().toLowerCase();
-    if (text === "x") return { c: 0, k: 1 };
+    if (text === "x" || text === "s") return { c: 0, k: 1 };
     if (!/^\d+$/.test(text)) return null;
     const n = Number(text);
     if (!Number.isInteger(n) || n <= 0) return null;
@@ -132,12 +132,13 @@
     };
   }
 
-  function formatExpr(expr) {
+  function formatExpr(expr, letter) {
+    const name = letter || "x";
     const c = expr.c;
     const k = expr.k;
     if (k === 0) return String(c);
-    if (c === 0) return k === 1 ? "x" : k + "x";
-    const xPart = k === 1 ? "x" : k + "x";
+    if (c === 0) return k === 1 ? name : k + name;
+    const xPart = k === 1 ? name : k + name;
     if (c > 0) return c + "+" + xPart;
     return xPart + "-" + (-c);
   }
@@ -186,7 +187,8 @@
 
   function parseExpr(input) {
     const source = softenMath(input).trim().replace(/\s+/g, "");
-    if (!source || !/^[0-9x+\-()]+$/.test(source)) return null;
+    if (!source || !/^[0-9xs+\-()]+$/.test(source)) return null;
+    if (source.indexOf("x") !== -1 && source.indexOf("s") !== -1) return null;
 
     let i = 0;
 
@@ -213,7 +215,7 @@
         i += 1;
         return inner;
       }
-      if (source[i] === "x") {
+      if (source[i] === "x" || source[i] === "s") {
         i += 1;
         return { c: 0, k: 1 };
       }
@@ -223,7 +225,7 @@
           n = n * 10 + Number(source[i]);
           i += 1;
         }
-        if (source[i] === "x") {
+        if (source[i] === "x" || source[i] === "s") {
           i += 1;
           return { c: 0, k: n };
         }
@@ -238,7 +240,7 @@
   }
 
   function parseExprFromText(input) {
-    const cleaned = softenMath(input).replace(/[^0-9x+\-()]/g, " ");
+    const cleaned = softenMath(input).replace(/[^0-9xs+\-()]/g, " ");
     const parts = cleaned.split(/\s+/).filter(Boolean);
     const joined = parseExpr(parts.join(""));
     if (joined) return joined;
