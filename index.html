@@ -212,7 +212,6 @@
       border-radius: 6px;
     }
     #askInput { width: min(100%, 280px); }
-    #trialX { width: 90px; padding: 8px; font-size: 1rem; border: 1px solid #94a3b8; border-radius: 6px; }
 
     [hidden] { display: none !important; }
 
@@ -901,23 +900,6 @@
     }
     row.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
     if (wanted === "x") {
-      const trial = document.createElement("label");
-      trial.append(document.createTextNode("試 x = "));
-      const trialInput = document.createElement("input");
-      trialInput.id = "trialX";
-      trialInput.type = "number";
-      trialInput.min = "1";
-      trialInput.step = "1";
-      trialInput.inputMode = "numeric";
-      if (experiment && experiment.x) trialInput.value = String(experiment.x);
-      trialInput.addEventListener("input", () => renderCurveSlot() || renderQueue() || renderReading());
-      trialInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          tryX();
-        }
-      });
-      trial.appendChild(trialInput);
       const target = document.createElement("label");
       target.append(document.createTextNode("題目的中位數 = "));
       const targetInput = document.createElement("input");
@@ -931,7 +913,7 @@
         renderReading();
       });
       target.appendChild(targetInput);
-      row.append(trial, target, makeButton("看看這個 x", "btn", tryX));
+      row.appendChild(target);
     }
     slot.appendChild(row);
     const note = document.createElement("p");
@@ -1598,38 +1580,6 @@
       block.append(pos, val);
       wrapper.appendChild(block);
     });
-  }
-
-  function tryX() {
-    const input = document.getElementById("trialX");
-    const x = Number(input && input.value);
-    if (!Number.isInteger(x) || x <= 0) {
-      tutor.log.push({ kind: "tutor", text: "x 要是正整數。" });
-      render();
-      return;
-    }
-    const lesson = current();
-    let median = null;
-    let hit = false;
-    if (lesson.kind === "continuous") {
-      const answer = travelAnswer();
-      median = answer ? answer.minute : null;
-      hit = median != null && median === Number(lesson.target);
-      experiment = { x, answer, hit, median };
-    } else {
-      const model = modelOf(lesson);
-      const view = model.error ? null : MedianMath.medianForX(model.rows, x);
-      median = view ? view.median : null;
-      hit = median != null && MedianMath.sameNumber(median, Number(lesson.target));
-      experiment = { x, view, hit, median };
-    }
-    if (median != null) {
-      const previous = tutor.trials[tutor.trials.length - 1];
-      if (!previous || previous.x !== x || previous.median !== median) {
-        tutor.trials.push({ x, median, hit });
-      }
-    }
-    render();
   }
 
   function renderTutor() {
@@ -2429,7 +2379,7 @@
       if (!range.unbounded && !maxOk && max < range.max) notes.push("你填的最大值偏小，還有更大的正整數也可以。");
       if (minOk) notes.unshift("最小值這一側是對的。");
       if (maxOk && !range.unbounded) notes.unshift("最大值這一側是對的。");
-      tutor.log.push({ kind: "tutor", text: notes.join("\n") + "\n還未完成。可以按提示，或用「看看這個 x」檢查邊界。我不會直接說出答案。" });
+      tutor.log.push({ kind: "tutor", text: notes.join("\n") + "\n還未完成。可以按提示。我不會直接說出答案。" });
     }
     render();
   }
@@ -2921,9 +2871,9 @@
         tutor.entry = "";
         tutor.log.push({ kind: "tutor", text: "最小這一側是對的。再按最大的 x。" });
       } else if (value < range.min) {
-        tutor.log.push({ kind: "tutor", text: "你填的最小值偏小，這個 x 的中位數還不是題目所給的數。可以按提示，或用「看看這個 x」檢查邊界。我不會直接說出答案。" });
+        tutor.log.push({ kind: "tutor", text: "你填的最小值偏小，這個 x 的中位數還不是題目所給的數。可以按提示。我不會直接說出答案。" });
       } else {
-        tutor.log.push({ kind: "tutor", text: "你填的最小值偏大，還有更小的正整數也可以。可以按提示，或用「看看這個 x」檢查邊界。我不會直接說出答案。" });
+        tutor.log.push({ kind: "tutor", text: "你填的最小值偏大，還有更小的正整數也可以。可以按提示。我不會直接說出答案。" });
       }
     } else {
       tutor.log.push({ kind: "student", text: "最大 " + value });
@@ -2931,9 +2881,9 @@
         const gap = range.intervals.length > 1 ? "\n不過中間並非每一個整數都可以。" : "";
         markSolved(successText(model, range) + gap);
       } else if (value > range.max) {
-        tutor.log.push({ kind: "tutor", text: "你填的最大值偏大，這個 x 的中位數已經不是題目所給的數。可以按提示，或用「看看這個 x」檢查邊界。我不會直接說出答案。" });
+        tutor.log.push({ kind: "tutor", text: "你填的最大值偏大，這個 x 的中位數已經不是題目所給的數。可以按提示。我不會直接說出答案。" });
       } else {
-        tutor.log.push({ kind: "tutor", text: "你填的最大值偏小，還有更大的正整數也可以。可以按提示，或用「看看這個 x」檢查邊界。我不會直接說出答案。" });
+        tutor.log.push({ kind: "tutor", text: "你填的最大值偏小，還有更大的正整數也可以。可以按提示。我不會直接說出答案。" });
       }
     }
     render();
