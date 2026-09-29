@@ -37,9 +37,9 @@
     }
 
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       color: #0f172a;
-      margin: 0 0 6px;
+      margin: 0 0 4px;
     }
 
     .progress { margin: 0 0 16px; color: #475569; font-weight: bold; }
@@ -56,10 +56,10 @@
 
     .card {
       background: #f1f5f9;
-      padding: 16px;
+      padding: 12px;
       border-radius: 12px;
       border: 1px solid #e2e8f0;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
 
     .card-title {
@@ -212,13 +212,26 @@
 
     [hidden] { display: none !important; }
 
+    .question-line {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      margin: 0 0 8px;
+      padding: 6px 2px;
+      background: #f1f5f9;
+      font-size: 1.15rem;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+    .chat-log:empty { display: none; }
+    .past-log { background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
+    .past-log summary { font-weight: bold; cursor: pointer; }
     .chat-log {
       background: white;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      padding: 12px;
-      min-height: 120px;
-      max-height: 380px;
+      border: none;
+      padding: 8px 0 0;
+      min-height: 0;
+      max-height: 220px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -292,13 +305,23 @@
     .digit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .digit-grid .btn { min-height: 48px; background: #e2e8f0; color: #0f172a; }
     .entry-display { font-size: 1.35rem; font-weight: 800; text-align: center; padding: 6px 0 8px; }
+    .chip-builder { flex: 1 1 100%; min-width: 100%; }
+    .chip-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      width: 100%;
+      padding-bottom: 4px;
+    }
     .chip-btn {
       display: flex;
+      flex: 0 0 auto;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       width: auto;
-      min-width: 64px;
+      min-width: 58px;
       border: 2px solid transparent;
       min-height: 52px;
       background: white;
@@ -308,6 +331,11 @@
     .chip-btn:hover { background: #f8fafc; }
     .chip-btn small { display: block; font-weight: 600; color: #64748b; font-size: 0.72rem; }
     .chip-btn.selected { outline: 3px solid #0f172a; }
+    .chip-btn[data-side="left"] { border-color: #2563eb; }
+    .chip-btn[data-side="right"] { border-color: #ea580c; }
+    .chip-btn[data-side="pool"] { border-color: #cbd5e1; }
+    .chip-btn:disabled { background: white; color: #0f172a; cursor: default; }
+    #tutorLog:empty { display: none; }
     .btn-hint { min-height: 48px; }
     .built-eq { font-size: 1.2rem; font-weight: 800; text-align: center; margin: 8px 0; }
     .baskets { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
@@ -337,10 +365,16 @@
     }
 
     @media (max-width: 640px) {
-      body { padding: 10px; }
-      .container { padding: 14px; }
+      body { padding: 8px; }
+      .container { padding: 10px; }
       h1 { font-size: 1.25rem; }
-      .chat-log { max-height: 180px; min-height: 72px; }
+      .progress { margin-bottom: 8px; }
+      .card { padding: 8px; margin-bottom: 6px; }
+      .more-box { margin-top: 6px; padding: 4px 8px; }
+      .action-row, .form-row { margin-top: 6px; }
+      .question-line { margin-bottom: 6px; padding: 4px 2px; font-size: 1.08rem; }
+      #tutorActions.tutor-dock { padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); }
+      .chat-log { max-height: 180px; min-height: 0; }
       table.horizontal-table th.row-header { min-width: 52px; padding: 6px 4px; }
       table.horizontal-table th, table.horizontal-table td { padding: 4px; }
       table.horizontal-table input { width: 42px; padding: 4px 2px; font-size: 0.95rem; }
@@ -367,7 +401,7 @@
     </div>
   </div>
   <div class="card" id="tutorCard">
-    <div class="chat-log" id="tutorLog" role="log" aria-live="polite"></div>
+    <div id="tutorLog"></div>
     <div id="tutorForm"></div>
     <div class="form-row" id="tutorActions"></div>
   </div>
@@ -728,27 +762,28 @@
     if (card.dataset.key !== key) {
       card.dataset.key = key;
       card.innerHTML = "";
-      const title = document.createElement("div");
-      title.className = "card-title";
-      title.textContent = lesson.title;
+      const line = document.createElement("p");
+      line.id = "questionLine";
+      line.className = "question-line";
+      line.setAttribute("aria-live", "polite");
+      card.appendChild(line);
+      card.appendChild(buildEditableTable(lesson));
+      const problem = document.createElement("details");
+      problem.className = "more-box";
+      const problemSummary = document.createElement("summary");
+      problemSummary.textContent = "看題目";
       const stem = document.createElement("p");
       stem.className = "problem-text";
       stem.textContent = lesson.stem;
-      card.append(title, stem);
+      problem.append(problemSummary, stem);
       if (lesson.image) {
         const img = document.createElement("img");
         img.src = lesson.image;
         img.alt = lesson.stem;
         img.className = "problem-img";
-        card.appendChild(img);
+        problem.appendChild(img);
       }
-      card.appendChild(buildEditableTable(lesson));
-      const note = document.createElement("p");
-      note.className = "problem-text";
-      note.textContent = lesson.kind === "continuous"
-        ? "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用 x。"
-        : "可改數值和頻數。頻數可填正整數，整個表只可以有一個 x。";
-      card.appendChild(note);
+      card.appendChild(problem);
       const balance = document.createElement("div");
       balance.id = "balanceSlot";
       card.appendChild(balance);
@@ -903,10 +938,16 @@
       moreRow.append(trial, target, makeButton("看看這個 x", "btn", tryX));
     }
     more.appendChild(moreRow);
+    const note = document.createElement("p");
+    note.className = "problem-text";
+    note.textContent = current().kind === "continuous"
+      ? "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用 x。"
+      : "可改數值和頻數。頻數可填正整數，整個表只可以有一個 x。";
+    more.appendChild(note);
     if (wanted === "x") more.appendChild(rangeChecker());
+    if (current().kind === "continuous") more.appendChild(medianChecker());
+    else if (wanted !== "x") more.appendChild(discreteMedianChecker());
     slot.appendChild(more);
-    if (current().kind === "continuous") slot.appendChild(medianChecker());
-    else if (wanted !== "x") slot.appendChild(discreteMedianChecker());
   }
 
   function toggleBlocks() {
@@ -1458,7 +1499,8 @@
     }
     const modelPreview = modelOf(lesson);
     const reveal = discreteRevealed || tutor.solved;
-    if (!modelPreview.hasX && !showBlocks && !reveal) {
+    const tried = Number.isInteger(trialNumber()) && trialNumber() > 0;
+    if (modelPreview.hasX ? !tried : (!showBlocks && !reveal)) {
       card.hidden = true;
       return;
     }
@@ -1688,24 +1730,68 @@
     return row;
   }
 
+  function latestPrompt() {
+    for (let i = tutor.log.length - 1; i >= 0; i -= 1) {
+      if (tutor.log[i].kind === "tutor" || tutor.log[i].kind === "hint") return { index: i, item: tutor.log[i] };
+    }
+    return null;
+  }
+
+  function stepCaption() {
+    if (tutor.mode !== "unknown" || phase !== "steps" || tutor.stale || tutor.solved) return "";
+    if (tutor.step === 1) {
+      const row = classifyRows()[tutor.cursor];
+      if (!row) return "";
+      return (current().header || "數值") + " " + row.val + "，頻數 " + MedianMath.formatExpr(row.freq) + "。";
+    }
+    if (tutor.step === 2 && tutor.phase === "confirm") {
+      const balance = currentBalance();
+      if (balance && balance.found) return MedianMath.formatExpr(balance.midFreq) + " − 1。";
+    }
+    return "";
+  }
+
+  function paintQuestion() {
+    const line = document.getElementById("questionLine");
+    if (!line) return;
+    const found = latestPrompt();
+    const caption = stepCaption();
+    const body = found ? found.item.text : "";
+    line.textContent = caption ? caption + body : body;
+  }
+
+  function logBubble(item) {
+    const bubble = document.createElement("div");
+    bubble.className = "bubble bubble-" + item.kind;
+    if (item.kind === "hint") {
+      const label = document.createElement("span");
+      label.className = "bubble-label";
+      label.textContent = "提示" + "一二三"[item.level - 1];
+      bubble.appendChild(label);
+    }
+    const body = document.createElement("div");
+    body.textContent = item.text;
+    bubble.appendChild(body);
+    return bubble;
+  }
+
   function renderLog() {
     const log = document.getElementById("tutorLog");
     log.innerHTML = "";
-    tutor.log.forEach((item) => {
-      const bubble = document.createElement("div");
-      bubble.className = "bubble bubble-" + item.kind;
-      if (item.kind === "hint") {
-        const label = document.createElement("span");
-        label.className = "bubble-label";
-        label.textContent = "提示" + "一二三"[item.level - 1];
-        bubble.appendChild(label);
-      }
-      const body = document.createElement("div");
-      body.textContent = item.text;
-      bubble.appendChild(body);
-      log.appendChild(bubble);
-    });
-    log.scrollTop = log.scrollHeight;
+    const found = latestPrompt();
+    const older = tutor.log.filter((item, index) => !found || index !== found.index);
+    if (older.length) {
+      const details = document.createElement("details");
+      details.className = "past-log";
+      const summary = document.createElement("summary");
+      summary.textContent = "先前的對話";
+      const box = document.createElement("div");
+      box.className = "chat-log";
+      older.forEach((item) => box.appendChild(logBubble(item)));
+      details.append(summary, box);
+      log.appendChild(details);
+    }
+    paintQuestion();
   }
 
   function makeButton(label, className, onClick) {
@@ -2077,13 +2163,10 @@
 
   function markSolved(text) {
     tutor.solved = true;
-    tutor.log.push({ kind: "tutor", text: text });
     if (lessonIndex === lessons.length - 1) {
-      tutor.log.push({
-        kind: "tutor",
-        text: "三題都做完了。\n離散數據要把數據由小到大排好：奇數個取最中間一項，偶數個取最中間兩項的平均。\n連續數據看累積頻數曲線，中位數對應總頻數的 50%，再從曲線讀回橫軸。\n兩種都叫中位數，但一個是找第幾項，一個是找一半的累積頻數。"
-      });
+      text += "\n\n三題都做完了。\n離散數據要把數據由小到大排好：奇數個取最中間一項，偶數個取最中間兩項的平均。\n連續數據看累積頻數曲線，中位數對應總頻數的 50%，再從曲線讀回橫軸。\n兩種都叫中位數，但一個是找第幾項，一個是找一半的累積頻數。";
     }
+    tutor.log.push({ kind: "tutor", text: text });
   }
 
   function submitStep() {
@@ -2408,46 +2491,9 @@
     paintTable(mode);
     if (tutor.phase !== "shown") {
       document.querySelectorAll("#pictureCard .walk-layer").forEach((node) => node.remove());
+      document.body.style.paddingBottom = "";
     }
-    const balance = currentBalance();
-    if (!slot) return;
-    if (!mode || !balance || !balance.found) {
-      slot.innerHTML = "";
-      return;
-    }
-    const target = formatMedian(Number(current().target));
-    const wrap = document.createElement("div");
-    const title = document.createElement("div");
-    title.className = "card-title";
-    const bar = document.createElement("div");
-    bar.className = "balance-layout";
-    const caption = document.createElement("p");
-    caption.className = "problem-text";
-    if (mode === "piles") {
-      title.textContent = "先分三堆";
-      bar.appendChild(threePiles(balance, target, false));
-      caption.textContent = "藍色是比中位數小，綠色是中位數那一組，橙色是比中位數大。";
-    } else if (mode === "minus") {
-      title.textContent = "先減 1";
-      bar.appendChild(threePiles(balance, target, true));
-      caption.textContent = "正中這 1 個是中位數，兩邊都不算。其餘的先留着，還未決定跟哪一邊。";
-    } else if (mode === "min") {
-      title.textContent = "x 最小的排法";
-      bar.appendChild(equationRow("左邊", rowChips(balance.leftRows).concat([spareChip(balance)]), "右邊", rowChips(balance.rightRows)));
-      caption.textContent = "中位數貼住這一組的最後一個。左邊個數要等於右邊個數。";
-    } else if (mode === "max") {
-      title.textContent = "x 最大的排法";
-      bar.appendChild(equationRow("左邊", rowChips(balance.leftRows), "右邊", [spareChip(balance)].concat(rowChips(balance.rightRows))));
-      caption.textContent = "中位數貼住這一組的第一個。左邊個數要等於右邊個數。";
-    } else {
-      title.textContent = "兩種邊界";
-      bar.appendChild(equationRow("最小：左邊", rowChips(balance.leftRows).concat([spareChip(balance)]), "右邊", rowChips(balance.rightRows)));
-      bar.appendChild(equationRow("最大：左邊", rowChips(balance.leftRows), "右邊", [spareChip(balance)].concat(rowChips(balance.rightRows))));
-      caption.textContent = "上面是最小的排法，下面是最大的排法。請用這兩條式解 x。";
-    }
-    wrap.append(title, bar, caption);
-    slot.innerHTML = "";
-    slot.appendChild(wrap);
+    if (slot) slot.innerHTML = "";
   }
 
   function threePiles(balance, target, splitMedian) {
@@ -2555,12 +2601,13 @@
     const target = formatMedian(Number(current().target));
     if (tutor.step === 1) {
       const row = classifyRows()[tutor.cursor];
-      const caption = document.createElement("p");
-      caption.className = "problem-text";
-      if (row) caption.textContent = (current().header || "數值") + " " + row.val + "，頻數 " + MedianMath.formatExpr(row.freq);
-      else caption.textContent = "請先確認中位數是表裡的其中一個數值。";
-      form.appendChild(caption);
-      if (!row) return;
+      if (!row) {
+        const caption = document.createElement("p");
+        caption.className = "problem-text";
+        caption.textContent = "請先確認中位數是表裡的其中一個數值。";
+        form.appendChild(caption);
+        return;
+      }
       actions.appendChild(makeButton("比 " + target + " 小", "btn dock-btn", () => answerClassify("left")));
       actions.appendChild(makeButton("等於 " + target, "btn dock-btn", () => answerClassify("mid")));
       actions.appendChild(makeButton("比 " + target + " 大", "btn dock-btn", () => answerClassify("right")));
@@ -2581,10 +2628,6 @@
       return;
     }
     if (tutor.step === 2) {
-      const line = document.createElement("p");
-      line.className = "built-eq";
-      line.textContent = midText + " − 1";
-      form.appendChild(line);
       actions.appendChild(makeButton("剩下 " + spareText, "btn dock-btn", () => chooseRemainder(true)));
       actions.appendChild(makeButton("剩下 " + midText, "btn btn-secondary dock-btn", () => chooseRemainder(false)));
       return;
@@ -2593,7 +2636,7 @@
       actions.appendChild(digitPad(confirmSolve));
       return;
     }
-    form.appendChild(chipBuilder());
+    actions.appendChild(chipBuilder());
     if (tutor.phase === "shown") {
       actions.appendChild(makeButton("再看一次", "btn btn-secondary dock-btn", () => playWalk(tutor.walk)));
       actions.appendChild(makeButton("下一步", "btn dock-btn", nextAfterWalk));
@@ -2697,40 +2740,36 @@
   function chipBuilder() {
     const balance = currentBalance();
     const wrap = document.createElement("div");
+    wrap.className = "chip-builder";
     if (!balance || !balance.found) {
       wrap.textContent = "請先確認中位數是表裡的其中一個數值。";
       return wrap;
     }
     const kind = tutor.step === 3 ? "min" : "max";
     const chips = equationChips(balance, kind);
-    const baskets = document.createElement("div");
-    baskets.className = "baskets";
-    const left = makeBasket("左邊", "pile-left");
-    const sign = document.createElement("div");
-    sign.className = "eq-sign";
-    sign.textContent = "=";
-    const right = makeBasket("右邊", "pile-right");
-    const pool = makeBasket("未放", "basket-pool");
+    const row = document.createElement("div");
+    row.className = "chip-row";
     chips.forEach((chip) => {
       const button = document.createElement("button");
       button.type = "button";
+      const side = tutor.placed[chip.id];
+      const placed = side === "left" || side === "right" ? side : "pool";
       button.className = "btn chip-btn" + (tutor.selectedChip === chip.id ? " selected" : "");
+      button.dataset.side = placed;
       button.setAttribute("aria-label", chip.label + " " + chip.note);
       const strong = document.createElement("b");
       strong.textContent = chip.label;
       const note = document.createElement("small");
-      note.textContent = chip.note;
+      note.textContent = placed === "left" ? "左" : placed === "right" ? "右" : "未放";
       button.append(strong, note);
       if (tutor.phase === "shown") button.disabled = true;
       else button.addEventListener("click", () => {
         tutor.selectedChip = tutor.selectedChip === chip.id ? "" : chip.id;
         render();
       });
-      const side = tutor.placed[chip.id];
-      (side === "left" ? left : side === "right" ? right : pool).appendChild(button);
+      row.appendChild(button);
     });
-    baskets.append(left, sign, right);
-    wrap.append(baskets, pool);
+    wrap.appendChild(row);
     if (tutor.phase === "shown") {
       const eq = document.createElement("div");
       eq.className = "built-eq";
@@ -2862,6 +2901,7 @@
       grid.appendChild(makeButton("重按上一個", "btn btn-secondary dock-btn", () => {
         tutor.held = null;
         tutor.entry = "";
+        tutor.log.push({ kind: "tutor", text: tutor.step === 3 ? "回到較前的數值。再按一次。" : "回到較前的位置。再按一次。" });
         render();
       }));
     }
@@ -2926,9 +2966,11 @@
     if ((kind !== "min" && kind !== "max") || tutor.stale || phase !== "steps") return;
     const stage = document.querySelector("#pictureCard .table-stage");
     if (!stage) return;
-    const target = Number(current().target);
-    const mid = [...document.querySelectorAll("#pictureCard .input-val")].find((input) => Number(input.value) === target);
-    if (mid) mid.parentElement.scrollIntoView({ inline: "center", block: "nearest" });
+    const anchor = document.getElementById("questionLine") || stage;
+    const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
+    const room = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    if (anchorTop > room) document.body.style.paddingBottom = (anchorTop - room + 8) + "px";
+    anchor.scrollIntoView({ block: "start", inline: "nearest", behavior: "auto" });
     const token = ++walkSerial;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
