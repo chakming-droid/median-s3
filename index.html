@@ -1942,11 +1942,14 @@
       }
       indexes.push(...[...keep].sort((a, b) => a - b));
     }
+    const hintOdd = !!(view && view.odd && (solvedMarks || cutLineOn()));
     const lit = solvedMarks && view
       ? view.positions.map((position) => position - 1)
-      : (lightsApply() ? (tutor.lit || []) : []);
-    const arrow = solvedMarks || (!!tutor.arrow && lightsApply());
-    const showCut = solvedMarks || cutLineOn();
+      : hintOdd
+        ? [view.positions[0] - 1]
+        : (lightsApply() ? (tutor.lit || []) : []);
+    const arrow = solvedMarks || hintOdd || (!!tutor.arrow && lightsApply());
+    const showCut = !!(view && !view.odd && (solvedMarks || cutLineOn()));
     let previous = -1;
     indexes.forEach((index) => {
       if (previous >= 0 && index > previous + 1) {
@@ -2143,7 +2146,7 @@
       const bucket = hintBucket();
       const used = tutor.hints[bucket] && tutor.hints[bucket][level];
       const name = "提示" + "一二三"[level - 1];
-      hintRow.appendChild(makeButton(used ? name + "（已看）" : name, "btn btn-hint" + (level > 1 ? " level-" + level : ""), () => showHint(level)));
+      hintRow.appendChild(makeButton(used ? name + "（收起）" : name, "btn btn-hint" + (level > 1 ? " level-" + level : ""), () => showHint(level)));
     });
     form.appendChild(hintRow);
     if (aiOpen()) form.appendChild(askRow());
@@ -2215,14 +2218,14 @@
         left: [[1, 1], [4, 2]],
         mid: [[7, 3]],
         right: [[9, 4], [12, 5]],
-        caption: "例子：5 個數據，斬開後左右各有 2 個。中間剩下第 3 項，數值是 7，中位數就是 7。回到這題，自己數中間是第幾項。"
+        caption: "例子：5 個數據，斬開後左右各有 2 個。正中間是第 3 項，數值是 7，中位數就是 7。回到上面自己數。"
       };
     }
     return {
       left: [[1, 1], [3, 2]],
       mid: [[4, 3], [8, 4]],
       right: [[9, 5], [10, 6]],
-      caption: "例子：6 個數據，斬開後左右各有 2 個。中間剩下第 3 項和第 4 項。中位數 = (4 + 8) / 2 = 6。回到這題，自己數中間是第幾項。"
+      caption: "例子：6 個數據，斬開後左右各有 2 個。正中間是第 3 項和第 4 項。中位數 = (4 + 8) / 2 = 6。回到上面自己數。"
     };
   }
 
@@ -2399,10 +2402,10 @@
       const view = knownView();
       if (!view) return "請先填好頻數表。";
       if (tutor.step === 1) return "單看頻數表，這批數據一共有多少個？";
-      if (tutor.step === 2) return view.odd ? "中位數是第幾項？" : "中位數是第幾項和第幾項？";
+      if (tutor.step === 2) return view.odd ? "中位數位於第幾項？" : "中位數在第幾項及第幾項的中間？";
       if (tutor.step === 3) return view.odd
         ? "中間那一項是哪個數值？"
-        : "較前的那一項是哪個數值？較後的那一項又是哪個？";
+        : "正中間這兩項的數值是多少？";
       return "總數是雙數。把這兩個數值加起來再除以 2。中位數是多少？";
     }
     if (tutor.mode === "continuous") {
@@ -2416,8 +2419,8 @@
     if (tutor.step === 1) {
       if (!view) return "先用 − 和 + 選定一個正整數。";
       return view.odd
-        ? "現在 " + letter + " = " + currentTrial() + "。中位數是第幾項？"
-        : "現在 " + letter + " = " + currentTrial() + "。中位數是第幾項和第幾項？";
+        ? "現在 " + letter + " = " + currentTrial() + "。中位數位於第幾項？"
+        : "現在 " + letter + " = " + currentTrial() + "。中位數在第幾項及第幾項的中間？";
     }
     return "先分最小和最大兩種情況。中位數放在正中間，左邊的項數等於右邊的項數。" + letter + " 的最小和最大可取值是多少？";
   }
@@ -2472,9 +2475,11 @@
     if (tutor.step === 2) {
       if (level === 1) return "看原始數據。每個數值上方寫著第幾項，由第 1 項數起。";
       if (level === 2) return view.odd
-        ? "數據的數目是奇數。正中間剩下一項。斬線畫在這一項旁邊。"
+        ? "數據的數目是單數。正中間只有一項，箭嘴和亮燈直接標出中位數的這一項。"
         : "數據的數目是偶數。正中間剩下兩項。斬線畫在這兩項中間。";
-      return "把由小至大的數據斬成兩半，再看中間剩下第幾項。下面的例子不是這題。提示不寫出這題的項數。";
+      return view.odd
+        ? "中位數位於第幾項？"
+        : "中位數在第幾項及第幾項的中間？先填第幾項，對了再填及第幾項。";
     }
     if (tutor.step === 3) {
       if (level === 1) return "由最小的數值開始數。它的頻數就是開頭佔了多少項。";
@@ -2545,9 +2550,11 @@
       if (!view) return "先用 − 和 + 選定一個正整數。";
       if (level === 1) return "看原始數據。每個數值上方寫著第幾項，由第 1 項數起。重複的數先用省略號。";
       if (level === 2) return view.odd
-        ? "數據的數目是奇數。正中間剩下一項。斬線畫在這一項旁邊。"
+        ? "數據的數目是單數。正中間只有一項，箭嘴和亮燈直接標出中位數的這一項。"
         : "數據的數目是偶數。正中間剩下兩項。斬線畫在這兩項中間。";
-      return "把由小至大的數據斬成兩半，再看中間剩下第幾項。提示不寫出這題的項數。";
+      return view.odd
+        ? "中位數位於第幾項？"
+        : "中位數在第幾項及第幾項的中間？先填第幾項，對了再填及第幾項。";
     }
     if (level === 1) return "先分兩種情況：最小，和最大。用 − 和 + 試一個正整數，看中位數會不會變成題目的數。先不要算出最小和最大。";
     if (level === 2) return "把中位數放在正中間。它左邊的項數，要等於右邊的項數。";
@@ -2583,10 +2590,14 @@
     if (tutor.solved) return;
     const bucket = hintBucket();
     tutor.hints[bucket] = tutor.hints[bucket] || {};
-    if (!tutor.hints[bucket][level]) {
-      tutor.hints[bucket][level] = true;
-      tutor.log.push({ kind: "hint", level, text: hintText(level) });
+    if (tutor.hints[bucket][level]) {
+      tutor.hints[bucket][level] = false;
+      tutor.log = tutor.log.filter((item) => !(item.kind === "hint" && item.level === level && item.bucket === bucket));
+      render();
+      return;
     }
+    tutor.hints[bucket][level] = true;
+    tutor.log.push({ kind: "hint", level, bucket, text: hintText(level) });
     const onItem = shouldLabelItems() && (level === 1 || level === 2);
     if (onItem) showBlocks = true;
     render();
@@ -2805,39 +2816,39 @@
       if (value === view.positions[0]) {
         lightPosition(view.positions[0], true);
         advance("對。總數是單數，只看最中間那一項。");
-      } else tutor.log.push({ kind: "tutor", text: "項數還未對。把數據斬成兩半，左右一樣多，再數中間是第幾項。" });
+      } else tutor.log.push({ kind: "tutor", text: "項數還未對。看箭嘴和亮燈的那一項。" });
     } else if (tutor.step === 2 && tutor.held == null) {
       tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
       if (value === view.positions[0]) {
         tutor.held = raw;
         tutor.entry = "";
         lightPosition(view.positions[0], false);
-        tutor.log.push({ kind: "tutor", text: "較前的一項對了。再填較後的一項。" });
-      } else tutor.log.push({ kind: "tutor", text: "較前的一項還未對。" });
+        tutor.log.push({ kind: "tutor", text: "這一項對了。再填及第幾項。" });
+      } else tutor.log.push({ kind: "tutor", text: "這一項還未對。" });
     } else if (tutor.step === 2) {
       const first = Number(tutor.held);
       tutor.log.push({ kind: "student", text: "第 " + tutor.held + " 項及第 " + raw + " 項" });
       if (first === view.positions[0] && value === view.positions[1]) {
         lightPosition(view.positions[1], true);
-        advance("對。總數是雙數，要看最中間這兩項。");
-      } else tutor.log.push({ kind: "tutor", text: "較後的一項還未對。" });
+        advance("對。總數是雙數，中位數在這兩項的中間。");
+      } else tutor.log.push({ kind: "tutor", text: "及第幾項還未對。" });
     } else if (tutor.step === 3 && view.odd) {
       tutor.log.push({ kind: "student", text: "數值 = " + raw });
       if (MedianMath.sameNumber(value, view.values[0])) markSolved("正確。總數是單數，中位數就是中間那一個數值。");
       else tutor.log.push({ kind: "tutor", text: "還未對。由最小的數值起累積頻數，看到中間那一項是哪個數值。" });
     } else if (tutor.step === 3 && tutor.held == null) {
-      tutor.log.push({ kind: "student", text: "較前 " + raw });
+      tutor.log.push({ kind: "student", text: "數值 " + raw });
       if (MedianMath.sameNumber(value, view.values[0])) {
         tutor.held = raw;
         tutor.entry = "";
-        tutor.log.push({ kind: "tutor", text: "較前的數值對了。再填較後的數值。" });
-      } else tutor.log.push({ kind: "tutor", text: "較前的數值還未對。由最小的數值起累積頻數。" });
+        tutor.log.push({ kind: "tutor", text: "這一項的數值對了。再填另一項的數值。" });
+      } else tutor.log.push({ kind: "tutor", text: "這一項的數值還未對。由最小的數值起累積頻數。" });
     } else if (tutor.step === 3) {
       const first = Number(tutor.held);
-      tutor.log.push({ kind: "student", text: "較前 " + tutor.held + "，較後 " + raw });
+      tutor.log.push({ kind: "student", text: "數值 " + tutor.held + " 及 " + raw });
       if (MedianMath.sameNumber(first, view.values[0]) && MedianMath.sameNumber(value, view.values[1])) {
         advance("對。這兩項的數值都找到了。總數是雙數，還要把它們平均。");
-      } else tutor.log.push({ kind: "tutor", text: "較後的數值還未對。沿表再數另一項是哪個數值。" });
+      } else tutor.log.push({ kind: "tutor", text: "另一項的數值還未對。沿表再數另一項是哪個數值。" });
     } else if (tutor.step === 4) {
       tutor.log.push({ kind: "student", text: "中位數 = " + raw });
       if (MedianMath.sameNumber(value, view.median)) {
@@ -2864,22 +2875,22 @@
       if (value === view.positions[0]) {
         lightPosition(view.positions[0], true);
         advance("對。總數是單數，只看最中間那一項。");
-      } else tutor.log.push({ kind: "tutor", text: "項數還未對。看斬線旁邊的那一項。" });
+      } else tutor.log.push({ kind: "tutor", text: "項數還未對。看箭嘴和亮燈的那一項。" });
     } else if (tutor.held == null) {
       tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
       if (value === view.positions[0]) {
         tutor.held = raw;
         tutor.entry = "";
         lightPosition(view.positions[0], false);
-        tutor.log.push({ kind: "tutor", text: "較前的一項對了。再填較後的一項。" });
-      } else tutor.log.push({ kind: "tutor", text: "較前的一項還未對。" });
+        tutor.log.push({ kind: "tutor", text: "這一項對了。再填及第幾項。" });
+      } else tutor.log.push({ kind: "tutor", text: "這一項還未對。" });
     } else {
       const first = Number(tutor.held);
       tutor.log.push({ kind: "student", text: "第 " + tutor.held + " 項及第 " + raw + " 項" });
       if (first === view.positions[0] && value === view.positions[1]) {
         lightPosition(view.positions[1], true);
-        advance("對。總數是雙數，要看最中間這兩項。");
-      } else tutor.log.push({ kind: "tutor", text: "較後的一項還未對。" });
+        advance("對。總數是雙數，中位數在這兩項的中間。");
+      } else tutor.log.push({ kind: "tutor", text: "及第幾項還未對。" });
     }
     render();
     scrollMark();
@@ -3394,15 +3405,15 @@
     if (tutor.mode === "unknown") {
       if (tutor.step === 1) {
         const view = trialView();
-        return view && view.odd ? "第幾項" : tutor.held == null ? "較前的一項" : "較後的一項";
+        return view && view.odd ? "第幾項" : tutor.held == null ? "第幾項" : "及第幾項";
       }
       return "最小 " + unknownLetter();
     }
     if (tutor.mode === "known") {
       const view = knownView();
       if (tutor.step === 1) return "N";
-      if (tutor.step === 2) return view && view.odd ? "第幾項" : tutor.held == null ? "較前的一項" : "較後的一項";
-      if (tutor.step === 3) return view && view.odd ? "中間那一項的數值" : tutor.held == null ? "較前的數值" : "較後的數值";
+      if (tutor.step === 2) return view && view.odd ? "第幾項" : tutor.held == null ? "第幾項" : "及第幾項";
+      if (tutor.step === 3) return view && view.odd ? "中間那一項的數值" : tutor.held == null ? "這一項的數值" : "另一項的數值";
       return "中位數";
     }
     if (tutor.step === 1) return "總頻數";
@@ -3442,7 +3453,7 @@
         if (tutor.step === itemStep()) clearLastLight();
         tutor.held = null;
         tutor.entry = "";
-        tutor.log.push({ kind: "tutor", text: tutor.step === 3 ? "回到較前的數值。再填一次。" : "回到較前的一項。再填一次。" });
+        tutor.log.push({ kind: "tutor", text: tutor.step === 3 ? "回到這一項的數值。再填一次。" : "回到第幾項。再填一次。" });
         render();
       }));
     }
