@@ -829,7 +829,7 @@
     }
     tutor.mode = lesson.kind === "continuous" ? "continuous" : hasX ? "unknown" : "known";
     tutor.step = 1;
-    tutor.log.push({ kind: "tutor", text: questionText() });
+    askQuestion();
     render();
   }
 
@@ -2196,12 +2196,26 @@
     return "";
   }
 
+  function askQuestion() {
+    tutor.log.push({ kind: "tutor", text: questionText(), asks: true, step: tutor.step });
+  }
+
+  function displayText(item) {
+    if (!item) return "";
+    if (item.kind === "hint" && item.bucket === hintBucket()) {
+      const seen = tutor.hints[item.bucket];
+      if (seen && seen[item.level]) return hintText(item.level);
+    }
+    if (item.kind === "tutor" && item.asks && item.step === tutor.step && !tutor.solved) return questionText();
+    return item.text;
+  }
+
   function paintQuestion() {
     const line = document.getElementById("questionLine");
     if (!line) return;
     const found = latestPrompt();
     const caption = stepCaption();
-    const body = found ? found.item.text : "";
+    const body = found ? displayText(found.item) : "";
     line.textContent = caption ? caption + body : body;
     syncCutDemo(line);
   }
@@ -2291,7 +2305,7 @@
       bubble.appendChild(label);
     }
     const body = document.createElement("div");
-    body.textContent = item.text;
+    body.textContent = displayText(item);
     bubble.appendChild(body);
     return bubble;
   }
@@ -2475,8 +2489,8 @@
     if (tutor.step === 2) {
       if (level === 1) return "看原始數據。每個數值上方寫著第幾項，由第 1 項數起。";
       if (level === 2) return view.odd
-        ? "數據的數目是單數。正中間只有一項，箭嘴和亮燈直接標出中位數的這一項。"
-        : "數據的數目是偶數。正中間剩下兩項。斬線畫在這兩項中間。";
+        ? "現在共 " + view.N + " 個，是單數。正中間只有一項，箭嘴和亮燈直接標出中位數的這一項。"
+        : "現在共 " + view.N + " 個，是偶數。正中間剩下兩項。斬線畫在這兩項中間。";
       return view.odd
         ? "中位數位於第幾項？"
         : "中位數在第幾項及第幾項的中間？先填第幾項，對了再填及第幾項。";
@@ -2550,8 +2564,8 @@
       if (!view) return "先用 − 和 + 選定一個正整數。";
       if (level === 1) return "看原始數據。每個數值上方寫著第幾項，由第 1 項數起。重複的數先用省略號。";
       if (level === 2) return view.odd
-        ? "數據的數目是單數。正中間只有一項，箭嘴和亮燈直接標出中位數的這一項。"
-        : "數據的數目是偶數。正中間剩下兩項。斬線畫在這兩項中間。";
+        ? "現在共 " + view.N + " 個，是單數。正中間只有一項，箭嘴和亮燈直接標出中位數的這一項。"
+        : "現在共 " + view.N + " 個，是偶數。正中間剩下兩項。斬線畫在這兩項中間。";
       return view.odd
         ? "中位數位於第幾項？"
         : "中位數在第幾項及第幾項的中間？先填第幾項，對了再填及第幾項。";
@@ -2664,7 +2678,7 @@
     tutor.arrow = false;
     tutor.litTrial = null;
     tutor.step = 1;
-    tutor.log.push({ kind: "tutor", text: questionText() });
+    askQuestion();
     render();
   }
 
@@ -2692,7 +2706,7 @@
       tutor.solved = true;
       return;
     }
-    tutor.log.push({ kind: "tutor", text: questionText() });
+    askQuestion();
   }
 
   function markSolved(text) {
