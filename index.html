@@ -519,12 +519,13 @@
       id: "commute",
       kind: "continuous",
       title: "連續數據",
-      chartTitle: "累積頻數曲線",
-      stem: "以下是一組數據的累積頻數曲線。可改組界、頻數或累積頻數。拖動紅線對位，再求中位數。",
+      chartTitle: "一組人於今早由家前往工作地點所需的交通時間",
+      axisLabel: "交通時間（分鐘）",
+      stem: "以下是一組人於今早由家前往工作地點所需交通時間的累積頻數曲線。可改組界、頻數或累積頻數。拖動紅線對位，再求中位數。",
       structure: 0,
       bounds: ["24.5", "29.5", "34.5", "39.5", "44.5", "49.5"],
-      freqs: ["", "8", "27", "65", "140", "60"],
-      cums: ["0", "8", "35", "100", "240", "300"]
+      freqs: ["", "15", "45", "90", "100", "50"],
+      cums: ["0", "15", "60", "150", "250", "300"]
     }
   ];
   const lessonTemplates = JSON.parse(JSON.stringify(lessons));
@@ -1585,7 +1586,7 @@
       '<path d="' + fill + '" fill="#dbeafe" opacity="0.7"/>' +
       '<path d="' + line + '" fill="none" stroke="#0f172a" stroke-width="2.5"/>' +
       dots + guideSvg +
-      '<text x="' + ((pad.l + w - pad.r) / 2) + '" y="' + (h - 16) + '" text-anchor="middle" font-size="13" fill="#334155">數值</text>' +
+      '<text x="' + ((pad.l + w - pad.r) / 2) + '" y="' + (h - 16) + '" text-anchor="middle" font-size="13" fill="#334155">' + (current().axisLabel || "數值") + "</text>" +
       '<text x="18" y="' + midY + '" text-anchor="middle" font-size="13" fill="#334155" transform="rotate(-90 18 ' + midY + ')">累積頻數</text>' +
       "</svg>";
   }
@@ -1594,7 +1595,7 @@
     const maxY = points[points.length - 1].y;
     const minY = points[0].y;
     if (readerCf == null || readerCf < minY || readerCf > maxY) {
-      readerCf = Math.min(maxY, Math.max(minY, maxY >= 100 ? 50 : Math.round(maxY / 5)));
+      readerCf = minY + (maxY - minY) / 2;
     }
   }
 
@@ -2532,7 +2533,7 @@
     }
     if (level === 1) return "在縱軸找到一半的累積頻數，看水平線會碰到曲線的哪裡。";
     if (level === 2) return "把紅線拖到那個高度，看垂直線落在哪兩個組界之間。";
-    return "看垂直線靠近哪一個整數，填最接近的整數。不要填小數，也不要填組界上的 .5。";
+    return "看垂直線靠近哪一個整數，填最接近的整數。剛好在兩個整數正中間時，填較小的那個。不要填小數，也不要填組界上的 .5。";
   }
 
   function unknownPlacement() {

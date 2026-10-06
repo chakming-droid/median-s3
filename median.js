@@ -432,8 +432,14 @@
       total,
       half,
       rawX,
-      minute: Math.round(rawX)
+      minute: nearestMinute(rawX)
     };
+  }
+
+  function nearestMinute(value) {
+    const lower = Math.floor(value + 1e-9);
+    if (Math.abs(value - lower - 0.5) < 1e-6) return lower;
+    return Math.round(value);
   }
 
   root.MedianMath = {
