@@ -842,6 +842,7 @@
       const button = makeButton(lesson.title, index === lessonIndex ? "btn" : "btn btn-secondary", () => showMode(index));
       bar.appendChild(button);
     });
+    bar.appendChild(makeButton("Q8", "btn btn-secondary", loadExercise));
   }
 
   function teacherStatusText() {
@@ -1049,7 +1050,6 @@
     const row = document.createElement("div");
     row.className = "action-row";
     row.appendChild(makeButton("重置這一題", "btn btn-secondary", () => loadLesson(lessonIndex)));
-    if (current().kind !== "continuous") row.appendChild(makeButton("Q8", "btn btn-secondary", loadExercise));
     row.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
     slot.appendChild(row);
   }
