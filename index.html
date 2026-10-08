@@ -808,7 +808,7 @@
     tutor = freshTutor();
     fieldDrafts = {};
     experiment = null;
-    showBlocks = false;
+    showBlocks = lesson.kind !== "continuous";
     discreteRevealed = false;
     casesRevealed = false;
     asking = false;
@@ -829,7 +829,7 @@
       }
     }
     tutor.mode = lesson.kind === "continuous" ? "continuous" : hasX ? "unknown" : "known";
-    tutor.step = 1;
+    tutor.step = tutor.mode === "unknown" ? 2 : 1;
     askQuestion();
     render();
   }
@@ -1034,19 +1034,12 @@
       row.appendChild(target);
     }
     if (row.childElementCount) slot.appendChild(row);
-    if (wanted === "x") {
-      const status = document.createElement("p");
-      status.id = "trialStatus";
-      status.className = "problem-text";
-      status.textContent = trialStatusText();
-      slot.appendChild(status);
+    if (current().kind === "continuous") {
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用未知數。";
+      slot.appendChild(note);
     }
-    const note = document.createElement("p");
-    note.className = "problem-text";
-    note.textContent = current().kind === "continuous"
-      ? "可改組界、頻數或累積頻數。改完曲線會重畫。這一題不用未知數。"
-      : "可改數值和頻數。頻數可填正整數，整個表只可以有一個 s 或 x。";
-    slot.appendChild(note);
   }
 
   function renderTools() {
@@ -1056,7 +1049,7 @@
     const row = document.createElement("div");
     row.className = "action-row";
     row.appendChild(makeButton("重置這一題", "btn btn-secondary", () => loadLesson(lessonIndex)));
-    if (current().kind !== "continuous") row.appendChild(makeButton("載入原子筆題", "btn btn-secondary", loadExercise));
+    if (current().kind !== "continuous") row.appendChild(makeButton("Q8", "btn btn-secondary", loadExercise));
     row.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
     slot.appendChild(row);
   }
@@ -1734,6 +1727,7 @@
       return;
     }
     if (model.hasX) {
+      if (!revealCases) wrapper.appendChild(pictureHintButtons());
       wrapper.appendChild(trialRaw(model.rows, letter));
       return;
     }
@@ -1743,6 +1737,7 @@
       return;
     }
     const expanded = expandRows(model.rows, 1);
+    if (!reveal) wrapper.appendChild(pictureHintButtons());
     if (!reveal && !rowMarksOn()) {
       wrapper.appendChild(plainLine(expanded));
       return;
@@ -1897,14 +1892,46 @@
     return -1;
   }
 
+  function pictureHintOn(level) {
+    return !!(tutor.hints.picture && tutor.hints.picture[level]);
+  }
+
   function itemLabelsOn() {
-    const step = itemStep();
-    return step > 0 && !!(tutor.hints[step] && tutor.hints[step][1]);
+    return pictureHintOn(1) || pictureHintOn(2);
   }
 
   function cutLineOn() {
-    const step = itemStep();
-    return step > 0 && !!(tutor.hints[step] && tutor.hints[step][2]);
+    return pictureHintOn(2);
+  }
+
+  function pictureHintButton(level, title) {
+    const open = pictureHintOn(level);
+    const button = makeButton(open ? title + "（收起）" : title, open ? "btn" : "btn btn-secondary", () => togglePictureHint(level));
+    if (level === 2 && !pictureHintOn(1)) button.disabled = true;
+    return button;
+  }
+
+  function pictureHintButtons() {
+    const row = document.createElement("div");
+    row.className = "action-row";
+    row.append(pictureHintButton(1, "提示一"), pictureHintButton(2, "提示二"));
+    return row;
+  }
+
+  function togglePictureHint(level) {
+    if (current().kind === "continuous") return;
+    tutor.hints.picture = tutor.hints.picture || {};
+    const open = !!tutor.hints.picture[level];
+    if (open) {
+      tutor.hints.picture[level] = false;
+      if (level === 1) tutor.hints.picture[2] = false;
+    } else {
+      if (level === 2 && !tutor.hints.picture[1]) return;
+      tutor.hints.picture[level] = true;
+    }
+    showBlocks = true;
+    render();
+    if (!open && level === 2) scrollMark();
   }
 
   function rowMarksOn() {
@@ -2141,15 +2168,17 @@
     } else {
       actions.appendChild(answerBox(confirmDigits));
     }
-    const hintRow = document.createElement("div");
-    hintRow.className = "form-row";
-    [1, 2, 3].forEach((level) => {
-      const bucket = hintBucket();
-      const used = tutor.hints[bucket] && tutor.hints[bucket][level];
-      const name = "提示" + "一二三"[level - 1];
-      hintRow.appendChild(makeButton(used ? name + "（收起）" : name, "btn btn-hint" + (level > 1 ? " level-" + level : ""), () => showHint(level)));
-    });
-    form.appendChild(hintRow);
+    if (tutor.mode === "continuous") {
+      const hintRow = document.createElement("div");
+      hintRow.className = "form-row";
+      [1, 2, 3].forEach((level) => {
+        const bucket = hintBucket();
+        const used = tutor.hints[bucket] && tutor.hints[bucket][level];
+        const name = "提示" + "一二三"[level - 1];
+        hintRow.appendChild(makeButton(used ? name + "（收起）" : name, "btn btn-hint" + (level > 1 ? " level-" + level : ""), () => showHint(level)));
+      });
+      form.appendChild(hintRow);
+    }
     if (aiOpen()) form.appendChild(askRow());
     updateBalance();
     if (tutor.phase === "shown" && tutor.walk && !tutor.walkPlayed) {
@@ -2678,7 +2707,8 @@
     tutor.lit = [];
     tutor.arrow = false;
     tutor.litTrial = null;
-    tutor.step = 1;
+    tutor.step = tutor.mode === "unknown" ? 2 : 1;
+    showBlocks = lesson.kind !== "continuous";
     askQuestion();
     render();
   }
@@ -2701,6 +2731,7 @@
     const knownViewNow = tutor.mode === "known" ? knownView() : null;
     const maxStep = tutor.mode === "unknown" ? 2 : tutor.mode === "known" && knownViewNow && !knownViewNow.odd ? 4 : 3;
     tutor.step += 1;
+    if (tutor.mode === "known" && tutor.step === 2) tutor.step = 3;
     tutor.trap = false;
     resetEntry();
     if (tutor.step > maxStep) {
