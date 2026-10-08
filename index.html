@@ -194,6 +194,14 @@
     .block-gap { align-self: center; font-size: 1.4rem; font-weight: bold; color: #64748b; padding: 0 4px; }
     .raw-scroll { overflow-x: auto; padding-bottom: 4px; }
     .raw-plain { font-size: 1.05rem; font-weight: 700; line-height: 1.7; margin: 4px 0 8px; }
+    .median-cut {
+      display: inline-block;
+      width: 0;
+      height: 1.15em;
+      margin: 0 6px;
+      border-left: 3px solid #7c3aed;
+      vertical-align: -0.15em;
+    }
     .raw-case { margin: 12px 0 16px; }
     .raw-case-title { font-weight: 800; color: #1d4ed8; margin-bottom: 6px; }
     .raw-track { display: flex; align-items: flex-end; gap: 10px; width: max-content; min-width: 100%; }
@@ -1739,7 +1747,7 @@
     const expanded = expandRows(model.rows, 1);
     if (!reveal) wrapper.appendChild(pictureHintButtons());
     if (!reveal && !rowMarksOn()) {
-      wrapper.appendChild(plainLine(expanded));
+      wrapper.appendChild(plainLine(expanded, view));
       return;
     }
     wrapper.appendChild(compactRow(expanded, view, !!reveal));
@@ -1791,11 +1799,8 @@
     return runs.map((run) => runLabel(run.val, run.count)).join(", ");
   }
 
-  function plainLine(values) {
-    const line = document.createElement("p");
-    line.className = "raw-plain";
-    line.textContent = compressValues(values);
-    return line;
+  function plainLine(values, view) {
+    return medianSplit(runsFromValues(values), view);
   }
 
   function symbolicLine(rows, letter) {
@@ -1938,13 +1943,79 @@
     return itemLabelsOn() || cutLineOn() || (tutor.lit && tutor.lit.length > 0);
   }
 
-  function bookRuns(rows, x) {
-    return rows.map((row) => {
+  function bookRunText(val, count) {
+    const text = String(val);
+    if (count <= 0) return "";
+    if (count <= 3) return Array.from({ length: count }, () => text).join(", ");
+    return text + ", …, " + text + "（" + count + " 個）";
+  }
+
+  function runsFromValues(values) {
+    const runs = [];
+    values.forEach((val, index) => {
+      const position = index + 1;
+      const last = runs[runs.length - 1];
+      if (last && last.val === val) {
+        last.count += 1;
+        last.end = position;
+      } else runs.push({ val, count: 1, start: position, end: position });
+    });
+    return runs;
+  }
+
+  function positionRuns(rows, x) {
+    const runs = [];
+    let start = 1;
+    rows.forEach((row) => {
       const count = row.freq.c + row.freq.k * x;
-      const text = String(row.val);
-      if (count <= 3) return Array.from({ length: count }, () => text).join(", ");
-      return text + ", …, " + text + "（" + count + " 個）";
-    }).join(", ");
+      if (count <= 0) return;
+      runs.push({ val: row.val, count, start, end: start + count - 1 });
+      start += count;
+    });
+    return runs;
+  }
+
+  function halvesAt(runs, cutAfter) {
+    const left = [];
+    const right = [];
+    runs.forEach((run) => {
+      if (run.end <= cutAfter) left.push(run);
+      else if (run.start > cutAfter) right.push(run);
+      else {
+        const leftCount = cutAfter - run.start + 1;
+        const rightCount = run.count - leftCount;
+        if (leftCount > 0) left.push({ val: run.val, count: leftCount });
+        if (rightCount > 0) right.push({ val: run.val, count: rightCount });
+      }
+    });
+    return { left, right };
+  }
+
+  function joinBookRuns(runs) {
+    return runs.map((run) => bookRunText(run.val, run.count)).filter(Boolean).join(", ");
+  }
+
+  function medianSplit(runs, view) {
+    const line = document.createElement("p");
+    line.className = "raw-plain";
+    if (!view || !view.positions || !view.positions.length) {
+      line.textContent = joinBookRuns(runs);
+      return line;
+    }
+    const cutAfter = view.odd ? view.positions[0] - 1 : view.positions[0];
+    const parts = halvesAt(runs, cutAfter);
+    const left = document.createElement("span");
+    left.textContent = joinBookRuns(parts.left);
+    const cut = document.createElement("span");
+    cut.className = "median-cut";
+    cut.setAttribute("role", "separator");
+    cut.setAttribute("aria-label", "中位數分割線");
+    const right = document.createElement("span");
+    right.textContent = joinBookRuns(parts.right);
+    if (left.textContent) line.appendChild(left);
+    line.appendChild(cut);
+    if (right.textContent) line.appendChild(right);
+    return line;
   }
 
   function compactRow(expanded, view, solvedMarks) {
@@ -2109,10 +2180,7 @@
     const view = MedianMath.medianForX(rows, x);
     if (rowMarksOn() && view && count <= 400) wrap.appendChild(compactRow(expandRows(rows, x), view, false));
     else {
-      const line = document.createElement("p");
-      line.className = "raw-plain";
-      line.textContent = bookRuns(rows, x);
-      wrap.appendChild(line);
+      wrap.appendChild(medianSplit(positionRuns(rows, x), view));
       if (rowMarksOn()) {
         const note = document.createElement("p");
         note.className = "problem-text";
