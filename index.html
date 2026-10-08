@@ -202,6 +202,16 @@
       border-left: 3px solid #7c3aed;
       vertical-align: -0.15em;
     }
+    .median-point {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: top;
+      margin: 0 2px;
+      line-height: 1;
+    }
+    .median-point-value { color: #15803d; }
+    .median-point-arrow { color: #15803d; font-size: 0.72rem; font-weight: 800; line-height: 1; }
     .raw-case { margin: 12px 0 16px; }
     .raw-case-title { font-weight: 800; color: #1d4ed8; margin-bottom: 6px; }
     .raw-track { display: flex; align-items: flex-end; gap: 10px; width: max-content; min-width: 100%; }
@@ -1995,6 +2005,21 @@
     return runs.map((run) => bookRunText(run.val, run.count)).filter(Boolean).join(", ");
   }
 
+  function medianPoint(value) {
+    const mark = document.createElement("span");
+    mark.className = "median-point";
+    mark.setAttribute("aria-label", "中位數");
+    const num = document.createElement("span");
+    num.className = "median-point-value";
+    num.textContent = String(value);
+    const arrow = document.createElement("span");
+    arrow.className = "median-point-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "▲";
+    mark.append(num, arrow);
+    return mark;
+  }
+
   function medianSplit(runs, view) {
     const line = document.createElement("p");
     line.className = "raw-plain";
@@ -2002,8 +2027,28 @@
       line.textContent = joinBookRuns(runs);
       return line;
     }
-    const cutAfter = view.odd ? view.positions[0] - 1 : view.positions[0];
-    const parts = halvesAt(runs, cutAfter);
+    if (view.odd) {
+      const position = view.positions[0];
+      const before = [];
+      const after = [];
+      let medianVal = null;
+      runs.forEach((run) => {
+        if (run.end < position) before.push(run);
+        else if (run.start > position) after.push(run);
+        else {
+          const leftCount = position - run.start;
+          const rightCount = run.end - position;
+          if (leftCount > 0) before.push({ val: run.val, count: leftCount });
+          medianVal = run.val;
+          if (rightCount > 0) after.push({ val: run.val, count: rightCount });
+        }
+      });
+      if (before.length) line.appendChild(document.createTextNode(joinBookRuns(before) + ", "));
+      if (medianVal != null) line.appendChild(medianPoint(medianVal));
+      if (after.length) line.appendChild(document.createTextNode(", " + joinBookRuns(after)));
+      return line;
+    }
+    const parts = halvesAt(runs, view.positions[0]);
     const left = document.createElement("span");
     left.textContent = joinBookRuns(parts.left);
     const cut = document.createElement("span");
