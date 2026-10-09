@@ -3,7 +3,7 @@
 
   function parseFreqToken(raw) {
     const text = String(raw ?? "").trim().toLowerCase();
-    if (text === "x" || text === "s") return { c: 0, k: 1 };
+    if (text === "x") return { c: 0, k: 1 };
     if (!/^\d+$/.test(text)) return null;
     const n = Number(text);
     if (!Number.isInteger(n) || n <= 0) return null;

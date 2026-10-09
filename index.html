@@ -192,7 +192,7 @@
     .block.highlight { border-color: var(--median-color); box-shadow: 0 0 10px rgba(22, 163, 74, 0.4); }
     .block.highlight .block-pos { background: var(--median-color); color: white; }
     .block-gap { align-self: center; font-size: 1.4rem; font-weight: bold; color: #64748b; padding: 0 4px; }
-    .raw-scroll { overflow-x: auto; padding-bottom: 4px; }
+    .raw-scroll { overflow-x: hidden; max-width: 100%; padding-bottom: 4px; }
     .raw-plain { font-size: 1.05rem; font-weight: 700; line-height: 1.7; margin: 4px 0 8px; }
     .median-cut {
       display: inline-block;
@@ -214,10 +214,11 @@
     .median-point-arrow { color: #15803d; font-size: 0.72rem; font-weight: 800; line-height: 1; }
     .raw-case { margin: 12px 0 16px; }
     .raw-case-title { font-weight: 800; color: #1d4ed8; margin-bottom: 6px; }
-    .raw-track { display: flex; align-items: flex-end; gap: 10px; width: max-content; min-width: 100%; }
-    .raw-col { display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: 28rem; }
-    .raw-above { min-height: 2.5em; color: #2563eb; font-weight: 800; text-align: center; line-height: 1.15; }
-    .raw-num { font-size: 1.02rem; font-weight: 700; color: #0f172a; line-height: 1.45; text-align: center; }
+    .raw-track { display: flex; align-items: flex-end; justify-content: center; gap: 8px; width: 100%; min-width: 0; }
+    .raw-col { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1 1 0; min-width: 0; }
+    .raw-col.raw-mid { flex: 0 0 auto; width: 4.8rem; }
+    .raw-above { min-height: 2.5em; color: #2563eb; font-weight: 800; text-align: center; line-height: 1.15; white-space: nowrap; }
+    .raw-num { font-size: 1.02rem; font-weight: 700; color: #0f172a; line-height: 1.45; text-align: center; overflow-wrap: anywhere; }
     .raw-num.median-num { color: #1d4ed8; }
     .raw-under { min-height: 2.4em; border-top: 2px solid #334155; text-align: center; font-size: 0.92rem; padding-top: 3px; width: 100%; }
     .list-and-trial { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
@@ -266,6 +267,7 @@
       font-size: 1.15rem;
       font-weight: 800;
       line-height: 1.45;
+      white-space: pre-line;
     }
     .cut-demo { margin: 0 0 10px; padding: 8px 8px 10px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 10px; }
     .cut-kicker { margin: 0 0 8px; color: #9a3412; font-weight: 800; }
@@ -463,10 +465,81 @@
     .walk-chip.walk-gold { background: #fef9c3; border-color: #ca8a04; }
     .digit-grid .btn.digit-ok { background: #2563eb; color: white; }
     .dock-btn, .digit-grid .btn, .chip-btn { touch-action: manipulation; }
+    .anim-trial { background: #fffbeb; border-color: #fcd34d; }
+    .anim-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .anim-head .card-title { margin-bottom: 0; }
+    .anim-tag { font-size: 0.78rem; font-weight: 800; color: #92400e; background: #fde68a; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+    .anim-note { margin: 0 0 6px; color: #92400e; font-size: 0.92rem; line-height: 1.45; }
+    .anim-kicker { margin: 0 0 8px; min-height: 1.45em; font-weight: 800; font-size: 1.02rem; line-height: 1.45; }
+    .anim-board { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; min-height: 108px; overflow-x: auto; }
+    .anim-sheet { display: grid; gap: 4px 6px; align-items: center; width: max-content; max-width: 100%; margin: 0 auto; }
+    .anim-sheet .lab { font-size: 0.78rem; font-weight: 800; color: #475569; }
+    .anim-pill { min-width: 36px; padding: 4px 2px; border-radius: 6px; border: 2px solid transparent; text-align: center; font-weight: 800; }
+    .anim-pill.val { color: #b91c1c; }
+    .anim-pill.freq { color: #0f172a; background: #f8fafc; border-color: #cbd5e1; transition: background 0.2s, border-color 0.2s; }
+    .anim-pill.freq.on { background: #fde68a; border-color: #d97706; }
+    .anim-pill.freq.done { background: #e2e8f0; border-color: #94a3b8; }
+    .anim-total { margin-top: 10px; text-align: center; font-weight: 800; font-size: 1.15rem; }
+    .anim-total strong { color: #1d4ed8; font-size: 1.55rem; }
+    .anim-grid { position: relative; display: grid; column-gap: 4px; row-gap: 16px; width: max-content; max-width: 100%; margin: 0 auto; padding: 18px 2px 16px; }
+    .anim-chip { position: relative; box-sizing: border-box; width: 30px; height: 34px; display: flex; align-items: center; justify-content: center; border: 2px solid #334155; border-radius: 6px; background: white; color: #b91c1c; font-weight: 800; transition: opacity 0.16s linear, background 0.16s, border-color 0.16s, color 0.16s, transform 0.3s; }
+    .anim-chip.gone { opacity: 0.2; border-color: #cbd5e1; background: #f8fafc; color: #94a3b8; }
+    .anim-chip.keep { border-color: #15803d; background: #dcfce7; color: #15803d; z-index: 1; }
+    .anim-chip.grow { transform: scale(1.16); z-index: 2; }
+    .anim-chip.cut::after { content: ""; position: absolute; top: 0; bottom: 0; right: -5px; width: 3px; background: #7c3aed; transform-origin: top center; animation: anim-drop 0.4s ease; }
+    .anim-arrow { position: absolute; left: 50%; bottom: -15px; color: #15803d; font-size: 0.8rem; font-weight: 800; line-height: 1; transform: translateX(-50%); animation: anim-rise 0.35s ease; }
+    .anim-mark { position: absolute; color: #2563eb; font-size: 0.72rem; font-weight: 800; line-height: 1; white-space: nowrap; transform: translateX(-50%); }
+    .anim-math { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; min-height: 52px; margin-top: 8px; font-weight: 800; font-size: 1.25rem; }
+    .anim-math .n { min-width: 2rem; padding: 4px 8px; border: 2px solid #15803d; border-radius: 8px; background: #dcfce7; color: #15803d; text-align: center; }
+    .anim-math .op { color: #334155; }
+    .anim-math .answer { transform: scale(0.7); opacity: 0; }
+    .anim-math .answer.show { animation: anim-pop 0.4s ease forwards; }
+    .anim-posbox { margin: 4px 0; text-align: center; font-weight: 800; line-height: 1.45; }
+    .anim-posbox strong { color: #1d4ed8; font-size: 1.35rem; }
+    .anim-cum { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .anim-cum th, .anim-cum td { border: 1px solid #cbd5e1; padding: 4px 3px; text-align: center; word-break: break-word; }
+    .anim-cum th { background: #f8fafc; font-size: 0.75rem; }
+    .anim-cum tr.now td { background: #fde68a; }
+    .anim-cum tr.hit td { background: #dcfce7; font-weight: 800; }
+    .anim-central { color: #15803d; font-size: 0.72rem; font-weight: 800; line-height: 1.3; }
+    .anim-trial .btn { padding: 7px 10px; font-size: 0.86rem; }
+    .anim-kicker.anim-kicker-sr { position: absolute; width: 1px; height: 1px; min-height: 0; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .anim-trial[data-clip="2"] .anim-board { overflow: hidden; }
+    #animNext.anim-next-locate:not(:disabled) { background: #ecfdf5; color: #065f46; box-shadow: inset 0 0 0 2px #34d399; }
+    .anim-loc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .anim-loc-chip { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 999px; padding: 3px 8px; font-size: 0.72rem; font-weight: 800; color: #334155; line-height: 1.35; }
+    .anim-loc-chip.title { background: #e2e8f0; }
+    .anim-loc-chip.found { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
+    .anim-band-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; margin: 8px 0; background: white; }
+    .anim-band-head, .anim-band-foot { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .anim-band-head strong { color: #0f172a; font-size: 0.84rem; }
+    .anim-band-head span, .anim-band-foot { color: #64748b; font-size: 0.72rem; font-weight: 700; }
+    .anim-band { position: relative; display: flex; height: 44px; margin: 8px 0 6px; border-radius: 8px; background: #e7f6ef; overflow: hidden; }
+    .anim-seg { display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden; border-right: 1px solid rgba(255, 255, 255, 0.9); color: transparent; font-size: 0.62rem; font-weight: 800; line-height: 1.1; text-align: center; }
+    .anim-seg.done { background: #cdeedf; color: #115e59; }
+    .anim-seg.hit { background: #f8cfc4; color: #9a3412; }
+    .anim-seg span { padding: 0 1px; white-space: nowrap; }
+    .anim-pin { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #ea580c; z-index: 2; }
+    .anim-pin::after { content: ""; position: absolute; left: -3px; bottom: 2px; width: 8px; height: 8px; border-radius: 50%; background: #ea580c; }
+    .anim-loc-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+    .anim-loc-table th { background: #f1f5f4; color: #1e293b; font-size: 0.7rem; }
+    .anim-loc-table th, .anim-loc-table td { border-bottom: 1px solid #e2e8f0; padding: 5px 2px; text-align: center; vertical-align: middle; word-break: break-word; }
+    .anim-loc-table td.val { text-align: left; font-weight: 800; padding-left: 4px; }
+    .anim-loc-table tr.hit { background: #fff1ee; }
+    .anim-loc-table .pending { color: #94a3b8; }
+    .anim-cum-pill { display: inline-block; min-width: 1.5rem; padding: 2px 6px; border-radius: 999px; background: #d1fae5; color: #047857; font-weight: 800; }
+    .anim-pos-badge { display: inline-block; margin: 1px; padding: 2px 5px; border-radius: 999px; background: #e11d48; color: white; font-size: 0.66rem; font-weight: 800; line-height: 1.3; }
+    .anim-loc-note { margin: 8px 0 0; font-size: 0.82rem; line-height: 1.45; color: #334155; }
+    @keyframes anim-drop { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    @keyframes anim-rise { from { transform: translateX(-50%) translateY(8px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+    @keyframes anim-pop { to { transform: scale(1); opacity: 1; } }
+
     @media (prefers-reduced-motion: reduce) {
       .walk-chip { transition: none !important; }
       #pictureCard td.hl-walk-now { animation: none; }
       .cut-board, .cut-knife::before, .cut-knife::after { transition: none !important; }
+      .anim-chip, .anim-pill.freq, .anim-chip.cut::after, .anim-arrow, .anim-math .answer { transition: none !important; animation: none !important; }
+      .anim-math .answer { transform: none; opacity: 1; }
     }
 
     @media (max-width: 640px) {
@@ -492,6 +565,34 @@
   <h1>中位數</h1>
   <p id="progress" class="progress"></p>
   <div class="card" id="pictureCard"></div>
+  <div class="card anim-trial" id="animTrial" hidden>
+    <div class="anim-head">
+      <div class="card-title">動畫試做</div>
+      <span class="anim-tag">可改可刪</span>
+    </div>
+    <div id="animBody">
+      <p class="anim-note">動畫1由兩端找中間。動畫2沿項次位置帶逐行累加，找到中央項次。可逐步，或自動播放。</p>
+      <p class="anim-kicker" id="animKicker" aria-live="polite"></p>
+      <div class="anim-board" id="animBoard"></div>
+      <div class="action-row">
+        <button type="button" class="btn" id="animClip1">動畫1</button>
+        <button type="button" class="btn btn-secondary" id="animClip2">動畫2</button>
+        <button type="button" class="btn" id="animEven">這題</button>
+        <button type="button" class="btn btn-secondary" id="animCafe">咖啡店</button>
+        <button type="button" class="btn btn-secondary" id="animOdd">單數例子</button>
+        <button type="button" class="btn btn-secondary" id="animClose">收起</button>
+      </div>
+      <div class="action-row">
+        <button type="button" class="btn btn-secondary" id="animPrev">上一步</button>
+        <button type="button" class="btn" id="animNext">下一步</button>
+        <button type="button" class="btn btn-secondary" id="animAuto">自動播放</button>
+        <button type="button" class="btn btn-secondary" id="animReplay" hidden>重新示範</button>
+      </div>
+    </div>
+    <div id="animReopen" hidden>
+      <button type="button" class="btn btn-secondary" id="animOpen">看動畫試做</button>
+    </div>
+  </div>
   <div class="card" id="queueCard" hidden>
     <div class="card-title">由小至大排列的原始數據</div>
     <div id="blocksWrapper"></div>
@@ -534,16 +635,21 @@
       structure: 0
     },
     {
-      id: "commute",
-      kind: "continuous",
-      title: "連續數據",
-      chartTitle: "一組人於今早由家前往工作地點所需的交通時間",
-      axisLabel: "交通時間（分鐘）",
-      stem: "以下是一組人於今早由家前往工作地點所需交通時間的累積頻數曲線。可改組界、頻數或累積頻數。拖動紅線對位，再求中位數。",
-      structure: 0,
-      bounds: ["24.5", "29.5", "34.5", "39.5", "44.5", "49.5"],
-      freqs: ["", "15", "45", "92", "98", "50"],
-      cums: ["0", "15", "60", "152", "250", "300"]
+      id: "pens",
+      kind: "discrete",
+      title: "求未知頻數",
+      header: "原子筆的數目",
+      freqHeader: "學生人數",
+      stem: "8.（參考書 P10.23 例 10.13）（DSE 2025/I/Q9a,b）下表顯示一些學生擁有原子筆的數目的分佈。該分佈的中位數為 7。",
+      target: "7",
+      rows: [
+        { val: 5, freq: "9" },
+        { val: 6, freq: "13" },
+        { val: 7, freq: "2" },
+        { val: 8, freq: "x" },
+        { val: 9, freq: "11" }
+      ],
+      structure: 0
     }
   ];
   const lessonTemplates = JSON.parse(JSON.stringify(lessons));
@@ -638,7 +744,8 @@
   function parseCell(raw) {
     const text = normalizeTyped(raw).toLowerCase().replace(/\s+/g, "");
     if (!text) return null;
-    if (text === "x" || text === "s") return { c: 0, k: 1 };
+    if (text === "x") return { c: 0, k: 1 };
+    if (/[a-wyz]/.test(text)) return null;
     const parsed = MedianMath.parseExpr(text);
     if (parsed) return parsed;
     const neg = text.match(/^-(\d+)$/);
@@ -666,15 +773,7 @@
   }
 
   function unknownLetter() {
-    const lesson = current();
-    if (!lesson || lesson.kind === "continuous") return "x";
-    const found = new Set();
-    lesson.rows.forEach((row) => {
-      const letters = String(row.freq).toLowerCase().match(/[a-z]/g) || [];
-      letters.forEach((letter) => found.add(letter));
-    });
-    if (found.size !== 1) return "x";
-    return [...found][0];
+    return "x";
   }
 
   function trialNumber() {
@@ -764,29 +863,6 @@
     startWork();
   }
 
-  function loadExercise() {
-    const lesson = lessons[0];
-    lesson.header = "原子筆的數目";
-    lesson.freqHeader = "學生人數";
-    lesson.stem = "（DSE 2025 卷一 Q9）下表顯示一些學生擁有原子筆的數目的分佈。該分佈的中位數為 7。求 s 的最小和最大可取值。";
-    lesson.image = "";
-    lesson.target = "7";
-    lesson.rows = [
-      { val: "5", freq: "9" },
-      { val: "6", freq: "13" },
-      { val: "7", freq: "2" },
-      { val: "8", freq: "s" },
-      { val: "9", freq: "11" }
-    ];
-    lesson.structure = (lesson.structure || 0) + 1;
-    lessonIndex = 0;
-    const card = document.getElementById("pictureCard");
-    if (card) card.dataset.key = "";
-    const checkSlot = document.getElementById("checkSlot");
-    if (checkSlot) checkSlot.dataset.mode = "";
-    startWork();
-  }
-
   function rememberFields() {
     document.querySelectorAll("input[id]").forEach((input) => {
       fieldDrafts[input.id] = input.value;
@@ -807,6 +883,7 @@
     renderCheck();
     renderTools();
     askWasOpen = aiOpen();
+    syncAnimCard();
   }
 
   function showMode(index) {
@@ -860,7 +937,6 @@
       const button = makeButton(lesson.title, index === lessonIndex ? "btn" : "btn btn-secondary", () => showMode(index));
       bar.appendChild(button);
     });
-    bar.appendChild(makeButton("Q8", "btn btn-secondary", loadExercise));
   }
 
   function teacherStatusText() {
@@ -1729,7 +1805,7 @@
       return;
     }
     if (model.error) {
-      wrapper.textContent = "請輸入有效的數據與頻數。頻數須為正整數，或一個 s 或 x。";
+      wrapper.textContent = "請輸入有效的數據與頻數。頻數須為正整數，或 x。";
       return;
     }
     const letter = unknownLetter();
@@ -1760,7 +1836,8 @@
       wrapper.appendChild(plainLine(expanded, view));
       return;
     }
-    wrapper.appendChild(compactRow(expanded, view, !!reveal));
+    if (reveal) wrapper.appendChild(markedLine(expanded, view));
+    else wrapper.appendChild(compactRow(expanded, view, false));
     if (!reveal) return;
     resultBox.hidden = false;
     if (view.odd) {
@@ -1822,7 +1899,7 @@
 
   function rawCol(text, under, median) {
     const col = document.createElement("div");
-    col.className = "raw-col";
+    col.className = "raw-col" + (median ? " raw-mid" : "");
     const above = document.createElement("div");
     above.className = "raw-above";
     if (median) above.append(document.createTextNode("中位數"), document.createElement("br"), document.createTextNode("↓"));
@@ -2271,13 +2348,25 @@
       return;
     }
     if (tutor.solved) {
-      if (current().kind !== "continuous") actions.appendChild(makeButton("去看連續數據", "btn", () => showMode(1)));
-      else actions.appendChild(makeButton("回到離散數據", "btn btn-secondary", () => showMode(0)));
+      if (current().id === "discrete") {
+        const q8 = lessons.findIndex((lesson) => lesson.id === "pens");
+        if (q8 >= 0) actions.appendChild(makeButton("去看求未知頻數", "btn", () => showMode(q8)));
+      } else if (current().id === "pens") {
+        actions.appendChild(makeButton("回到離散數據", "btn btn-secondary", () => showMode(0)));
+      }
       updateBalance();
       return;
     }
     if (tutor.mode === "unknown" && tutor.step > 1) {
       renderUnknownControls(form, actions);
+    } else if (tutor.mode === "known" && tutor.step === 2) {
+      actions.append(makeButton("單數", "btn", () => chooseParity(true)), makeButton("雙數", "btn btn-secondary", () => chooseParity(false)));
+    } else if (tutor.mode === "known" && tutor.step === 3 && knownView() && !knownView().odd) {
+      const row = document.createElement("div");
+      row.className = "form-row";
+      row.append(fieldLabel("第", "pos1"), text("項及第"), fieldLabel("", "pos2"), text("項"));
+      form.appendChild(row);
+      actions.appendChild(makeButton("確定", "btn", submitKnownPosition));
     } else {
       actions.appendChild(answerBox(confirmDigits));
     }
@@ -2558,12 +2647,14 @@
     if (tutor.mode === "known") {
       const view = knownView();
       if (!view) return "請先填好頻數表。";
-      if (tutor.step === 1) return "單看頻數表，這批數據一共有多少個？";
-      if (tutor.step === 2) return view.odd ? "中位數位於第幾項？" : "中位數在第幾項及第幾項的中間？";
+      if (tutor.step === 1) return "把每一格頻數相加。這批數據的總數是多少？";
+      if (tutor.step === 2) return "這個總數是單數還是雙數？";
       if (tutor.step === 3) return view.odd
-        ? "中間那一項是哪個數值？"
-        : "正中間這兩項的數值是多少？";
-      return "總數是雙數。把這兩個數值加起來再除以 2。中位數是多少？";
+        ? "總數是單數。中位數是第幾項？"
+        : "總數是雙數。中位數在第幾項及第幾項的中間？";
+      return view.odd
+        ? "正中間那一項的數值就是中位數。中位數是多少？"
+        : "把正中間兩項的數值加起來，再除以 2。中位數是多少？";
     }
     if (tutor.mode === "continuous") {
       if (tutor.step === 1) return "曲線終點的高度就是數據的總頻數。總頻數是多少？";
@@ -2579,16 +2670,16 @@
         ? "現在 " + letter + " = " + currentTrial() + "。中位數位於第幾項？"
         : "現在 " + letter + " = " + currentTrial() + "。中位數在第幾項及第幾項的中間？";
     }
-    return "先分最小和最大兩種情況。中位數放在正中間，左邊的項數等於右邊的項數。" + letter + " 的最小和最大可取值是多少？";
+    return "先分最小和最大兩種情況。中位數放在正中間，左邊的項數等於右邊的項數。\n(a) 求 " + letter + " 的最小的可取值。\n(b) 寫出 " + letter + " 的最大的可取值。";
   }
 
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
-      if (tutor.step === 2) return "幫他找出中位數是第幾項。奇數是正中間一項，偶數是正中間兩項。不要說出第幾項。";
-      if (tutor.step === 3) return "幫他由最小的數值數起，找出那一項是哪個數值。不要說出那個數值。";
-      return "幫他明白雙數要把中間兩個數值平均。不要說出中位數。";
+      if (tutor.step === 2) return "幫他分辨總數是單數還是雙數。不能被 2 整除是單數。不要直接說是單數還是雙數。";
+      if (tutor.step === 3) return "幫他找出中位數的位置。單數是正中間一項，雙數是正中間兩項的中間。不要說出第幾項。";
+      return "幫他求出中位數。單數就是中間那一個數值，雙數是中間兩個數值的平均。不要說出中位數。";
     }
     if (tutor.mode === "continuous") {
       if (tutor.step === 1) return "幫他從曲線終點的高度讀總頻數。不要說出那個數。";
@@ -2627,24 +2718,22 @@
     if (tutor.step === 1) {
       if (level === 1) return "頻數是每個數值出現的次數。總數是全部頻數相加。";
       if (level === 2) return "把頻數那一列的數字逐個相加。";
-      return "每一格頻數都加完，得到的數就是 N。自己算完再填。";
+      return "每一格頻數都加完，得到的就是總數。自己算完再填。";
     }
     if (tutor.step === 2) {
-      if (level === 1) return "看原始數據。每個數值上方寫著第幾項，由第 1 項數起。";
-      if (level === 2) return view.odd
-        ? "現在共 " + view.N + " 個，是單數。正中間只有一項，箭嘴和亮燈直接標出中位數的這一項。"
-        : "現在共 " + view.N + " 個，是偶數。正中間剩下兩項。斬線畫在這兩項中間。";
-      return view.odd
-        ? "中位數位於第幾項？"
-        : "中位數在第幾項及第幾項的中間？先填第幾項，對了再填及第幾項。";
+      if (level === 1) return "看你求出的總數。";
+      if (level === 2) return "這個數能被 2 整除，就是雙數。不能被 2 整除，就是單數。";
+      return "先判斷單數還是雙數，再按對應的按鈕。";
     }
     if (tutor.step === 3) {
-      if (level === 1) return "由最小的數值開始數。它的頻數就是開頭佔了多少項。";
-      if (level === 2) return "一路數下去，看到中間那一項停在哪一個數值。雙數要看兩項，兩項可能是同一個數值，也可能跨到下一個數值。";
-      return "沿表由左數到你求出的那一項，看是哪個數值。自己填。";
+      if (level === 1) return "先按提示一，每個數值上方會標出第幾項。";
+      if (level === 2) return view.odd
+        ? "再按提示二。箭嘴指住正中間那一項。"
+        : "再按提示二。線畫在正中間兩項之間。";
+      return view.odd ? "看箭嘴指住的第幾項，自己填。" : "看線兩旁的第幾項，自己填。";
     }
     if (level === 1) return view.odd ? "單數時，中位數就是中間那一個數值。" : "雙數時，不要只取其中一個數值。";
-    if (level === 2) return view.odd ? "把上一格的數值再填一次，它就是中位數。" : "把兩個中間數值相加，再除以 2。";
+    if (level === 2) return view.odd ? "箭嘴指住的那個數值，就是中位數。" : "把兩個中間數值相加，再除以 2。";
     return view.odd ? "中位數就是中間那一個數值。填進去就可以。" : "兩個數值相加後除以 2，算出來的才填。不要只填其中一個。";
   }
 
@@ -2841,10 +2930,8 @@
 
   function advance(message) {
     tutor.log.push({ kind: "tutor", text: message });
-    const knownViewNow = tutor.mode === "known" ? knownView() : null;
-    const maxStep = tutor.mode === "unknown" ? 2 : tutor.mode === "known" && knownViewNow && !knownViewNow.odd ? 4 : 3;
+    const maxStep = tutor.mode === "unknown" ? 2 : tutor.mode === "known" ? 4 : 3;
     tutor.step += 1;
-    if (tutor.mode === "known" && tutor.step === 2) tutor.step = 3;
     tutor.trap = false;
     resetEntry();
     if (tutor.step > maxStep) {
@@ -2857,7 +2944,7 @@
   function markSolved(text) {
     tutor.solved = true;
     if (lessonIndex === lessons.length - 1) {
-      text += "\n\n三題都做完了。\n離散數據要把數據由小到大排好：奇數個取最中間一項，偶數個取最中間兩項的平均。\n連續數據看累積頻數曲線，中位數對應總頻數的 50%，再從曲線讀回橫軸。\n兩種都叫中位數，但一個是找第幾項，一個是找一半的累積頻數。";
+      text += "\n\n兩題都做完了。離散數據要把數據由小到大排好：單數取最中間一項，雙數取最中間兩項的平均。";
     }
     tutor.log.push({ kind: "tutor", text: text });
   }
@@ -2967,47 +3054,13 @@
     const raw = normalizeTyped(tutor.entry);
     const value = Number(raw);
     if (tutor.step === 1) {
-      tutor.log.push({ kind: "student", text: "N = " + raw });
-      if (value === view.N) advance("對，共有 " + view.N + " 個數據。");
-      else tutor.log.push({ kind: "tutor", text: "還未對。頻數要全部相加。" });
-    } else if (tutor.step === 2 && view.odd) {
-      tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
-      if (value === view.positions[0]) {
-        lightPosition(view.positions[0], true);
-        advance("對。總數是單數，只看最中間那一項。");
-      } else tutor.log.push({ kind: "tutor", text: "項數還未對。看箭嘴和亮燈的那一項。" });
-    } else if (tutor.step === 2 && tutor.held == null) {
-      tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
-      if (value === view.positions[0]) {
-        tutor.held = raw;
-        tutor.entry = "";
-        lightPosition(view.positions[0], false);
-        tutor.log.push({ kind: "tutor", text: "這一項對了。再填及第幾項。" });
-      } else tutor.log.push({ kind: "tutor", text: "這一項還未對。" });
-    } else if (tutor.step === 2) {
-      const first = Number(tutor.held);
-      tutor.log.push({ kind: "student", text: "第 " + tutor.held + " 項及第 " + raw + " 項" });
-      if (first === view.positions[0] && value === view.positions[1]) {
-        lightPosition(view.positions[1], true);
-        advance("對。總數是雙數，中位數在這兩項的中間。");
-      } else tutor.log.push({ kind: "tutor", text: "及第幾項還未對。" });
+      tutor.log.push({ kind: "student", text: "總數 = " + raw });
+      if (value === view.N) advance("對。總數是 " + view.N + "。");
+      else tutor.log.push({ kind: "tutor", text: "還未對。把頻數全部相加。" });
     } else if (tutor.step === 3 && view.odd) {
-      tutor.log.push({ kind: "student", text: "數值 = " + raw });
-      if (MedianMath.sameNumber(value, view.values[0])) markSolved("正確。總數是單數，中位數就是中間那一個數值。");
-      else tutor.log.push({ kind: "tutor", text: "還未對。由最小的數值起累積頻數，看到中間那一項是哪個數值。" });
-    } else if (tutor.step === 3 && tutor.held == null) {
-      tutor.log.push({ kind: "student", text: "數值 " + raw });
-      if (MedianMath.sameNumber(value, view.values[0])) {
-        tutor.held = raw;
-        tutor.entry = "";
-        tutor.log.push({ kind: "tutor", text: "這一項的數值對了。再填另一項的數值。" });
-      } else tutor.log.push({ kind: "tutor", text: "這一項的數值還未對。由最小的數值起累積頻數。" });
-    } else if (tutor.step === 3) {
-      const first = Number(tutor.held);
-      tutor.log.push({ kind: "student", text: "數值 " + tutor.held + " 及 " + raw });
-      if (MedianMath.sameNumber(first, view.values[0]) && MedianMath.sameNumber(value, view.values[1])) {
-        advance("對。這兩項的數值都找到了。總數是雙數，還要把它們平均。");
-      } else tutor.log.push({ kind: "tutor", text: "另一項的數值還未對。沿表再數另一項是哪個數值。" });
+      tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
+      if (value === view.positions[0]) advance("對。中位數是這一項。");
+      else tutor.log.push({ kind: "tutor", text: "還未對。看箭嘴指住的第幾項。" });
     } else if (tutor.step === 4) {
       tutor.log.push({ kind: "student", text: "中位數 = " + raw });
       if (MedianMath.sameNumber(value, view.median)) {
@@ -3018,6 +3071,35 @@
     }
     render();
     scrollMark();
+  }
+
+  function chooseParity(saysOdd) {
+    const view = knownView();
+    if (!view) {
+      tutor.log.push({ kind: "tutor", text: "請先填好頻數表。" });
+      render();
+      return;
+    }
+    tutor.log.push({ kind: "student", text: saysOdd ? "單數" : "雙數" });
+    if (saysOdd === view.odd) advance(view.odd ? "對。總數是單數。" : "對。總數是雙數。");
+    else tutor.log.push({ kind: "tutor", text: "還未對。不能被 2 整除是單數，可以整除是雙數。" });
+    render();
+  }
+
+  function submitKnownPosition() {
+    const view = knownView();
+    const firstField = document.getElementById("pos1");
+    const secondField = document.getElementById("pos2");
+    const first = Number(normalizeTyped(firstField ? firstField.value : ""));
+    const second = Number(normalizeTyped(secondField ? secondField.value : ""));
+    if (!view) {
+      tutor.log.push({ kind: "tutor", text: "請先填好頻數表。" });
+    } else {
+      tutor.log.push({ kind: "student", text: "第 " + (firstField ? firstField.value : "") + " 項及第 " + (secondField ? secondField.value : "") + " 項" });
+      if (first === view.positions[0] && second === view.positions[1]) advance("對。中位數在這兩項的中間。");
+      else tutor.log.push({ kind: "tutor", text: "還未對。看分割線兩旁的第幾項。" });
+    }
+    render();
   }
 
   function submitTrialItem() {
@@ -3570,9 +3652,8 @@
     }
     if (tutor.mode === "known") {
       const view = knownView();
-      if (tutor.step === 1) return "N";
-      if (tutor.step === 2) return view && view.odd ? "第幾項" : tutor.held == null ? "第幾項" : "及第幾項";
-      if (tutor.step === 3) return view && view.odd ? "中間那一項的數值" : tutor.held == null ? "這一項的數值" : "另一項的數值";
+      if (tutor.step === 1) return "總數";
+      if (tutor.step === 3) return "第幾項";
       return "中位數";
     }
     if (tutor.step === 1) return "總頻數";
@@ -3581,7 +3662,7 @@
   }
 
   function allowDecimal() {
-    if (tutor.mode === "known" && (tutor.step === 3 || tutor.step === 4)) return true;
+    if (tutor.mode === "known" && tutor.step === 4) return true;
     return tutor.mode === "continuous" && tutor.step === 2;
   }
 
@@ -3856,12 +3937,772 @@
     render();
   }
 
+  const animTrial = { closed: true, which: "lesson", token: 0, timers: [], seen: false, clip: 1, play: "step", step: 1 };
+
+  function animStop() {
+    animTrial.token += 1;
+    animTrial.timers.forEach((id) => clearTimeout(id));
+    animTrial.timers = [];
+  }
+
+  function animLater(token, ms, fn) {
+    const id = setTimeout(() => {
+      if (token !== animTrial.token) return;
+      fn();
+    }, ms);
+    animTrial.timers.push(id);
+  }
+
+  function animSetKicker(text) {
+    const node = document.getElementById("animKicker");
+    if (!node) return;
+    node.textContent = text;
+    node.classList.toggle("anim-kicker-sr", animTrial.clip === 2);
+  }
+
+  function animBeat(n) {
+    animTrial.step = n;
+    const card = document.getElementById("animTrial");
+    if (card) card.dataset.beat = String(n);
+    animSyncControls();
+  }
+
+  function animFreqRows(values) {
+    const rows = [];
+    values.forEach((val) => {
+      const last = rows[rows.length - 1];
+      if (last && last.val === val) last.count += 1;
+      else rows.push({ val, count: 1 });
+    });
+    return rows;
+  }
+
+  function animMids(n) {
+    if (n % 2 === 1) return [(n - 1) / 2];
+    return [n / 2 - 1, n / 2];
+  }
+
+  function animDataset() {
+    if (animTrial.which === "odd") {
+      const values = [1, 2, 2, 3, 4, 4, 5];
+      return { sample: "odd", unit: "", values, rows: animFreqRows(values) };
+    }
+    if (animTrial.which === "cafe") {
+      const rows = [
+        { val: 1, count: 2 },
+        { val: 2, count: 3 },
+        { val: 3, count: 3 },
+        { val: 4, count: 2 }
+      ];
+      const values = [];
+      rows.forEach((row) => {
+        for (let i = 0; i < row.count; i += 1) values.push(row.val);
+      });
+      return { sample: "cafe", unit: "杯", values, rows };
+    }
+    const model = modelOf(current());
+    if (model.error || model.hasX) return null;
+    const values = expandRows(model.rows, 1);
+    if (values.length < 1 || values.length > 60) return null;
+    const rows = model.rows.map((row) => ({ val: row.val, count: row.freq.c + row.freq.k }));
+    if (rows.some((row) => !Number.isInteger(row.count) || row.count <= 0)) return null;
+    return { sample: "lesson", unit: "次", values, rows };
+  }
+
+  function animKickerText(data, beat) {
+    const odd = data.values.length % 2 === 1;
+    if (beat === 1) {
+      const who = data.sample === "cafe"
+        ? "咖啡店例子，不是這題。"
+        : (data.sample === "odd" ? "單數例子，不是這題。" : "這題。");
+      return who + "1. 總數：由左至右，把頻數相加。";
+    }
+    if (beat === 2) return "2. 由兩端一對一對撇走。";
+    if (beat === 3) {
+      return odd
+        ? "3. 中位數位置。箭嘴指住正中間那一項。"
+        : "3. 中位數位置。線畫在正中間兩項之間。";
+    }
+    return odd
+      ? "4. 正中間那一項的數值就是中位數。"
+      : "4. 把正中間兩項的數值加起來，再除以 2。";
+  }
+
+  function animColumns(n, boardWidth) {
+    const width = boardWidth > 40 ? boardWidth : 300;
+    const fit = Math.max(4, Math.floor(width / 34));
+    if (n <= fit) return n;
+    const mid = Math.floor((n - 1) / 2);
+    for (let cols = Math.min(fit, 12); cols >= 4; cols -= 1) {
+      if (n % 2 === 0 && Math.floor(mid / cols) !== Math.floor((mid + 1) / cols)) continue;
+      return cols;
+    }
+    return Math.min(fit, n);
+  }
+
+  function animBuildGrid(board, values) {
+    const grid = document.createElement("div");
+    grid.className = "anim-grid";
+    const cols = animColumns(values.length, board.clientWidth);
+    grid.style.gridTemplateColumns = "repeat(" + cols + ", 30px)";
+    values.forEach((value) => {
+      const chip = document.createElement("div");
+      chip.className = "anim-chip";
+      chip.textContent = String(value);
+      grid.appendChild(chip);
+    });
+    board.appendChild(grid);
+    return grid;
+  }
+
+  function animMarkMids(grid, chips, mids) {
+    if (mids.length === 1) {
+      const arrow = document.createElement("span");
+      arrow.className = "anim-arrow";
+      arrow.textContent = "▲";
+      chips[mids[0]].appendChild(arrow);
+    } else {
+      chips[mids[0]].classList.add("cut");
+    }
+    const label = document.createElement("div");
+    label.className = "anim-mark";
+    label.textContent = mids.length === 1
+      ? "第" + (mids[0] + 1) + "項"
+      : "第" + (mids[0] + 1) + "項及第" + (mids[1] + 1) + "項";
+    const anchor = chips[mids[0]];
+    const end = chips[mids[mids.length - 1]];
+    label.style.left = ((anchor.offsetLeft + end.offsetLeft + end.offsetWidth) / 2) + "px";
+    label.style.top = (anchor.offsetTop - 14) + "px";
+    grid.appendChild(label);
+  }
+
+  function animShowMath(board, data, instant, token) {
+    const mids = animMids(data.values.length);
+    const picked = mids.map((index) => data.values[index]);
+    const median = picked.length === 1 ? picked[0] : (picked[0] + picked[1]) / 2;
+    const math = document.createElement("div");
+    math.className = "anim-math";
+    const add = (className, text) => {
+      const span = document.createElement("span");
+      span.className = className;
+      span.textContent = text;
+      math.appendChild(span);
+      return span;
+    };
+    board.appendChild(math);
+    if (picked.length === 1) {
+      add("n answer show", formatMedian(median));
+      add("op", "中位數");
+      return;
+    }
+    add("op", "(");
+    add("n", String(picked[0]));
+    const plus = add("op", "+");
+    const second = add("n", String(picked[1]));
+    const close = add("op", ")");
+    const div = add("op", "÷ 2");
+    const eq = add("op", "=");
+    const answer = add("n answer", formatMedian(median));
+    if (instant) {
+      answer.classList.add("show");
+      return;
+    }
+    [plus, second, close, div, eq, answer].forEach((node) => { node.hidden = true; });
+    animLater(token, 450, () => {
+      plus.hidden = false;
+      second.hidden = false;
+      close.hidden = false;
+    });
+    animLater(token, 1000, () => { div.hidden = false; });
+    animLater(token, 1600, () => {
+      eq.hidden = false;
+      answer.hidden = false;
+      answer.classList.add("show");
+    });
+  }
+
+  function animPaintFinal(board, data) {
+    board.innerHTML = "";
+    const grid = animBuildGrid(board, data.values);
+    const chips = [...grid.querySelectorAll(".anim-chip")];
+    const mids = animMids(data.values.length);
+    chips.forEach((chip, index) => {
+      if (mids.indexOf(index) < 0) chip.classList.add("gone");
+      else chip.classList.add("keep", "grow");
+    });
+    animMarkMids(grid, chips, mids);
+    animShowMath(board, data, true);
+    animSetKicker(animKickerText(data, 4));
+    animBeat(4);
+  }
+
+  function animStageMedian(board, data, token) {
+    animSetKicker(animKickerText(data, 4));
+    animBeat(4);
+    const mids = animMids(data.values.length);
+    board.querySelectorAll(".anim-chip").forEach((chip, index) => {
+      if (mids.indexOf(index) >= 0) chip.classList.add("grow");
+    });
+    animShowMath(board, data, false, token);
+    animLater(token, 1800, () => animFinishAuto(token));
+  }
+
+  function animStagePlace(board, data, token, done) {
+    animSetKicker(animKickerText(data, 3));
+    animBeat(3);
+    const grid = board.querySelector(".anim-grid");
+    const chips = [...board.querySelectorAll(".anim-chip")];
+    const mids = animMids(data.values.length);
+    mids.forEach((index) => chips[index].classList.add("keep"));
+    if (grid) animMarkMids(grid, chips, mids);
+    animLater(token, 2000, done);
+  }
+
+  function animStagePairs(board, data, token, done) {
+    animSetKicker(animKickerText(data, 2));
+    animBeat(2);
+    board.innerHTML = "";
+    animLater(token, 30, () => {
+      const grid = animBuildGrid(board, data.values);
+      const chips = [...grid.querySelectorAll(".anim-chip")];
+      const odd = data.values.length % 2 === 1;
+      const leave = odd ? 1 : 2;
+      const pairs = Math.floor((chips.length - leave) / 2);
+      const stepMs = pairs <= 6 ? 340 : Math.max(90, Math.round(2100 / pairs));
+      for (let i = 0; i < pairs; i += 1) {
+        animLater(token, stepMs * i, () => {
+          chips[i].classList.add("gone");
+          chips[chips.length - 1 - i].classList.add("gone");
+        });
+      }
+      animLater(token, stepMs * pairs + 420, () => {
+        animSetKicker(odd ? "2. 剩下一項，所以是單數。" : "2. 剩下兩項，所以是雙數。");
+        animMids(chips.length).forEach((index) => chips[index].classList.add("keep"));
+        animLater(token, 900, done);
+      });
+    });
+  }
+
+  function animStageTotal(board, data, token, done) {
+    animSetKicker(animKickerText(data, 1));
+    animBeat(1);
+    board.innerHTML = "";
+    const sheet = document.createElement("div");
+    sheet.className = "anim-sheet";
+    sheet.style.gridTemplateColumns = "auto repeat(" + data.rows.length + ", minmax(36px, 1fr))";
+    const valLabel = document.createElement("div");
+    valLabel.className = "lab";
+    valLabel.textContent = "數值";
+    const freqLabel = document.createElement("div");
+    freqLabel.className = "lab";
+    freqLabel.textContent = "頻數";
+    const vals = [];
+    const freqs = [];
+    data.rows.forEach((row) => {
+      const val = document.createElement("div");
+      val.className = "anim-pill val";
+      val.textContent = String(row.val);
+      const freq = document.createElement("div");
+      freq.className = "anim-pill freq";
+      freq.textContent = String(row.count);
+      vals.push(val);
+      freqs.push(freq);
+    });
+    sheet.append(valLabel, ...vals, freqLabel, ...freqs);
+    const total = document.createElement("div");
+    total.className = "anim-total";
+    total.append(document.createTextNode("總數 "));
+    const strong = document.createElement("strong");
+    strong.textContent = "0";
+    total.appendChild(strong);
+    board.append(sheet, total);
+    const stepMs = Math.max(320, Math.min(520, Math.round(2200 / Math.max(1, freqs.length))));
+    let sum = 0;
+    freqs.forEach((cell, index) => {
+      animLater(token, stepMs * index, () => {
+        freqs.forEach((other, i) => {
+          other.classList.toggle("on", i === index);
+          other.classList.toggle("done", i < index);
+        });
+        sum += data.rows[index].count;
+        strong.textContent = String(sum);
+      });
+    });
+    animLater(token, stepMs * freqs.length + 450, () => {
+      freqs.forEach((cell) => {
+        cell.classList.remove("on");
+        cell.classList.add("done");
+      });
+      done();
+    });
+  }
+
+  function animMaxStep() {
+    if (animTrial.clip !== 2) return 4;
+    const data = animDataset();
+    if (!data) return 0;
+    return animHitEnd(animCumModel(data)) + 1;
+  }
+
+  function animFinishAuto(token) {
+    if (token !== animTrial.token || animTrial.play !== "auto") return;
+    animTrial.play = "step";
+    animSyncControls();
+  }
+
+  function animValText(data, val) {
+    return data.unit ? String(val) + " " + data.unit : String(val);
+  }
+
+  function animFoundRow(model, pos, count) {
+    const index = model.rows.findIndex((row) => pos >= row.start && pos <= row.end);
+    if (index < 0 || index >= count) return null;
+    return model.rows[index];
+  }
+
+  function anim2Caption(data, model, count) {
+    const who = data.sample === "cafe"
+      ? "咖啡店例子，不是這題。"
+      : (data.sample === "odd" ? "單數例子，不是這題。" : "");
+    if (count <= 0) {
+      return who + "橙色線標的是項次位置；沿頻數表往下累加，找到涵蓋該位置的數值行。";
+    }
+    if (model.positions.some((pos) => !animFoundRow(model, pos, count))) {
+      const row = model.rows[count - 1];
+      const next = model.rows[count];
+      const follow = next ? "下一行會接續由第 " + next.start + " 項開始。" : "";
+      return who + "累積頻數 " + row.cum + " 尚未到達中央位置。" + follow;
+    }
+    if (model.positions.length === 1) return who + "中央項次的數值就是中位數。";
+    const hitRows = model.rows.filter((row, index) => index < count && row.hit.length);
+    if (hitRows.length === 1) {
+      const tip = data.sample === "lesson" ? "可按「咖啡店」，看看兩個位置落在不同數值行的情況。" : "";
+      return who + "兩個中央位置在同一行，所以中央數值相同；仍按公式取平均數，答案不變。" + tip;
+    }
+    return who + "兩個中央位置落在不同的數值行。讀出兩個數值，再取平均。";
+  }
+
+  function animCumModel(data) {
+    const n = data.rows.reduce((sum, row) => sum + row.count, 0);
+    const odd = n % 2 === 1;
+    const positions = odd ? [(n + 1) / 2] : [n / 2, n / 2 + 1];
+    let cum = 0;
+    const rows = data.rows.map((row) => {
+      const start = cum + 1;
+      cum += row.count;
+      const end = cum;
+      const hit = positions.filter((pos) => pos >= start && pos <= end);
+      return { val: row.val, count: row.count, cum, start, end, hit };
+    });
+    return { n, odd, positions, rows };
+  }
+
+  function animHitEnd(model) {
+    let last = 0;
+    model.rows.forEach((row, index) => {
+      if (row.hit.length) last = index;
+    });
+    return last;
+  }
+
+  function animCentralValues(model) {
+    return model.positions.map((pos) => {
+      const row = model.rows.find((item) => pos >= item.start && pos <= item.end);
+      return row ? row.val : null;
+    });
+  }
+
+  function animSegLabel(row) {
+    return row.val + " " + (row.start === row.end ? String(row.start) : row.start + "-" + row.end);
+  }
+
+  function animSpanText(row) {
+    if (row.start === row.end) return "第 " + row.start + " 項";
+    return "第 " + row.start + "-" + row.end + " 項";
+  }
+
+  function anim2Math(model) {
+    const values = animCentralValues(model);
+    const math = document.createElement("div");
+    math.className = "anim-math";
+    const add = (className, text) => {
+      const span = document.createElement("span");
+      span.className = className;
+      span.textContent = text;
+      math.appendChild(span);
+    };
+    if (values.length === 1) {
+      add("n answer show", formatMedian(values[0]));
+      add("op", "中位數");
+      return math;
+    }
+    const median = (values[0] + values[1]) / 2;
+    add("op", "(");
+    add("n", String(values[0]));
+    add("op", "+");
+    add("n", String(values[1]));
+    add("op", ")");
+    add("op", "÷ 2");
+    add("op", "=");
+    add("n answer show", formatMedian(median));
+    return math;
+  }
+
+  function anim2Chips(data, model, count) {
+    const wrap = document.createElement("div");
+    wrap.className = "anim-loc-chips";
+    const title = document.createElement("span");
+    title.className = "anim-loc-chip title";
+    title.textContent = "中央位置（項次）";
+    wrap.appendChild(title);
+    model.positions.forEach((pos) => {
+      const chip = document.createElement("span");
+      chip.className = "anim-loc-chip";
+      const row = animFoundRow(model, pos, count);
+      if (row) {
+        chip.classList.add("found");
+        chip.textContent = "第 " + pos + " 項 位置 → " + row.val + (data.unit ? " " + data.unit : "") + "數值";
+      } else {
+        chip.textContent = "第 " + pos + " 項 位置 待定位數值";
+      }
+      wrap.appendChild(chip);
+    });
+    const total = document.createElement("span");
+    total.className = "anim-loc-chip";
+    total.textContent = "N = " + model.n;
+    wrap.appendChild(total);
+    return wrap;
+  }
+
+  function anim2Band(model, count) {
+    const card = document.createElement("div");
+    card.className = "anim-band-card";
+    const head = document.createElement("div");
+    head.className = "anim-band-head";
+    const title = document.createElement("strong");
+    title.textContent = "項次位置帶";
+    const status = document.createElement("span");
+    status.textContent = count <= 0 ? "頻數尚未累加" : "已累加至第 " + model.rows[count - 1].end + " 項";
+    head.append(title, status);
+    const band = document.createElement("div");
+    band.className = "anim-band";
+    band.setAttribute("aria-hidden", "true");
+    model.rows.forEach((row, index) => {
+      const seg = document.createElement("div");
+      seg.className = "anim-seg";
+      seg.style.flex = String(row.count) + " " + String(row.count) + " 0";
+      if (index < count) {
+        seg.classList.add(row.hit.length ? "hit" : "done");
+        const label = document.createElement("span");
+        label.textContent = animSegLabel(row);
+        seg.appendChild(label);
+      }
+      band.appendChild(seg);
+    });
+    model.positions.forEach((pos) => {
+      const pin = document.createElement("div");
+      pin.className = "anim-pin";
+      pin.style.left = ((pos - 0.5) / model.n * 100) + "%";
+      band.appendChild(pin);
+    });
+    const foot = document.createElement("div");
+    foot.className = "anim-band-foot";
+    const from = document.createElement("span");
+    from.textContent = "較小數值 · 從第 1 項開始";
+    const to = document.createElement("span");
+    to.textContent = "第 " + model.n + " 項";
+    foot.append(from, to);
+    card.append(head, band, foot);
+    return card;
+  }
+
+  function anim2Table(data, model, count) {
+    const table = document.createElement("table");
+    table.className = "anim-loc-table";
+    const head = document.createElement("tr");
+    ["數值", "頻數", "累積頻數", "涵蓋項次／中央位置"].forEach((text) => {
+      const th = document.createElement("th");
+      th.textContent = text;
+      head.appendChild(th);
+    });
+    const thead = document.createElement("thead");
+    thead.appendChild(head);
+    const tbody = document.createElement("tbody");
+    model.rows.forEach((row, index) => {
+      const tr = document.createElement("tr");
+      const shown = index < count;
+      if (shown && row.hit.length) tr.classList.add("hit");
+      const val = document.createElement("td");
+      val.className = "val";
+      val.textContent = animValText(data, row.val);
+      const freq = document.createElement("td");
+      freq.textContent = String(row.count);
+      const cum = document.createElement("td");
+      const range = document.createElement("td");
+      if (!shown) {
+        cum.className = "pending";
+        cum.textContent = "待累加";
+        range.className = "pending";
+        range.textContent = "尚未搜尋";
+      } else {
+        const pill = document.createElement("span");
+        pill.className = "anim-cum-pill";
+        pill.textContent = String(row.cum);
+        cum.appendChild(pill);
+        if (row.hit.length) {
+          row.hit.forEach((pos) => {
+            const badge = document.createElement("span");
+            badge.className = "anim-pos-badge";
+            badge.textContent = "第 " + pos + " 項位置";
+            range.appendChild(badge);
+          });
+        } else {
+          range.textContent = animSpanText(row);
+        }
+      }
+      tr.append(val, freq, cum, range);
+      tbody.appendChild(tr);
+    });
+    table.append(thead, tbody);
+    return table;
+  }
+
+  function anim2Paint(board, data, model, count) {
+    const covered = model.positions.every((pos) => animFoundRow(model, pos, count));
+    const caption = anim2Caption(data, model, count);
+    animSetKicker(caption);
+    animBeat(count);
+    board.innerHTML = "";
+    const note = document.createElement("p");
+    note.className = "anim-loc-note";
+    note.setAttribute("aria-hidden", "true");
+    note.textContent = caption;
+    board.append(anim2Chips(data, model, count), anim2Band(model, count), anim2Table(data, model, count));
+    if (covered) board.appendChild(anim2Math(model));
+    board.appendChild(note);
+  }
+
+  function anim2Run(shown, play, token, data) {
+    const board = document.getElementById("animBoard");
+    const model = animCumModel(data);
+    const last = animHitEnd(model);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce && play === "auto") {
+      anim2Paint(board, data, model, last + 1);
+      animFinishAuto(token);
+      return;
+    }
+    const count = Math.max(0, Math.min(last + 1, shown));
+    anim2Paint(board, data, model, count);
+    if (play === "auto" && count <= last) animLater(token, 850, () => anim2Run(count + 1, play, token, data));
+    else if (play === "auto") animFinishAuto(token);
+  }
+
+  function anim1Settled(board, data, step, token) {
+    if (step <= 1) {
+      animSetKicker(animKickerText(data, 1));
+      animBeat(1);
+      board.innerHTML = "";
+      const sheet = document.createElement("div");
+      sheet.className = "anim-sheet";
+      sheet.style.gridTemplateColumns = "auto repeat(" + data.rows.length + ", minmax(36px, 1fr))";
+      const valLabel = document.createElement("div");
+      valLabel.className = "lab";
+      valLabel.textContent = "數值";
+      const freqLabel = document.createElement("div");
+      freqLabel.className = "lab";
+      freqLabel.textContent = "頻數";
+      const vals = [];
+      const freqs = [];
+      let sum = 0;
+      data.rows.forEach((row) => {
+        const val = document.createElement("div");
+        val.className = "anim-pill val";
+        val.textContent = String(row.val);
+        const freq = document.createElement("div");
+        freq.className = "anim-pill freq done";
+        freq.textContent = String(row.count);
+        vals.push(val);
+        freqs.push(freq);
+        sum += row.count;
+      });
+      sheet.append(valLabel, ...vals, freqLabel, ...freqs);
+      const total = document.createElement("div");
+      total.className = "anim-total";
+      const strong = document.createElement("strong");
+      strong.textContent = String(sum);
+      total.append(document.createTextNode("總數 "), strong);
+      board.append(sheet, total);
+      return;
+    }
+    const odd = data.values.length % 2 === 1;
+    animSetKicker(step === 2
+      ? (odd ? "2. 剩下一項，所以是單數。" : "2. 剩下兩項，所以是雙數。")
+      : animKickerText(data, step));
+    animBeat(step);
+    board.innerHTML = "";
+    const grid = animBuildGrid(board, data.values);
+    const chips = [...grid.querySelectorAll(".anim-chip")];
+    const mids = animMids(data.values.length);
+    chips.forEach((chip, index) => {
+      if (mids.indexOf(index) < 0) chip.classList.add("gone");
+      else chip.classList.add("keep");
+    });
+    if (step < 3) return;
+    animLater(token, 30, () => {
+      if (token !== animTrial.token) return;
+      animMarkMids(grid, chips, mids);
+      if (step < 4) return;
+      mids.forEach((index) => chips[index].classList.add("grow"));
+      animShowMath(board, data, true);
+    });
+  }
+
+  function anim1Run(step, play, token, data) {
+    const board = document.getElementById("animBoard");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (play === "auto" && step === 1 && !reduce) {
+      animStageTotal(board, data, token, () => {
+        animStagePairs(board, data, token, () => {
+          animStagePlace(board, data, token, () => animStageMedian(board, data, token));
+        });
+      });
+      return;
+    }
+    const show = reduce && play === "auto" ? 4 : step;
+    anim1Settled(board, data, show, token);
+    if (play === "auto" && show < 4) animLater(token, reduce ? 0 : 1600, () => anim1Run(show + 1, play, token, data));
+    else if (play === "auto") animFinishAuto(token);
+  }
+
+  function animGo(step, play) {
+    animStop();
+    const token = animTrial.token;
+    animTrial.play = play;
+    const board = document.getElementById("animBoard");
+    const data = animDataset();
+    animSyncControls();
+    if (!board) return;
+    if (!data) {
+      board.innerHTML = "";
+      animSetKicker("請先填好頻數。頻數須為正整數。");
+      animBeat(0);
+      return;
+    }
+    const floor = animTrial.clip === 2 ? 0 : 1;
+    const capped = Math.max(floor, Math.min(animMaxStep(), step));
+    if (animTrial.clip === 2) anim2Run(capped, play, token, data);
+    else anim1Run(capped, play, token, data);
+  }
+
+  function animSyncControls() {
+    const card = document.getElementById("animTrial");
+    const clip1 = document.getElementById("animClip1");
+    const clip2 = document.getElementById("animClip2");
+    const prev = document.getElementById("animPrev");
+    const next = document.getElementById("animNext");
+    const auto = document.getElementById("animAuto");
+    const replay = document.getElementById("animReplay");
+    const floor = animTrial.clip === 2 ? 0 : 1;
+    if (card) card.dataset.clip = String(animTrial.clip);
+    if (clip1) {
+      clip1.className = animTrial.clip === 1 ? "btn" : "btn btn-secondary";
+      clip1.textContent = animTrial.clip === 2 ? "回看動畫1" : "動畫1";
+    }
+    if (clip2) clip2.className = animTrial.clip === 2 ? "btn" : "btn btn-secondary";
+    if (auto) {
+      auto.className = animTrial.play === "auto" ? "btn" : "btn btn-secondary";
+      auto.textContent = animTrial.clip === 2 ? "自動播放定位" : "自動播放";
+    }
+    if (next) {
+      next.textContent = animTrial.clip === 2 ? "累加下一行" : "下一步";
+      next.classList.toggle("anim-next-locate", animTrial.clip === 2);
+    }
+    if (replay) replay.hidden = animTrial.clip !== 2;
+    if (prev) prev.disabled = animTrial.step <= floor;
+    if (next) next.disabled = animTrial.step >= animMaxStep();
+    animMarkButtons();
+  }
+
+  function animMarkButtons() {
+    const even = document.getElementById("animEven");
+    const cafe = document.getElementById("animCafe");
+    const odd = document.getElementById("animOdd");
+    if (even) even.className = animTrial.which === "lesson" ? "btn" : "btn btn-secondary";
+    if (cafe) cafe.className = animTrial.which === "cafe" ? "btn" : "btn btn-secondary";
+    if (odd) odd.className = animTrial.which === "odd" ? "btn" : "btn btn-secondary";
+  }
+
+  function syncAnimCard() {
+    const card = document.getElementById("animTrial");
+    if (!card) return;
+    const onLesson = current().id === "discrete";
+    card.hidden = !onLesson;
+    if (!onLesson) {
+      animStop();
+      animTrial.seen = false;
+      return;
+    }
+    const body = document.getElementById("animBody");
+    const reopen = document.getElementById("animReopen");
+    if (body) body.hidden = !!animTrial.closed;
+    if (reopen) reopen.hidden = !animTrial.closed;
+    if (!animTrial.closed && !animTrial.seen) {
+      animTrial.seen = true;
+      animGo(animTrial.clip === 2 ? 0 : 1, "step");
+    }
+  }
+
+  function bindAnimTrial() {
+    const clip1 = document.getElementById("animClip1");
+    const clip2 = document.getElementById("animClip2");
+    const even = document.getElementById("animEven");
+    const cafe = document.getElementById("animCafe");
+    const odd = document.getElementById("animOdd");
+    const closeBtn = document.getElementById("animClose");
+    const open = document.getElementById("animOpen");
+    const prev = document.getElementById("animPrev");
+    const next = document.getElementById("animNext");
+    const auto = document.getElementById("animAuto");
+    const replay = document.getElementById("animReplay");
+    const openSample = (which) => {
+      animTrial.which = which;
+      animGo(animTrial.clip === 2 ? 0 : 1, "step");
+    };
+    if (clip1) clip1.addEventListener("click", () => {
+      animTrial.clip = 1;
+      animGo(1, "step");
+    });
+    if (clip2) clip2.addEventListener("click", () => {
+      animTrial.clip = 2;
+      animGo(0, "step");
+    });
+    if (even) even.addEventListener("click", () => openSample("lesson"));
+    if (cafe) cafe.addEventListener("click", () => openSample("cafe"));
+    if (odd) odd.addEventListener("click", () => openSample("odd"));
+    if (prev) prev.addEventListener("click", () => animGo(animTrial.step - 1, "step"));
+    if (next) next.addEventListener("click", () => animGo(animTrial.step + 1, "step"));
+    if (auto) auto.addEventListener("click", () => animGo(animTrial.clip === 2 ? 0 : 1, "auto"));
+    if (replay) replay.addEventListener("click", () => animGo(0, "step"));
+    if (closeBtn) closeBtn.addEventListener("click", () => {
+      animTrial.closed = true;
+      animStop();
+      syncAnimCard();
+    });
+    if (open) open.addEventListener("click", () => {
+      animTrial.closed = false;
+      animTrial.seen = false;
+      syncAnimCard();
+    });
+  }
+
   setInterval(() => {
     const open = aiOpen();
     if (open !== askWasOpen) render();
     else if (teacherView) renderTeacher();
   }, 5000);
 
+  bindAnimTrial();
   loadLesson(0);
 </script>
 </body>
