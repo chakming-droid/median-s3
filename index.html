@@ -487,6 +487,14 @@
     .anim-chip.keep { border-color: #15803d; background: #dcfce7; color: #15803d; z-index: 1; }
     .anim-chip.grow { transform: scale(1.16); z-index: 2; }
     .anim-chip.cut::after { content: ""; position: absolute; top: 0; bottom: 0; right: -5px; width: 3px; background: #7c3aed; transform-origin: top center; animation: anim-drop 0.4s ease; }
+    .anim-chip.extra, .anim-pill.extra { background: #ede9fe; color: #5b21b6; border-color: #7c3aed; }
+    .anim-chip.extra-x, .anim-pill.extra-x { background: #fde68a; color: #92400e; border-color: #d97706; }
+    .anim-chip.extra.gone, .anim-chip.extra-x.gone { opacity: 0.2; border-color: #cbd5e1; background: #f8fafc; color: #94a3b8; }
+    .bridge-row { display: flex; flex-wrap: wrap; column-gap: 4px; row-gap: 18px; justify-content: center; padding-bottom: 16px; }
+    .bridge-chip { position: relative; width: 30px; height: 32px; box-sizing: border-box; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; background: #e2e8f0; color: #0f172a; }
+    .bridge-chip.extra { background: #ddd6fe; color: #5b21b6; }
+    .bridge-chip.mid { box-shadow: inset 0 0 0 2px #ea580c; }
+    .bridge-chip.mid::after { content: "▲"; position: absolute; left: 0; right: 0; bottom: -14px; text-align: center; font-size: 10px; color: #ea580c; }
     .anim-arrow { position: absolute; left: 50%; bottom: -15px; color: #15803d; font-size: 0.8rem; font-weight: 800; line-height: 1; transform: translateX(-50%); animation: anim-rise 0.35s ease; }
     .anim-mark { position: absolute; color: #2563eb; font-size: 0.72rem; font-weight: 800; line-height: 1; white-space: nowrap; transform: translateX(-50%); }
     .anim-math { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; min-height: 52px; margin-top: 8px; font-weight: 800; font-size: 1.25rem; }
@@ -518,6 +526,13 @@
     .anim-seg { display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden; border-right: 1px solid rgba(255, 255, 255, 0.9); color: transparent; font-size: 0.62rem; font-weight: 800; line-height: 1.1; text-align: center; }
     .anim-seg.done { background: #cdeedf; color: #115e59; }
     .anim-seg.hit { background: #f8cfc4; color: #9a3412; }
+    .anim-seg.low { background: #cdeedf; color: #115e59; }
+    .anim-seg.mid { background: #bfdbfe; color: #1e3a8a; }
+    .anim-seg.high { background: #e2e8f0; color: #334155; }
+    .anim-seg.x { background: #fde68a; color: #92400e; }
+    .anim-seg.extra, .anim-seg.done.extra, .anim-seg.hit.extra { background: #ddd6fe; color: #5b21b6; }
+    .anim-seg.extra-x, .anim-seg.done.extra-x, .anim-seg.hit.extra-x { background: #fde68a; color: #92400e; }
+    .anim-seg.land { box-shadow: inset 0 0 0 2px #ea580c; }
     .anim-seg span { padding: 0 1px; white-space: nowrap; }
     .anim-pin { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #ea580c; z-index: 2; }
     .anim-pin::after { content: ""; position: absolute; left: -3px; bottom: 2px; width: 8px; height: 8px; border-radius: 50%; background: #ea580c; }
@@ -530,6 +545,15 @@
     .anim-cum-pill { display: inline-block; min-width: 1.5rem; padding: 2px 6px; border-radius: 999px; background: #d1fae5; color: #047857; font-weight: 800; }
     .anim-pos-badge { display: inline-block; margin: 1px; padding: 2px 5px; border-radius: 999px; background: #e11d48; color: white; font-size: 0.66rem; font-weight: 800; line-height: 1.3; }
     .anim-loc-note { margin: 8px 0 0; font-size: 0.82rem; line-height: 1.45; color: #334155; }
+    .xband-now { margin: 0 0 6px; text-align: center; font-size: 1.12rem; font-weight: 800; line-height: 1.35; color: #9a3412; }
+    .xband-now.ok { color: #15803d; }
+    .xband-zones { display: flex; gap: 2px; margin: 0 0 2px; }
+    .xband-zones span { min-width: 0; overflow: hidden; text-align: center; white-space: nowrap; font-size: 0.68rem; font-weight: 800; color: #64748b; }
+    .xband-zones .mid { color: #1d4ed8; }
+    .xband-zones .high { color: #92400e; }
+    .xband-aim { position: relative; height: 1.35em; }
+    .xband-flag { position: absolute; transform: translateX(-50%); background: #1d4ed8; color: white; font-size: 0.68rem; font-weight: 800; line-height: 1.3; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+    .xband-flag::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -4px; border: 4px solid transparent; border-top-color: #1d4ed8; }
     @keyframes anim-drop { from { transform: scaleY(0); } to { transform: scaleY(1); } }
     @keyframes anim-rise { from { transform: translateX(-50%) translateY(8px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
     @keyframes anim-pop { to { transform: scale(1); opacity: 1; } }
@@ -556,6 +580,8 @@
       table.horizontal-table th.row-header { min-width: 52px; padding: 6px 4px; }
       table.horizontal-table th, table.horizontal-table td { padding: 4px; }
       table.horizontal-table input { width: 42px; padding: 4px 2px; font-size: 0.95rem; }
+      table.bridge-table th.row-header { min-width: 40px; }
+      table.bridge-table input { width: 34px; }
     }
   </style>
 </head>
@@ -578,8 +604,6 @@
         <button type="button" class="btn" id="animClip1">動畫1</button>
         <button type="button" class="btn btn-secondary" id="animClip2">動畫2</button>
         <button type="button" class="btn" id="animEven">這題</button>
-        <button type="button" class="btn btn-secondary" id="animCafe">咖啡店</button>
-        <button type="button" class="btn btn-secondary" id="animOdd">單數例子</button>
         <button type="button" class="btn btn-secondary" id="animClose">收起</button>
       </div>
       <div class="action-row">
@@ -635,6 +659,23 @@
       structure: 0
     },
     {
+      id: "bridge",
+      kind: "discrete",
+      title: "加數據",
+      header: "數值",
+      freqHeader: "個數",
+      stem: "下面有 5 個數據。先選一個中位數。另一顏色的數據會逐個加上，直到正中間落到這個數。",
+      bridge: true,
+      rows: [
+        { val: 1, freq: "1" },
+        { val: 2, freq: "1" },
+        { val: 3, freq: "1" },
+        { val: 4, freq: "1" },
+        { val: 5, freq: "1" }
+      ],
+      structure: 0
+    },
+    {
       id: "pens",
       kind: "discrete",
       title: "求未知頻數",
@@ -659,6 +700,7 @@
   let tutor = freshTutor();
   let fieldDrafts = {};
   let experiment = null;
+  let bridgeRun = { target: null, added: 0, timer: 0 };
   let showBlocks = false;
   let discreteRevealed = false;
   let casesRevealed = false;
@@ -907,6 +949,19 @@
     discreteRevealed = false;
     casesRevealed = false;
     asking = false;
+    bridgeStop();
+    bridgeRun = { target: null, added: 0, timer: 0 };
+    animTrial.pensOpen = false;
+    animTrial.closed = true;
+    animTrial.seen = false;
+    animStop();
+    if (lesson.bridge) {
+      tutor.mode = "bridge";
+      tutor.step = 1;
+      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值。紫色數據會逐個加上，直到正中間落到這個數。" });
+      render();
+      return;
+    }
     if (hasX && lesson.kind !== "continuous") {
       const model = modelOf(lesson);
       const target = Number(lesson.target);
@@ -1034,7 +1089,7 @@
     const stage = document.createElement("div");
     stage.className = "table-stage";
     const table = document.createElement("table");
-    table.className = "horizontal-table";
+    table.className = "horizontal-table" + (lesson.bridge ? " bridge-table" : "");
     const body = document.createElement("tbody");
     if (lesson.kind === "continuous") {
       body.append(
@@ -1564,6 +1619,14 @@
   }
 
   function markEdited() {
+    if (current().bridge) {
+      bridgeStop();
+      bridgeRun.target = null;
+      bridgeRun.added = 0;
+      renderTutor();
+      renderQueue();
+      return;
+    }
     const wasRevealed = discreteRevealed || casesRevealed || tutor.solved;
     discreteRevealed = false;
     casesRevealed = false;
@@ -1820,6 +1883,10 @@
       result.append(stepLine("中位數 = " + formatMedian(Number(lesson.target)) + "。"));
       return;
     }
+    if (lesson.bridge) {
+      wrapper.appendChild(bridgeBoard());
+      return;
+    }
     if (model.hasX) {
       if (!revealCases) wrapper.appendChild(pictureHintButtons());
       wrapper.appendChild(trialRaw(model.rows, letter));
@@ -1858,6 +1925,12 @@
     const slot = document.getElementById("checkSlot");
     if (!card || !slot) return;
     const letter = current().kind === "continuous" ? "" : unknownLetter();
+    if (current().bridge) {
+      card.hidden = true;
+      slot.innerHTML = "";
+      slot.dataset.mode = "";
+      return;
+    }
     const wanted = (current().kind === "continuous" ? "continuous" : (lessonHasX() ? "x" : "plain")) + ":" + letter;
     card.hidden = false;
     if (slot.dataset.mode === wanted && slot.childElementCount) return;
@@ -2291,35 +2364,239 @@
     return board;
   }
 
+  function xBandSegments(rows, x, target) {
+    let cum = 0;
+    return rows.map((row) => {
+      const count = row.freq.c + row.freq.k * x;
+      const start = count > 0 ? cum + 1 : cum;
+      cum += count;
+      let kind = "low";
+      if (row.freq.k) kind = "x";
+      else if (Number.isFinite(target) && row.val > target) kind = "high";
+      else if (Number.isFinite(target) && MedianMath.sameNumber(row.val, target)) kind = "mid";
+      return { val: row.val, count, start, end: cum, kind, unknown: row.freq.k > 0 };
+    }).filter((seg) => seg.count > 0);
+  }
+
+  function xBandOnTarget(view, target) {
+    return !!view && Number.isFinite(target) && view.values.every((value) => MedianMath.sameNumber(value, target));
+  }
+
+  function xBandCenterText(view, target) {
+    if (!view) return "";
+    const middle = view.values.length === 1
+      ? "正中間是 " + view.values[0]
+      : "正中間是 " + view.values[0] + " 和 " + view.values[1];
+    if (!Number.isFinite(target)) return middle + "。";
+    return middle + (xBandOnTarget(view, target) ? "，和題目一樣。" : "，和題目不同。");
+  }
+
+  function xBand(rows, letter, x, view, target) {
+    const segs = xBandSegments(rows, x, target);
+    const n = segs.reduce((sum, seg) => sum + seg.count, 0);
+    const onTarget = xBandOnTarget(view, target);
+    const card = document.createElement("div");
+    card.className = "anim-band-card";
+    const now = document.createElement("p");
+    now.className = "xband-now" + (onTarget ? " ok" : "");
+    now.textContent = xBandCenterText(view, target);
+    const head = document.createElement("div");
+    head.className = "anim-band-head";
+    const title = document.createElement("strong");
+    title.textContent = "項次位置帶";
+    const status = document.createElement("span");
+    status.textContent = view
+      ? "共 " + n + " 項 · " + (view.odd ? "單數 · 一條橙線" : "雙數 · 兩條橙線")
+      : letter + " = " + x;
+    head.append(title, status);
+    const zones = document.createElement("div");
+    zones.className = "xband-zones";
+    ["low", "mid", "high"].forEach((key) => {
+      const count = segs.reduce((sum, seg) => {
+        const side = !Number.isFinite(target) ? "low" : (MedianMath.sameNumber(seg.val, target) ? "mid" : (seg.val > target ? "high" : "low"));
+        return side === key ? sum + seg.count : sum;
+      }, 0);
+      const label = document.createElement("span");
+      label.className = key;
+      label.style.flex = Math.max(count, 0) + " " + Math.max(count, 0) + " 0";
+      if (count / n >= 0.16) {
+        label.textContent = key === "low" ? "比中位數小" : (key === "high" ? "比中位數大" : "目標");
+      }
+      zones.appendChild(label);
+    });
+    const aim = document.createElement("div");
+    aim.className = "xband-aim";
+    const mid = segs.find((seg) => Number.isFinite(target) && MedianMath.sameNumber(seg.val, target));
+    if (mid && n > 0) {
+      const flag = document.createElement("div");
+      flag.className = "xband-flag";
+      flag.textContent = "目標 " + target;
+      flag.style.left = ((mid.start - 1 + mid.count / 2) / n * 100) + "%";
+      aim.appendChild(flag);
+    }
+    const band = document.createElement("div");
+    band.className = "anim-band";
+    band.setAttribute("aria-hidden", "true");
+    segs.forEach((seg) => {
+      const el = document.createElement("div");
+      el.className = "anim-seg " + seg.kind;
+      el.style.flex = seg.count + " " + seg.count + " 0";
+      if (seg.count / n >= 0.08) {
+        const label = document.createElement("span");
+        label.textContent = seg.unknown ? letter : String(seg.val);
+        el.appendChild(label);
+      }
+      band.appendChild(el);
+    });
+    if (view && n > 0) {
+      view.positions.forEach((pos) => {
+        const pin = document.createElement("div");
+        pin.className = "anim-pin";
+        pin.style.left = ((pos - 0.5) / n * 100) + "%";
+        band.appendChild(pin);
+      });
+    }
+    const note = document.createElement("p");
+    note.className = "anim-loc-note";
+    if (!Number.isFinite(target)) note.textContent = "黃色是 " + letter + "。按 + 拉闊，按 − 縮短。橙線是正中間。";
+    else if (onTarget) note.textContent = "橙線已落到目標。再按 + 或 −，看它會不會離開。";
+    else note.textContent = "黃色是 " + letter + "，其他顏色不變。按 + 拉闊黃色，直到橙線落到藍色目標。";
+    card.append(now, head, zones, aim, band, note);
+    if (current().id === "pens") {
+      card.appendChild(makeButton("看動畫一", "btn btn-secondary", watchPensAnim));
+    }
+    return card;
+  }
+
+  function bridgeStop() {
+    if (bridgeRun.timer) clearTimeout(bridgeRun.timer);
+    bridgeRun.timer = 0;
+  }
+
+  function bridgePairs() {
+    const pairs = [];
+    current().rows.forEach((row) => {
+      const count = Number(row.freq);
+      const val = Number(row.val);
+      if (!Number.isFinite(val) || !Number.isInteger(count) || count <= 0) return;
+      for (let index = 0; index < count; index += 1) pairs.push({ val, extra: false });
+    });
+    if (bridgeRun.target != null) {
+      for (let index = 0; index < bridgeRun.added; index += 1) pairs.push({ val: bridgeRun.target, extra: true });
+    }
+    pairs.sort((a, b) => a.val - b.val || Number(a.extra) - Number(b.extra));
+    return pairs;
+  }
+
+  function bridgeCenterValues(pairs) {
+    const count = pairs.length;
+    if (!count) return [];
+    if (count % 2 === 1) return [pairs[(count - 1) / 2].val];
+    return [pairs[count / 2 - 1].val, pairs[count / 2].val];
+  }
+
+  function bridgeHit(pairs, target) {
+    const values = bridgeCenterValues(pairs);
+    return values.length > 0 && values.every((value) => value === target);
+  }
+
+  function bridgeStatus() {
+    if (bridgeRun.target == null) return "選一個表裡的數值，當作中位數。";
+    const hit = bridgeHit(bridgePairs(), bridgeRun.target);
+    if (bridgeRun.added === 0 && hit) return "正中間已經是 " + bridgeRun.target + "，不用再加。";
+    if (!hit) return bridgeRun.added === 0
+      ? "正在逐個加上 " + bridgeRun.target + "。"
+      : "已額外加上 " + bridgeRun.added + " 個 " + bridgeRun.target + "。正中間還沒落到目標。";
+    return "已額外加上 " + bridgeRun.added + " 個 " + bridgeRun.target + "。正中間落到目標。";
+  }
+
+  function bridgeTick() {
+    bridgeRun.timer = 0;
+    if (!current().bridge || bridgeRun.target == null) return;
+    if (bridgeHit(bridgePairs(), bridgeRun.target) || bridgeRun.added >= 12) {
+      render();
+      return;
+    }
+    bridgeRun.added += 1;
+    render();
+    if (!bridgeHit(bridgePairs(), bridgeRun.target) && bridgeRun.added < 12) {
+      bridgeRun.timer = setTimeout(bridgeTick, 700);
+    }
+  }
+
+  function bridgeChoose(value) {
+    bridgeStop();
+    bridgeRun.target = value;
+    bridgeRun.added = 0;
+    render();
+    if (!bridgeHit(bridgePairs(), value)) bridgeRun.timer = setTimeout(bridgeTick, 700);
+  }
+
+  function bridgeBoard() {
+    const wrap = document.createElement("div");
+    const pairs = bridgePairs();
+    const count = pairs.length;
+    const mids = count % 2 === 1 ? [(count + 1) / 2] : [count / 2, count / 2 + 1];
+    const row = document.createElement("div");
+    row.className = "bridge-row";
+    pairs.forEach((item, index) => {
+      const chip = document.createElement("div");
+      chip.className = "bridge-chip" + (item.extra ? " extra" : "") + (mids.indexOf(index + 1) >= 0 ? " mid" : "");
+      chip.textContent = String(item.val);
+      row.appendChild(chip);
+    });
+    const note = document.createElement("p");
+    note.className = "anim-loc-note";
+    note.textContent = bridgeStatus() + "紫色是額外加上的。";
+    wrap.append(row, note);
+    return wrap;
+  }
+
+  function renderBridge(form, actions) {
+    const note = document.createElement("p");
+    note.className = "problem-text";
+    note.textContent = "選一個表裡已有的數值。";
+    form.appendChild(note);
+    const row = document.createElement("div");
+    row.className = "action-row";
+    current().rows.forEach((item) => {
+      const value = Number(item.val);
+      if (!Number.isFinite(value)) return;
+      row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => bridgeChoose(value)));
+    });
+    form.appendChild(row);
+    const status = document.createElement("p");
+    status.className = "problem-text";
+    status.textContent = bridgeStatus();
+    form.appendChild(status);
+    const next = lessons.findIndex((lesson) => lesson.id === "pens");
+    if (next >= 0) actions.appendChild(makeButton("去看求未知頻數", "btn", () => showMode(next)));
+  }
+
+  function watchPensAnim() {
+    animTrial.pensOpen = true;
+    animTrial.closed = false;
+    animTrial.seen = true;
+    animTrial.clip = 1;
+    animTrial.which = "lesson";
+    syncAnimCard();
+    animGo(1, "auto");
+  }
+
   function trialRaw(rows, letter) {
     const wrap = document.createElement("div");
     const x = currentTrial();
-    const caption = document.createElement("p");
-    caption.className = "problem-text";
-    caption.textContent = letter + " = " + x;
-    wrap.appendChild(caption);
-    const count = expandedCount(rows, x);
     const view = MedianMath.medianForX(rows, x);
-    if (rowMarksOn() && view && count <= 400) wrap.appendChild(compactRow(expandRows(rows, x), view, false));
+    wrap.appendChild(xBand(rows, letter, x, view, Number(current().target)));
+    if (!rowMarksOn() || !view) return wrap;
+    const count = expandedCount(rows, x);
+    if (count <= 400) wrap.appendChild(compactRow(expandRows(rows, x), view, false));
     else {
       wrap.appendChild(medianSplit(positionRuns(rows, x), view));
-      if (rowMarksOn()) {
-        const note = document.createElement("p");
-        note.className = "problem-text";
-        note.textContent = "這個數太大，未能逐項標出第幾項。試一個小一點的正整數。";
-        wrap.appendChild(note);
-      }
-    }
-    if (view) {
-      const status = document.createElement("p");
-      status.className = "problem-text";
-      const target = Number(current().target);
-      status.textContent = "中位數是 " + formatMedian(view.median) + "。" + (
-        Number.isFinite(target)
-          ? (MedianMath.sameNumber(view.median, target) ? "和題目一樣。" : "和題目不同。")
-          : ""
-      );
-      wrap.appendChild(status);
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = "這個數太大，未能逐項標出第幾項。試一個小一點的正整數。";
+      wrap.appendChild(note);
     }
     return wrap;
   }
@@ -2347,10 +2624,15 @@
       updateBalance();
       return;
     }
+    if (tutor.mode === "bridge") {
+      renderBridge(form, actions);
+      updateBalance();
+      return;
+    }
     if (tutor.solved) {
       if (current().id === "discrete") {
-        const q8 = lessons.findIndex((lesson) => lesson.id === "pens");
-        if (q8 >= 0) actions.appendChild(makeButton("去看求未知頻數", "btn", () => showMode(q8)));
+        const next = lessons.findIndex((lesson) => lesson.id === "bridge");
+        if (next >= 0) actions.appendChild(makeButton("去看加數據", "btn", () => showMode(next)));
       } else if (current().id === "pens") {
         actions.appendChild(makeButton("回到離散數據", "btn btn-secondary", () => showMode(0)));
       }
@@ -2644,6 +2926,7 @@
   function questionText() {
     if (phase === "type") return "做之前，先判斷：這是離散數據還是連續數據？";
     const lesson = current();
+    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。";
     if (tutor.mode === "known") {
       const view = knownView();
       if (!view) return "請先填好頻數表。";
@@ -2675,6 +2958,7 @@
 
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
+    if (tutor.mode === "bridge") return "幫他觀察紫色數據逐個加上之後，正中間怎樣落到他選的數值。不要說出要加多少個。";
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
       if (tutor.step === 2) return "幫他分辨總數是單數還是雙數。不能被 2 整除是單數。不要直接說是單數還是雙數。";
@@ -3937,7 +4221,7 @@
     render();
   }
 
-  const animTrial = { closed: true, which: "lesson", token: 0, timers: [], seen: false, clip: 1, play: "step", step: 1 };
+  const animTrial = { closed: true, which: "lesson", token: 0, timers: [], seen: false, clip: 1, play: "step", step: 1, pensOpen: false };
 
   function animStop() {
     animTrial.token += 1;
@@ -3983,23 +4267,8 @@
   }
 
   function animDataset() {
-    if (animTrial.which === "odd") {
-      const values = [1, 2, 2, 3, 4, 4, 5];
-      return { sample: "odd", unit: "", values, rows: animFreqRows(values) };
-    }
-    if (animTrial.which === "cafe") {
-      const rows = [
-        { val: 1, count: 2 },
-        { val: 2, count: 3 },
-        { val: 3, count: 3 },
-        { val: 4, count: 2 }
-      ];
-      const values = [];
-      rows.forEach((row) => {
-        for (let i = 0; i < row.count; i += 1) values.push(row.val);
-      });
-      return { sample: "cafe", unit: "杯", values, rows };
-    }
+    if (current().bridge) return bridgeDataset();
+    if (current().id === "pens") return pensAnimDataset();
     const model = modelOf(current());
     if (model.error || model.hasX) return null;
     const values = expandRows(model.rows, 1);
@@ -4009,12 +4278,50 @@
     return { sample: "lesson", unit: "次", values, rows };
   }
 
+  function bridgeDataset() {
+    const pairs = bridgePairs();
+    const rows = [];
+    pairs.forEach((item) => {
+      const last = rows[rows.length - 1];
+      if (last && last.val === item.val && last.extra === item.extra) last.count += 1;
+      else rows.push({ val: item.val, count: 1, extra: item.extra, extraClass: item.extra ? "extra" : "" });
+    });
+    if (!pairs.length || pairs.length > 60) return null;
+    return {
+      sample: "bridge",
+      unit: "",
+      values: pairs.map((item) => item.val),
+      extras: pairs.map((item) => item.extra),
+      extraClass: "extra",
+      rows
+    };
+  }
+
+  function pensAnimDataset() {
+    const model = modelOf(current());
+    if (model.error || !model.rows) return null;
+    const x = currentTrial();
+    const values = [];
+    const extras = [];
+    const rows = [];
+    model.rows.forEach((row) => {
+      const count = row.freq.c + row.freq.k * x;
+      if (!Number.isInteger(count) || count <= 0) return;
+      const extra = row.freq.k > 0;
+      rows.push({ val: row.val, count, extra, extraClass: extra ? "extra-x" : "" });
+      for (let index = 0; index < count; index += 1) {
+        values.push(row.val);
+        extras.push(extra);
+      }
+    });
+    if (values.length < 1 || values.length > 80) return null;
+    return { sample: "lesson", unit: "枝", values, extras, extraClass: "extra-x", rows };
+  }
+
   function animKickerText(data, beat) {
     const odd = data.values.length % 2 === 1;
     if (beat === 1) {
-      const who = data.sample === "cafe"
-        ? "咖啡店例子，不是這題。"
-        : (data.sample === "odd" ? "單數例子，不是這題。" : "這題。");
+      const who = data.sample === "bridge" ? "加上額外數據後。" : "這題。";
       return who + "1. 總數：由左至右，把頻數相加。";
     }
     if (beat === 2) return "2. 由兩端一對一對撇走。";
@@ -4040,14 +4347,16 @@
     return Math.min(fit, n);
   }
 
-  function animBuildGrid(board, values) {
+  function animBuildGrid(board, data) {
     const grid = document.createElement("div");
     grid.className = "anim-grid";
+    const values = data.values;
     const cols = animColumns(values.length, board.clientWidth);
     grid.style.gridTemplateColumns = "repeat(" + cols + ", 30px)";
-    values.forEach((value) => {
+    values.forEach((value, index) => {
       const chip = document.createElement("div");
       chip.className = "anim-chip";
+      if (data.extras && data.extras[index] && data.extraClass) chip.classList.add(data.extraClass);
       chip.textContent = String(value);
       grid.appendChild(chip);
     });
@@ -4123,7 +4432,7 @@
 
   function animPaintFinal(board, data) {
     board.innerHTML = "";
-    const grid = animBuildGrid(board, data.values);
+    const grid = animBuildGrid(board, data);
     const chips = [...grid.querySelectorAll(".anim-chip")];
     const mids = animMids(data.values.length);
     chips.forEach((chip, index) => {
@@ -4163,7 +4472,7 @@
     animBeat(2);
     board.innerHTML = "";
     animLater(token, 30, () => {
-      const grid = animBuildGrid(board, data.values);
+      const grid = animBuildGrid(board, data);
       const chips = [...grid.querySelectorAll(".anim-chip")];
       const odd = data.values.length % 2 === 1;
       const leave = odd ? 1 : 2;
@@ -4201,9 +4510,11 @@
     data.rows.forEach((row) => {
       const val = document.createElement("div");
       val.className = "anim-pill val";
+      if (row.extra && data.extraClass) val.classList.add(data.extraClass);
       val.textContent = String(row.val);
       const freq = document.createElement("div");
       freq.className = "anim-pill freq";
+      if (row.extra && data.extraClass) freq.classList.add(data.extraClass);
       freq.textContent = String(row.count);
       vals.push(val);
       freqs.push(freq);
@@ -4250,36 +4561,24 @@
     animSyncControls();
   }
 
-  function animValText(data, val) {
-    return data.unit ? String(val) + " " + data.unit : String(val);
-  }
-
   function animFoundRow(model, pos, count) {
     const index = model.rows.findIndex((row) => pos >= row.start && pos <= row.end);
     if (index < 0 || index >= count) return null;
     return model.rows[index];
   }
 
-  function anim2Caption(data, model, count) {
-    const who = data.sample === "cafe"
-      ? "咖啡店例子，不是這題。"
-      : (data.sample === "odd" ? "單數例子，不是這題。" : "");
-    if (count <= 0) {
-      return who + "橙色線標的是項次位置；沿頻數表往下累加，找到涵蓋該位置的數值行。";
-    }
+  function anim2Caption(model, count) {
+    if (count <= 0) return "橙色線標的是項次位置；沿位置帶由左至右累加，找到涵蓋該位置的數值。";
     if (model.positions.some((pos) => !animFoundRow(model, pos, count))) {
       const row = model.rows[count - 1];
       const next = model.rows[count];
       const follow = next ? "下一行會接續由第 " + next.start + " 項開始。" : "";
-      return who + "累積頻數 " + row.cum + " 尚未到達中央位置。" + follow;
+      return "累積頻數 " + row.cum + " 尚未到達中央位置。" + follow;
     }
-    if (model.positions.length === 1) return who + "中央項次的數值就是中位數。";
+    if (model.positions.length === 1) return "中央項次的數值就是中位數。";
     const hitRows = model.rows.filter((row, index) => index < count && row.hit.length);
-    if (hitRows.length === 1) {
-      const tip = data.sample === "lesson" ? "可按「咖啡店」，看看兩個位置落在不同數值行的情況。" : "";
-      return who + "兩個中央位置在同一行，所以中央數值相同；仍按公式取平均數，答案不變。" + tip;
-    }
-    return who + "兩個中央位置落在不同的數值行。讀出兩個數值，再取平均。";
+    if (hitRows.length === 1) return "兩個中央位置在同一行，所以中央數值相同；仍按公式取平均數，答案不變。";
+    return "兩個中央位置落在不同的數值行。讀出兩個數值，再取平均。";
   }
 
   function animCumModel(data) {
@@ -4292,7 +4591,7 @@
       cum += row.count;
       const end = cum;
       const hit = positions.filter((pos) => pos >= start && pos <= end);
-      return { val: row.val, count: row.count, cum, start, end, hit };
+      return { val: row.val, count: row.count, cum, start, end, hit, extra: !!row.extra, extraClass: row.extraClass || "" };
     });
     return { n, odd, positions, rows };
   }
@@ -4314,11 +4613,6 @@
 
   function animSegLabel(row) {
     return row.val + " " + (row.start === row.end ? String(row.start) : row.start + "-" + row.end);
-  }
-
-  function animSpanText(row) {
-    if (row.start === row.end) return "第 " + row.start + " 項";
-    return "第 " + row.start + "-" + row.end + " 項";
   }
 
   function anim2Math(model) {
@@ -4393,6 +4687,7 @@
       seg.style.flex = String(row.count) + " " + String(row.count) + " 0";
       if (index < count) {
         seg.classList.add(row.hit.length ? "hit" : "done");
+        if (row.extra && row.extraClass) seg.classList.add(row.extraClass);
         const label = document.createElement("span");
         label.textContent = animSegLabel(row);
         seg.appendChild(label);
@@ -4416,60 +4711,9 @@
     return card;
   }
 
-  function anim2Table(data, model, count) {
-    const table = document.createElement("table");
-    table.className = "anim-loc-table";
-    const head = document.createElement("tr");
-    ["數值", "頻數", "累積頻數", "涵蓋項次／中央位置"].forEach((text) => {
-      const th = document.createElement("th");
-      th.textContent = text;
-      head.appendChild(th);
-    });
-    const thead = document.createElement("thead");
-    thead.appendChild(head);
-    const tbody = document.createElement("tbody");
-    model.rows.forEach((row, index) => {
-      const tr = document.createElement("tr");
-      const shown = index < count;
-      if (shown && row.hit.length) tr.classList.add("hit");
-      const val = document.createElement("td");
-      val.className = "val";
-      val.textContent = animValText(data, row.val);
-      const freq = document.createElement("td");
-      freq.textContent = String(row.count);
-      const cum = document.createElement("td");
-      const range = document.createElement("td");
-      if (!shown) {
-        cum.className = "pending";
-        cum.textContent = "待累加";
-        range.className = "pending";
-        range.textContent = "尚未搜尋";
-      } else {
-        const pill = document.createElement("span");
-        pill.className = "anim-cum-pill";
-        pill.textContent = String(row.cum);
-        cum.appendChild(pill);
-        if (row.hit.length) {
-          row.hit.forEach((pos) => {
-            const badge = document.createElement("span");
-            badge.className = "anim-pos-badge";
-            badge.textContent = "第 " + pos + " 項位置";
-            range.appendChild(badge);
-          });
-        } else {
-          range.textContent = animSpanText(row);
-        }
-      }
-      tr.append(val, freq, cum, range);
-      tbody.appendChild(tr);
-    });
-    table.append(thead, tbody);
-    return table;
-  }
-
   function anim2Paint(board, data, model, count) {
     const covered = model.positions.every((pos) => animFoundRow(model, pos, count));
-    const caption = anim2Caption(data, model, count);
+    const caption = anim2Caption(model, count);
     animSetKicker(caption);
     animBeat(count);
     board.innerHTML = "";
@@ -4477,7 +4721,7 @@
     note.className = "anim-loc-note";
     note.setAttribute("aria-hidden", "true");
     note.textContent = caption;
-    board.append(anim2Chips(data, model, count), anim2Band(model, count), anim2Table(data, model, count));
+    board.append(anim2Chips(data, model, count), anim2Band(model, count));
     if (covered) board.appendChild(anim2Math(model));
     board.appendChild(note);
   }
@@ -4518,9 +4762,11 @@
       data.rows.forEach((row) => {
         const val = document.createElement("div");
         val.className = "anim-pill val";
+        if (row.extra && data.extraClass) val.classList.add(data.extraClass);
         val.textContent = String(row.val);
         const freq = document.createElement("div");
         freq.className = "anim-pill freq done";
+        if (row.extra && data.extraClass) freq.classList.add(data.extraClass);
         freq.textContent = String(row.count);
         vals.push(val);
         freqs.push(freq);
@@ -4541,7 +4787,7 @@
       : animKickerText(data, step));
     animBeat(step);
     board.innerHTML = "";
-    const grid = animBuildGrid(board, data.values);
+    const grid = animBuildGrid(board, data);
     const chips = [...grid.querySelectorAll(".anim-chip")];
     const mids = animMids(data.values.length);
     chips.forEach((chip, index) => {
@@ -4609,7 +4855,13 @@
       clip1.className = animTrial.clip === 1 ? "btn" : "btn btn-secondary";
       clip1.textContent = animTrial.clip === 2 ? "回看動畫1" : "動畫1";
     }
-    if (clip2) clip2.className = animTrial.clip === 2 ? "btn" : "btn btn-secondary";
+    const lessonId = current().id;
+    if (clip2) {
+      clip2.hidden = lessonId === "pens";
+      clip2.className = animTrial.clip === 2 ? "btn" : "btn btn-secondary";
+    }
+    const even = document.getElementById("animEven");
+    if (even) even.hidden = lessonId !== "discrete";
     if (auto) {
       auto.className = animTrial.play === "auto" ? "btn" : "btn btn-secondary";
       auto.textContent = animTrial.clip === 2 ? "自動播放定位" : "自動播放";
@@ -4626,17 +4878,14 @@
 
   function animMarkButtons() {
     const even = document.getElementById("animEven");
-    const cafe = document.getElementById("animCafe");
-    const odd = document.getElementById("animOdd");
     if (even) even.className = animTrial.which === "lesson" ? "btn" : "btn btn-secondary";
-    if (cafe) cafe.className = animTrial.which === "cafe" ? "btn" : "btn btn-secondary";
-    if (odd) odd.className = animTrial.which === "odd" ? "btn" : "btn btn-secondary";
   }
 
   function syncAnimCard() {
     const card = document.getElementById("animTrial");
     if (!card) return;
-    const onLesson = current().id === "discrete";
+    const id = current().id;
+    const onLesson = id === "discrete" || id === "bridge" || (id === "pens" && animTrial.pensOpen);
     card.hidden = !onLesson;
     if (!onLesson) {
       animStop();
@@ -4649,7 +4898,7 @@
     if (reopen) reopen.hidden = !animTrial.closed;
     if (!animTrial.closed && !animTrial.seen) {
       animTrial.seen = true;
-      animGo(animTrial.clip === 2 ? 0 : 1, "step");
+      animGo(current().id === "pens" ? 1 : (animTrial.clip === 2 ? 0 : 1), current().id === "pens" ? "auto" : "step");
     }
   }
 
@@ -4657,8 +4906,6 @@
     const clip1 = document.getElementById("animClip1");
     const clip2 = document.getElementById("animClip2");
     const even = document.getElementById("animEven");
-    const cafe = document.getElementById("animCafe");
-    const odd = document.getElementById("animOdd");
     const closeBtn = document.getElementById("animClose");
     const open = document.getElementById("animOpen");
     const prev = document.getElementById("animPrev");
@@ -4678,8 +4925,6 @@
       animGo(0, "step");
     });
     if (even) even.addEventListener("click", () => openSample("lesson"));
-    if (cafe) cafe.addEventListener("click", () => openSample("cafe"));
-    if (odd) odd.addEventListener("click", () => openSample("odd"));
     if (prev) prev.addEventListener("click", () => animGo(animTrial.step - 1, "step"));
     if (next) next.addEventListener("click", () => animGo(animTrial.step + 1, "step"));
     if (auto) auto.addEventListener("click", () => animGo(animTrial.clip === 2 ? 0 : 1, "auto"));
