@@ -603,7 +603,6 @@
       <div class="action-row">
         <button type="button" class="btn" id="animClip1">動畫1</button>
         <button type="button" class="btn btn-secondary" id="animClip2">動畫2</button>
-        <button type="button" class="btn" id="animEven">這題</button>
         <button type="button" class="btn btn-secondary" id="animClose">收起</button>
       </div>
       <div class="action-row">
@@ -2578,7 +2577,6 @@
     animTrial.closed = false;
     animTrial.seen = true;
     animTrial.clip = 1;
-    animTrial.which = "lesson";
     syncAnimCard();
     animGo(1, "auto");
   }
@@ -4221,7 +4219,7 @@
     render();
   }
 
-  const animTrial = { closed: true, which: "lesson", token: 0, timers: [], seen: false, clip: 1, play: "step", step: 1, pensOpen: false };
+  const animTrial = { closed: true, token: 0, timers: [], seen: false, clip: 1, play: "step", step: 1, pensOpen: false };
 
   function animStop() {
     animTrial.token += 1;
@@ -4860,8 +4858,6 @@
       clip2.hidden = lessonId === "pens";
       clip2.className = animTrial.clip === 2 ? "btn" : "btn btn-secondary";
     }
-    const even = document.getElementById("animEven");
-    if (even) even.hidden = lessonId !== "discrete";
     if (auto) {
       auto.className = animTrial.play === "auto" ? "btn" : "btn btn-secondary";
       auto.textContent = animTrial.clip === 2 ? "自動播放定位" : "自動播放";
@@ -4873,12 +4869,6 @@
     if (replay) replay.hidden = animTrial.clip !== 2;
     if (prev) prev.disabled = animTrial.step <= floor;
     if (next) next.disabled = animTrial.step >= animMaxStep();
-    animMarkButtons();
-  }
-
-  function animMarkButtons() {
-    const even = document.getElementById("animEven");
-    if (even) even.className = animTrial.which === "lesson" ? "btn" : "btn btn-secondary";
   }
 
   function syncAnimCard() {
@@ -4905,17 +4895,12 @@
   function bindAnimTrial() {
     const clip1 = document.getElementById("animClip1");
     const clip2 = document.getElementById("animClip2");
-    const even = document.getElementById("animEven");
     const closeBtn = document.getElementById("animClose");
     const open = document.getElementById("animOpen");
     const prev = document.getElementById("animPrev");
     const next = document.getElementById("animNext");
     const auto = document.getElementById("animAuto");
     const replay = document.getElementById("animReplay");
-    const openSample = (which) => {
-      animTrial.which = which;
-      animGo(animTrial.clip === 2 ? 0 : 1, "step");
-    };
     if (clip1) clip1.addEventListener("click", () => {
       animTrial.clip = 1;
       animGo(1, "step");
@@ -4924,7 +4909,6 @@
       animTrial.clip = 2;
       animGo(0, "step");
     });
-    if (even) even.addEventListener("click", () => openSample("lesson"));
     if (prev) prev.addEventListener("click", () => animGo(animTrial.step - 1, "step"));
     if (next) next.addEventListener("click", () => animGo(animTrial.step + 1, "step"));
     if (auto) auto.addEventListener("click", () => animGo(animTrial.clip === 2 ? 0 : 1, "auto"));
