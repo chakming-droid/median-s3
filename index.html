@@ -468,7 +468,6 @@
     .anim-trial { background: #fffbeb; border-color: #fcd34d; }
     .anim-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
     .anim-head .card-title { margin-bottom: 0; }
-    .anim-tag { font-size: 0.78rem; font-weight: 800; color: #92400e; background: #fde68a; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
     .anim-note { margin: 0 0 6px; color: #92400e; font-size: 0.92rem; line-height: 1.45; }
     .anim-kicker { margin: 0 0 8px; min-height: 1.45em; font-weight: 800; font-size: 1.02rem; line-height: 1.45; }
     .anim-board { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; min-height: 108px; overflow-x: auto; }
@@ -484,16 +483,19 @@
     .anim-grid { position: relative; display: grid; column-gap: 4px; row-gap: 16px; width: max-content; max-width: 100%; margin: 0 auto; padding: 18px 2px 16px; }
     .anim-chip { position: relative; box-sizing: border-box; width: 30px; height: 34px; display: flex; align-items: center; justify-content: center; border: 2px solid #334155; border-radius: 6px; background: white; color: #b91c1c; font-weight: 800; transition: opacity 0.16s linear, background 0.16s, border-color 0.16s, color 0.16s, transform 0.3s; }
     .anim-chip.gone { opacity: 0.2; border-color: #cbd5e1; background: #f8fafc; color: #94a3b8; }
-    .anim-board.slow-fade .anim-chip { transition: opacity 1.6s ease, background 1.6s ease, border-color 1.6s ease, color 1.6s ease, transform 0.35s; }
+    .anim-board.slow-fade .anim-chip, .anim-board.pair-fade .anim-chip { transition: opacity 0.45s ease, background 0.45s ease, border-color 0.45s ease, color 0.45s ease, transform 0.35s; }
     .anim-chip.keep { border-color: #15803d; background: #dcfce7; color: #15803d; z-index: 1; }
     .anim-chip.grow { transform: scale(1.16); z-index: 2; }
     .anim-chip.cut::after { content: ""; position: absolute; top: 0; bottom: 0; right: -5px; width: 3px; background: #7c3aed; transform-origin: top center; animation: anim-drop 0.4s ease; }
     .anim-chip.extra, .anim-pill.extra { background: #ede9fe; color: #5b21b6; border-color: #7c3aed; }
     .anim-chip.extra-x, .anim-pill.extra-x { background: #fde68a; color: #92400e; border-color: #d97706; }
     .anim-chip.extra.gone, .anim-chip.extra-x.gone { opacity: 0.2; border-color: #cbd5e1; background: #f8fafc; color: #94a3b8; }
-    .bridge-row { display: flex; flex-wrap: wrap; column-gap: 4px; row-gap: 18px; justify-content: center; padding-bottom: 16px; }
+    .bridge-row { display: flex; flex-wrap: wrap; column-gap: 4px; row-gap: 18px; justify-content: center; align-items: flex-end; padding-top: 18px; padding-bottom: 16px; }
     .bridge-chip { position: relative; width: 30px; height: 32px; box-sizing: border-box; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; background: #e2e8f0; color: #0f172a; }
     .bridge-chip.extra { background: #ddd6fe; color: #5b21b6; }
+    .bridge-group { display: flex; column-gap: 4px; position: relative; padding-bottom: 4px; box-shadow: inset 0 -3px 0 #7c3aed; }
+    .bridge-group::before { content: attr(data-label); position: absolute; left: 50%; top: -16px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 800; color: #6d28d9; }
+    .bridge-chip.outside { box-shadow: inset 0 0 0 2px #64748b; }
     .bridge-chip.mid { box-shadow: inset 0 0 0 2px #ea580c; }
     .bridge-chip.mid::after { content: "▲"; position: absolute; left: 0; right: 0; bottom: -14px; text-align: center; font-size: 10px; color: #ea580c; }
     .anim-arrow { position: absolute; left: 50%; bottom: -15px; color: #15803d; font-size: 0.8rem; font-weight: 800; line-height: 1; transform: translateX(-50%); animation: anim-rise 0.35s ease; }
@@ -523,8 +525,15 @@
     .anim-band-head, .anim-band-foot { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
     .anim-band-head strong { color: #0f172a; font-size: 0.84rem; }
     .anim-band-head span, .anim-band-foot { color: #64748b; font-size: 0.72rem; font-weight: 700; }
-    .anim-band { position: relative; display: flex; height: 44px; margin: 8px 0 6px; border-radius: 8px; background: #e7f6ef; overflow: hidden; }
+    .anim-band { position: relative; display: flex; height: 40px; margin: 8px 0 2px; border-radius: 8px; background: #e7f6ef; overflow: hidden; }
+    .anim-band-items { display: flex; align-items: flex-start; min-height: 1.2em; margin: 0 0 4px; }
+    .anim-band-items span { min-width: 0; text-align: center; font-size: 0.68rem; font-weight: 800; line-height: 1.25; white-space: nowrap; color: transparent; }
+    .anim-band-items span.done { color: #115e59; }
+    .anim-band-items span.hit { color: #9a3412; }
+    .anim-band-items span.extra { color: #5b21b6; }
+    .anim-band-items span.extra-x { color: #92400e; }
     .anim-seg { display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden; border-right: 1px solid rgba(255, 255, 255, 0.9); color: transparent; font-size: 0.62rem; font-weight: 800; line-height: 1.1; text-align: center; }
+    .anim-seg .seg-val { font-size: 1rem; line-height: 1; padding: 0; }
     .anim-seg.done { background: #cdeedf; color: #115e59; }
     .anim-seg.hit { background: #f8cfc4; color: #9a3412; }
     .anim-seg.low { background: #cdeedf; color: #115e59; }
@@ -595,7 +604,6 @@
   <div class="card anim-trial" id="animTrial" hidden>
     <div class="anim-head">
       <div class="card-title">動畫試做</div>
-      <span class="anim-tag">可改可刪</span>
     </div>
     <div id="animBody">
       <p class="anim-note">動畫1由兩端找中間。動畫2沿項次位置帶逐行累加，找到中央項次。可逐步，或自動播放。</p>
@@ -650,11 +658,11 @@
       header: "觀看的電影數目",
       stem: "2.（參考書 P10.23 例 10.12）下表所示為某班學生在暑假期間所觀看的電影數目。",
       rows: [
-        { val: 0, freq: "4" },
-        { val: 1, freq: "6" },
-        { val: 2, freq: "9" },
-        { val: 3, freq: "6" },
-        { val: 4, freq: "5" }
+        { val: 0, freq: "2" },
+        { val: 1, freq: "2" },
+        { val: 2, freq: "3" },
+        { val: 3, freq: "1" },
+        { val: 4, freq: "4" }
       ],
       structure: 0
     },
@@ -664,13 +672,13 @@
       title: "指定中位數",
       header: "數值",
       freqHeader: "個數",
-      stem: "個數有一格寫著 x。先選一個中位數。紫色會逐個加上 x 的那個數值，直到正中間落到你選的數。",
+      stem: "表裡的個數先固定。選一個中位數後，紫色會逐個加上這個數，直到正中間砌到它。先停在最少，再按繼續看最多。",
       bridge: true,
       rows: [
         { val: 1, freq: "1" },
         { val: 2, freq: "1" },
         { val: 3, freq: "1" },
-        { val: 4, freq: "x" },
+        { val: 4, freq: "1" },
         { val: 5, freq: "1" }
       ],
       structure: 0
@@ -681,14 +689,15 @@
       title: "求未知頻數",
       header: "原子筆的數目",
       freqHeader: "學生人數",
-      stem: "8.（參考書 P10.23 例 10.13）（DSE 2025/I/Q9a,b）下表顯示一些學生擁有原子筆的數目的分佈。該分佈的中位數為 7。",
+      stem: "（改自 DSE2025/I/Q9）下表顯示一些學生擁有原子筆的數目的分佈。",
+      closing: "該分佈的中位數為 7。",
       target: "7",
       rows: [
-        { val: 5, freq: "9" },
-        { val: 6, freq: "13" },
-        { val: 7, freq: "2" },
+        { val: 5, freq: "4" },
+        { val: 6, freq: "5" },
+        { val: 7, freq: "3" },
         { val: 8, freq: "x" },
-        { val: 9, freq: "11" }
+        { val: 9, freq: "3" }
       ],
       structure: 0
     }
@@ -700,7 +709,7 @@
   let tutor = freshTutor();
   let fieldDrafts = {};
   let experiment = null;
-  let bridgeRun = { target: null, added: 0, timer: 0 };
+  let bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
   let showBlocks = false;
   let discreteRevealed = false;
   let casesRevealed = false;
@@ -950,7 +959,7 @@
     casesRevealed = false;
     asking = false;
     bridgeStop();
-    bridgeRun = { target: null, added: 0, timer: 0 };
+    bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
     animTrial.pensOpen = false;
     animTrial.closed = true;
     animTrial.seen = false;
@@ -958,7 +967,7 @@
     if (lesson.bridge) {
       tutor.mode = "bridge";
       tutor.step = 1;
-      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值。紫色會逐個加上寫著 x 的那個數值，直到正中間落到這個數。" });
+      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值。紫色會逐個加上這個數，先停在最少，再按繼續看最多。" });
       render();
       return;
     }
@@ -972,7 +981,7 @@
           kind: "tutor",
           text: model.error === "multi-x"
             ? "只可以有一個未知數。請改好再按繼續。"
-            : "表裡有未知數。請先填「題目的中位數」，並確認它是表裡的其中一個數值，再按繼續。"
+            : "表裡有未知數。請先按表裡的一個數值，當作中位數。"
         });
         render();
         return;
@@ -1054,6 +1063,12 @@
         card.appendChild(img);
       }
       card.appendChild(buildEditableTable(lesson));
+      if (lesson.closing) {
+        const closing = document.createElement("p");
+        closing.className = "problem-text";
+        closing.textContent = lesson.closing;
+        card.appendChild(closing);
+      }
       const balance = document.createElement("div");
       balance.id = "balanceSlot";
       card.appendChild(balance);
@@ -1167,22 +1182,6 @@
       pair.appendChild(blocksButton);
       if (wanted === "x") pair.appendChild(trialControls());
       row.appendChild(pair);
-    }
-    if (wanted === "x") {
-      const target = document.createElement("label");
-      target.append(document.createTextNode("題目的中位數 = "));
-      const targetInput = document.createElement("input");
-      targetInput.id = "targetMedian";
-      targetInput.type = "text";
-      targetInput.inputMode = "decimal";
-      targetInput.value = current().target == null ? "" : String(current().target);
-      targetInput.addEventListener("input", () => {
-        current().target = targetInput.value.trim();
-        markEdited();
-        renderReading();
-      });
-      target.appendChild(targetInput);
-      row.appendChild(target);
     }
     if (row.childElementCount) slot.appendChild(row);
     if (current().kind === "continuous") {
@@ -1620,10 +1619,14 @@
   }
 
   function markEdited() {
+    bridgeStop();
+    bridgeRun.target = null;
+    bridgeRun.added = 0;
+    bridgeRun.phase = "idle";
+    bridgeRun.view = "min";
+    bridgeRun.minAdded = null;
+    bridgeRun.maxAdded = null;
     if (current().bridge) {
-      bridgeStop();
-      bridgeRun.target = null;
-      bridgeRun.added = 0;
       renderTutor();
       renderQueue();
       return;
@@ -1889,7 +1892,6 @@
       return;
     }
     if (model.hasX) {
-      if (!revealCases) wrapper.appendChild(pictureHintButtons());
       wrapper.appendChild(trialRaw(model.rows, letter));
       return;
     }
@@ -1926,7 +1928,7 @@
     const slot = document.getElementById("checkSlot");
     if (!card || !slot) return;
     const letter = current().kind === "continuous" ? "" : unknownLetter();
-    if (current().bridge) {
+    if (current().bridge || current().id === "pens") {
       card.hidden = true;
       slot.innerHTML = "";
       slot.dataset.mode = "";
@@ -2463,9 +2465,6 @@
     else if (onTarget) note.textContent = "橙線已落到目標。再按 + 或 −，看它會不會離開。";
     else note.textContent = "黃色是 " + letter + "，其他顏色不變。按 + 拉闊黃色，直到橙線落到藍色目標。";
     card.append(now, head, zones, aim, band, note);
-    if (current().id === "pens") {
-      card.appendChild(makeButton("看動畫一", "btn btn-secondary", watchPensAnim));
-    }
     return card;
   }
 
@@ -2474,16 +2473,21 @@
     bridgeRun.timer = 0;
   }
 
-  function bridgeXState() {
+  function bridgeAddValue() {
     const marked = current().rows.filter((row) => String(row.freq).trim() === "x");
     if (marked.length > 1) return { error: "multi", val: null };
-    if (marked.length !== 1 || !Number.isFinite(Number(marked[0].val))) return { error: "none", val: null };
-    return { error: "", val: Number(marked[0].val) };
+    if (marked.length === 1) {
+      const val = Number(marked[0].val);
+      if (!Number.isFinite(val)) return { error: "multi", val: null };
+      return { error: "", val };
+    }
+    if (!Number.isFinite(bridgeRun.target)) return { error: "none", val: null };
+    return { error: "", val: bridgeRun.target };
   }
 
   function bridgePairs(added) {
     const extraCount = added == null ? bridgeRun.added : added;
-    const x = bridgeXState();
+    const add = bridgeAddValue();
     const pairs = [];
     current().rows.forEach((row) => {
       if (String(row.freq).trim() === "x") return;
@@ -2492,15 +2496,15 @@
       if (!Number.isFinite(val) || !Number.isInteger(count) || count <= 0) return;
       for (let index = 0; index < count; index += 1) pairs.push({ val, extra: false });
     });
-    if (!x.error && extraCount > 0) {
-      for (let index = 0; index < extraCount; index += 1) pairs.push({ val: x.val, extra: true });
+    if (!add.error && extraCount > 0) {
+      for (let index = 0; index < extraCount; index += 1) pairs.push({ val: add.val, extra: true });
     }
     pairs.sort((a, b) => a.val - b.val || Number(a.extra) - Number(b.extra));
     return pairs;
   }
 
   function bridgeCanReach(target) {
-    const x = bridgeXState();
+    const x = bridgeAddValue();
     if (x.error) return false;
     for (let added = 0; added <= 16; added += 1) {
       const pairs = bridgePairs(added);
@@ -2525,41 +2529,170 @@
     return values.length > 0 && values.every((value) => value === target);
   }
 
+  function bridgeMark() {
+    const min = bridgeRun.minAdded;
+    if (min == null) return null;
+    if (bridgeRun.phase === "min") return { cover: min, label: "最少" };
+    if (bridgeRun.phase === "seek-max") {
+      const hit = bridgeHit(bridgePairs(), bridgeRun.target);
+      if (!hit) return { cover: Math.max(0, bridgeRun.added - 1), label: bridgeRun.added - 1 === min ? "最少也最多" : "最多" };
+      return { cover: bridgeRun.added, label: bridgeRun.added === min ? "最少" : "仍在" };
+    }
+    if (bridgeRun.phase === "free") return { cover: bridgeRun.added, label: "仍在" };
+    if (bridgeRun.phase === "done") {
+      const showingMin = bridgeRun.view === "min" && bridgeRun.maxAdded !== min;
+      return { cover: showingMin ? min : bridgeRun.maxAdded, label: bridgeRun.maxAdded === min ? "最少也最多" : (showingMin ? "最少" : "最多") };
+    }
+    return null;
+  }
+
   function bridgeStatus() {
-    const x = bridgeXState();
+    const x = bridgeAddValue();
     if (x.error === "multi") return "個數格只可以有一個 x。";
-    if (x.error) return "先在一個個數格寫上 x。紫色會加上這個數值。";
-    if (bridgeRun.target == null) return "選一個表裡的數值，當作中位數。紫色會加上 " + x.val + "。";
-    if (!bridgeCanReach(bridgeRun.target)) return "加上 " + x.val + "，正中間不能落到 " + bridgeRun.target + "。";
-    const hit = bridgeHit(bridgePairs(), bridgeRun.target);
-    if (bridgeRun.added === 0 && hit) return "正中間已經是 " + bridgeRun.target + "，不用再加。";
-    if (!hit) return bridgeRun.added === 0
-      ? "正在逐個加上 " + x.val + "。"
-      : "已額外加上 " + bridgeRun.added + " 個 " + x.val + "。正中間還沒落到目標。";
-    return "已額外加上 " + bridgeRun.added + " 個 " + x.val + "。正中間落到目標。";
+    if (bridgeRun.target == null) {
+      const marked = current().rows.some((row) => String(row.freq).trim() === "x");
+      if (marked && !x.error && x.val != null) return "選一個表裡的數值，當作中位數。紫色會逐個加上寫了 x 的 " + x.val + "。";
+      return "選一個表裡的數值，當作中位數。紫色會逐個加上這個數。";
+    }
+    if (bridgeRun.phase === "idle") return "加上 " + x.val + "，正中間不能落到 " + bridgeRun.target + "。";
+    if (bridgeRun.phase === "seek-min") {
+      return bridgeRun.added === 0
+        ? "正在逐個加上 " + x.val + "。"
+        : "已加上 " + bridgeRun.added + " 個 " + x.val + "。正中間還沒落到目標。";
+    }
+    if (bridgeRun.phase === "min") {
+      return bridgeRun.minAdded === 0
+        ? "正中間已經是 " + bridgeRun.target + "。這是最少。"
+        : "已加上 " + bridgeRun.minAdded + " 個 " + x.val + "。正中間剛落到目標。這是最少。";
+    }
+    if (bridgeRun.phase === "seek-max") return "已加上 " + bridgeRun.added + " 個 " + x.val + "。仍落到目標。";
+    if (bridgeRun.phase === "free") return "已加上 " + bridgeRun.added + " 個 " + x.val + "。再加仍留在目標，沒有最多。";
+    if (bridgeRun.view === "min" && bridgeRun.maxAdded !== bridgeRun.minAdded) {
+      return bridgeRun.minAdded === 0
+        ? "正中間已經是 " + bridgeRun.target + "。這是最少。"
+        : "已加上 " + bridgeRun.minAdded + " 個 " + x.val + "。這是最少。";
+    }
+    if (bridgeRun.maxAdded === bridgeRun.minAdded) return "再多一個就離開。已停在前一個。最少同時是最多。";
+    return "已加上 " + bridgeRun.maxAdded + " 個 " + x.val + "。再多一個就離開。這是最多。";
+  }
+
+  function paintBridge() {
+    const explorer = document.getElementById("pensExplorer");
+    if (explorer && current().id === "pens") {
+      explorer.replaceWith(pensExplorer());
+      return;
+    }
+    renderQueue();
+    renderTutor();
   }
 
   function bridgeTick() {
     bridgeRun.timer = 0;
-    if (!current().bridge || bridgeRun.target == null) return;
-    if (bridgeXState().error || !bridgeCanReach(bridgeRun.target) || bridgeHit(bridgePairs(), bridgeRun.target) || bridgeRun.added >= 16) {
-      render();
+    if (bridgeRun.target == null || (!current().bridge && current().id !== "pens")) return;
+    const target = bridgeRun.target;
+    if (bridgeAddValue().error) {
+      paintBridge();
+      return;
+    }
+    if (bridgeRun.phase === "seek-min") {
+      if (bridgeRun.added >= 16) {
+        paintBridge();
+        return;
+      }
+      bridgeRun.added += 1;
+      if (bridgeHit(bridgePairs(), target)) {
+        bridgeRun.minAdded = bridgeRun.added;
+        bridgeRun.phase = "min";
+        paintBridge();
+        return;
+      }
+      paintBridge();
+      if (bridgeRun.added < 16) bridgeRun.timer = setTimeout(bridgeTick, 700);
+      return;
+    }
+    if (bridgeRun.phase !== "seek-max") return;
+    const same = bridgeAddValue().val === target;
+    if ((same && bridgeRun.added >= bridgeRun.minAdded + 3) || bridgeRun.added >= 40) {
+      bridgeRun.phase = "free";
+      paintBridge();
       return;
     }
     bridgeRun.added += 1;
-    render();
-    if (!bridgeHit(bridgePairs(), bridgeRun.target) && bridgeRun.added < 16) {
-      bridgeRun.timer = setTimeout(bridgeTick, 700);
+    if (!bridgeHit(bridgePairs(), target)) {
+      bridgeRun.added -= 1;
+      bridgeRun.maxAdded = bridgeRun.added;
+      bridgeRun.view = "max";
+      bridgeRun.phase = "done";
+      paintBridge();
+      return;
     }
+    paintBridge();
+    bridgeRun.timer = setTimeout(bridgeTick, 700);
+  }
+
+  function bridgeShow(which) {
+    if (bridgeRun.phase !== "done" || bridgeRun.minAdded == null || bridgeRun.maxAdded == null) return;
+    if (bridgeRun.minAdded === bridgeRun.maxAdded) return;
+    bridgeRun.view = which === "min" ? "min" : "max";
+    bridgeRun.added = bridgeRun.view === "min" ? bridgeRun.minAdded : bridgeRun.maxAdded;
+    paintBridge();
+  }
+
+  function bridgeSwitchButtons() {
+    const row = document.createElement("div");
+    row.className = "action-row";
+    row.appendChild(makeButton("最少", bridgeRun.view === "min" ? "btn" : "btn btn-secondary", () => bridgeShow("min")));
+    row.appendChild(makeButton("最多", bridgeRun.view === "max" ? "btn" : "btn btn-secondary", () => bridgeShow("max")));
+    return row;
+  }
+
+  function appendBridgePhaseButtons(parent) {
+    if (bridgeRun.phase === "min") parent.appendChild(makeButton("繼續，看最多", "btn", bridgeContinueMax));
+    if (bridgeRun.phase === "done" && bridgeRun.maxAdded != null && bridgeRun.minAdded !== bridgeRun.maxAdded) parent.appendChild(bridgeSwitchButtons());
+    if (bridgeRun.phase === "free") parent.appendChild(makeButton("再加一個", "btn btn-secondary", bridgeAddOne));
   }
 
   function bridgeChoose(value) {
     bridgeStop();
     bridgeRun.target = value;
     bridgeRun.added = 0;
+    bridgeRun.phase = "seek-min";
+    bridgeRun.view = "min";
+    bridgeRun.minAdded = null;
+    bridgeRun.maxAdded = null;
+    if (bridgeAddValue().error === "multi" || !bridgeCanReach(value)) {
+      bridgeRun.phase = "idle";
+      render();
+      return;
+    }
+    if (bridgeHit(bridgePairs(), value)) {
+      bridgeRun.minAdded = 0;
+      bridgeRun.phase = "min";
+      render();
+      return;
+    }
     render();
-    if (bridgeXState().error || !bridgeCanReach(value)) return;
-    if (!bridgeHit(bridgePairs(), value)) bridgeRun.timer = setTimeout(bridgeTick, 700);
+    bridgeRun.timer = setTimeout(bridgeTick, 700);
+  }
+
+  function bridgeContinueMax() {
+    if (bridgeRun.phase !== "min") return;
+    bridgeStop();
+    bridgeRun.phase = "seek-max";
+    render();
+    bridgeRun.timer = setTimeout(bridgeTick, 700);
+  }
+
+  function bridgeAddOne() {
+    if (bridgeRun.phase !== "free" || bridgeRun.added >= 20) return;
+    bridgeRun.added += 1;
+    if (!bridgeHit(bridgePairs(), bridgeRun.target)) {
+      bridgeRun.added -= 1;
+      bridgeRun.maxAdded = bridgeRun.added;
+      bridgeRun.view = "max";
+      bridgeRun.phase = "done";
+    }
+    render();
   }
 
   function bridgeBoard() {
@@ -2567,14 +2700,36 @@
     const pairs = bridgePairs();
     const count = pairs.length;
     const mids = count % 2 === 1 ? [(count + 1) / 2] : [count / 2, count / 2 + 1];
+    const mark = bridgeMark();
     const row = document.createElement("div");
     row.className = "bridge-row";
+    let extraSeen = 0;
+    let group = null;
+    const flush = () => {
+      if (!group) return;
+      row.appendChild(group);
+      group = null;
+    };
     pairs.forEach((item, index) => {
       const chip = document.createElement("div");
-      chip.className = "bridge-chip" + (item.extra ? " extra" : "") + (mids.indexOf(index + 1) >= 0 ? " mid" : "");
+      const covered = !!(item.extra && mark && extraSeen < mark.cover);
+      const outside = !!(item.extra && mark && bridgeRun.phase === "done" && extraSeen >= mark.cover);
+      chip.className = "bridge-chip" + (item.extra ? " extra" : "") + (mids.indexOf(index + 1) >= 0 ? " mid" : "") + (outside ? " outside" : "");
       chip.textContent = String(item.val);
-      row.appendChild(chip);
+      if (item.extra) extraSeen += 1;
+      if (covered) {
+        if (!group) {
+          group = document.createElement("div");
+          group.className = "bridge-group";
+          group.dataset.label = mark.label;
+        }
+        group.appendChild(chip);
+      } else {
+        flush();
+        row.appendChild(chip);
+      }
     });
+    flush();
     const note = document.createElement("p");
     note.className = "anim-loc-note";
     note.textContent = bridgeStatus() + "紫色是額外加上的。";
@@ -2585,7 +2740,7 @@
   function renderBridge(form, actions) {
     const note = document.createElement("p");
     note.className = "problem-text";
-    note.textContent = "選一個表裡已有的數值。";
+    note.textContent = "選一個表裡已有的數值。先看到最少，再按繼續看最多。";
     form.appendChild(note);
     const row = document.createElement("div");
     row.className = "action-row";
@@ -2599,8 +2754,33 @@
     status.className = "problem-text";
     status.textContent = bridgeStatus();
     form.appendChild(status);
+    appendBridgePhaseButtons(form);
     const next = lessons.findIndex((lesson) => lesson.id === "pens");
     if (next >= 0) actions.appendChild(makeButton("去看求未知頻數", "btn", () => showMode(next)));
+  }
+
+  function pensChooseMedian(value) {
+    current().target = String(value);
+    bridgeChoose(value);
+  }
+
+  function pensExplorer() {
+    const wrap = document.createElement("div");
+    wrap.id = "pensExplorer";
+    wrap.appendChild(bridgeBoard());
+    const note = document.createElement("p");
+    note.className = "problem-text";
+    note.textContent = "選一個表裡已有的數值，當作中位數。紫色會逐個加上寫了 x 的那個數，先停在最少，再按繼續看最多。";
+    const row = document.createElement("div");
+    row.className = "action-row";
+    current().rows.forEach((item) => {
+      const value = Number(item.val);
+      if (!Number.isFinite(value)) return;
+      row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => pensChooseMedian(value)));
+    });
+    wrap.append(note, row);
+    appendBridgePhaseButtons(wrap);
+    return wrap;
   }
 
   function watchPensAnim() {
@@ -2617,6 +2797,7 @@
     const x = currentTrial();
     const view = MedianMath.medianForX(rows, x);
     wrap.appendChild(xBand(rows, letter, x, view, Number(current().target)));
+    if (current().id === "pens") wrap.appendChild(pensExplorer());
     if (!rowMarksOn() || !view) return wrap;
     const count = expandedCount(rows, x);
     if (count <= 400) wrap.appendChild(compactRow(expandRows(rows, x), view, false));
@@ -2955,7 +3136,7 @@
   function questionText() {
     if (phase === "type") return "做之前，先判斷：這是離散數據還是連續數據？";
     const lesson = current();
-    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。紫色加上的是寫著 x 的那個數值。";
+    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。紫色會逐個加上這個數。";
     if (tutor.mode === "known") {
       const view = knownView();
       if (!view) return "請先填好頻數表。";
@@ -2987,7 +3168,7 @@
 
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
-    if (tutor.mode === "bridge") return "幫他觀察寫著 x 的那個數值逐個加上之後，正中間怎樣落到他選的數。不要說出要加多少個。";
+    if (tutor.mode === "bridge") return "幫他觀察紫色數據逐個加上之後，先看到最少，再看最多或沒有最多。不要說出要加多少個。";
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
       if (tutor.step === 2) return "幫他分辨總數是單數還是雙數。不能被 2 整除是單數。不要直接說是單數還是雙數。";
@@ -3197,7 +3378,7 @@
     tutor.trials = [];
     if (hasX && !Number.isFinite(Number(lesson.target))) {
       tutor.blocked = true;
-      tutor.log.push({ kind: "tutor", text: "表裡有未知數。請先填「題目的中位數」，再按繼續。" });
+      tutor.log.push({ kind: "tutor", text: "表裡有未知數。請先按表裡的一個數值，當作中位數。" });
       render();
       return;
     }
@@ -3211,7 +3392,7 @@
       }
       if (!MedianMath.groupSpan(model.rows, Number(lesson.target)).found) {
         tutor.blocked = true;
-        tutor.log.push({ kind: "tutor", text: "你填的中位數不是表裡的其中一個數值。請核對題目的中位數，再按繼續。" });
+        tutor.log.push({ kind: "tutor", text: "這個中位數不是表裡的其中一個數值。請按表裡的一個數。" });
         render();
         return;
       }
@@ -3515,7 +3696,7 @@
     }
     const info = MedianMath.describeProblem(model.rows, current().target);
     if (!info.span.found) {
-      tutor.log.push({ kind: "tutor", text: "題目的中位數要等於表裡其中一個數值。請核對「題目的中位數」，再填第一項和最後一項。" });
+      tutor.log.push({ kind: "tutor", text: "中位數要等於表裡其中一個數值。請按表裡的一個數，再填第一項和最後一項。" });
       render();
       return;
     }
@@ -4353,16 +4534,15 @@
       const who = data.sample === "bridge" ? "加上額外數據後。" : "這題。";
       return who + "1. 總數：由左至右，把頻數相加。";
     }
-    if (beat === 2) return "2. 由小至大排好。全部先亮著。";
-    if (beat === 3) return odd ? "3. 剩下一項，所以是單數。" : "3. 剩下兩項，所以是雙數。";
-    if (beat === 4) {
+    if (beat === 2) return "2. 由兩端一對一對撇走。";
+    if (beat === 3) {
       return odd
-        ? "4. 中位數位置。箭嘴指住正中間那一項。"
-        : "4. 中位數位置。線畫在正中間兩項之間。";
+        ? "3. 中位數位置。箭嘴指住正中間那一項。"
+        : "3. 中位數位置。線畫在正中間兩項之間。";
     }
     return odd
-      ? "5. 正中間那一項的數值就是中位數。"
-      : "5. 把正中間兩項的數值加起來，再除以 2。";
+      ? "4. 正中間那一項的數值就是中位數。"
+      : "4. 把正中間兩項的數值加起來，再除以 2。";
   }
 
   function animColumns(n, boardWidth) {
@@ -4471,13 +4651,13 @@
     });
     animMarkMids(grid, chips, mids);
     animShowMath(board, data, true);
-    animSetKicker(animKickerText(data, 5));
-    animBeat(5);
+    animSetKicker(animKickerText(data, 4));
+    animBeat(4);
   }
 
   function animStageMedian(board, data, token) {
-    animSetKicker(animKickerText(data, 5));
-    animBeat(5);
+    animSetKicker(animKickerText(data, 4));
+    animBeat(4);
     const mids = animMids(data.values.length);
     board.querySelectorAll(".anim-chip").forEach((chip, index) => {
       if (mids.indexOf(index) >= 0) chip.classList.add("grow");
@@ -4487,8 +4667,8 @@
   }
 
   function animStagePlace(board, data, token, done) {
-    animSetKicker(animKickerText(data, 4));
-    animBeat(4);
+    animSetKicker(animKickerText(data, 3));
+    animBeat(3);
     const grid = board.querySelector(".anim-grid");
     const chips = [...board.querySelectorAll(".anim-chip")];
     const mids = animMids(data.values.length);
@@ -4497,8 +4677,40 @@
     animLater(token, 2000, done);
   }
 
+  function animStagePairs(board, data, token, done) {
+    animSetKicker(animKickerText(data, 2));
+    animBeat(2);
+    board.classList.remove("pair-fade");
+    board.innerHTML = "";
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    animLater(token, 30, () => {
+      if (token !== animTrial.token) return;
+      const grid = animBuildGrid(board, data);
+      const chips = [...grid.querySelectorAll(".anim-chip")];
+      const odd = data.values.length % 2 === 1;
+      const leave = odd ? 1 : 2;
+      const pairs = Math.floor((chips.length - leave) / 2);
+      const stepMs = reduce ? 0 : 480;
+      const finish = () => {
+        if (token !== animTrial.token) return;
+        animSetKicker(odd ? "2. 剩下一項，所以是單數。" : "2. 剩下兩項，所以是雙數。");
+        animMids(chips.length).forEach((index) => chips[index].classList.add("keep"));
+        if (done) animLater(token, reduce ? 0 : 900, done);
+      };
+      if (!reduce) board.classList.add("pair-fade");
+      for (let index = 0; index < pairs; index += 1) {
+        animLater(token, 220 + stepMs * index, () => {
+          chips[index].classList.add("gone");
+          chips[chips.length - 1 - index].classList.add("gone");
+        });
+      }
+      animLater(token, 220 + stepMs * pairs + (reduce ? 0 : 360), finish);
+    });
+  }
+
   function animPaintChips(board, data) {
     board.classList.remove("slow-fade");
+    board.classList.remove("pair-fade");
     board.innerHTML = "";
     const grid = animBuildGrid(board, data);
     const chips = [...grid.querySelectorAll(".anim-chip")];
@@ -4570,7 +4782,7 @@
   }
 
   function animMaxStep() {
-    if (animTrial.clip !== 2) return 5;
+    if (animTrial.clip !== 2) return 4;
     const data = animDataset();
     if (!data) return 0;
     return animHitEnd(animCumModel(data)) + 1;
@@ -4632,8 +4844,9 @@
     });
   }
 
-  function animSegLabel(row) {
-    return row.val + " " + (row.start === row.end ? String(row.start) : row.start + "-" + row.end);
+  function animSegItems(row) {
+    const range = row.start === row.end ? String(row.start) : row.start + "-" + row.end;
+    return "第" + range + "項";
   }
 
   function anim2Math(model) {
@@ -4710,10 +4923,23 @@
         seg.classList.add(row.hit.length ? "hit" : "done");
         if (row.extra && row.extraClass) seg.classList.add(row.extraClass);
         const label = document.createElement("span");
-        label.textContent = animSegLabel(row);
+        label.className = "seg-val";
+        label.textContent = String(row.val);
         seg.appendChild(label);
       }
       band.appendChild(seg);
+    });
+    const items = document.createElement("div");
+    items.className = "anim-band-items";
+    model.rows.forEach((row, index) => {
+      const cell = document.createElement("span");
+      cell.style.flex = String(row.count) + " " + String(row.count) + " 0";
+      if (index < count) {
+        cell.textContent = animSegItems(row);
+        cell.className = row.hit.length ? "hit" : "done";
+        if (row.extra && row.extraClass) cell.classList.add(row.extraClass);
+      }
+      items.appendChild(cell);
     });
     model.positions.forEach((pos) => {
       const pin = document.createElement("div");
@@ -4728,7 +4954,7 @@
     const to = document.createElement("span");
     to.textContent = "第 " + model.n + " 項";
     foot.append(from, to);
-    card.append(head, band, foot);
+    card.append(head, band, items, foot);
     return card;
   }
 
@@ -4802,27 +5028,15 @@
       board.append(sheet, total);
       return;
     }
-    if (step === 2) {
-      animSetKicker(animKickerText(data, 2));
-      animBeat(2);
-      animPaintChips(board, data);
-      return;
-    }
     const painted = animPaintChips(board, data);
     animSetKicker(animKickerText(data, step));
     animBeat(step);
-    if (step === 3) {
-      animLater(token, 60, () => {
-        if (token !== animTrial.token) return;
-        animFadeToMedian(board, painted.chips, painted.mids, true);
-      });
-      return;
-    }
     animFadeToMedian(board, painted.chips, painted.mids, false);
+    if (step < 3) return;
     animLater(token, 30, () => {
       if (token !== animTrial.token) return;
       animMarkMids(painted.grid, painted.chips, painted.mids);
-      if (step < 5) return;
+      if (step < 4) return;
       painted.mids.forEach((index) => painted.chips[index].classList.add("grow"));
       animShowMath(board, data, true);
     });
@@ -4832,11 +5046,15 @@
     const board = document.getElementById("animBoard");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce && play === "auto") {
-      anim1Settled(board, data, 5, token);
+      anim1Settled(board, data, 4, token);
       animFinishAuto(token);
       return;
     }
     if (play !== "auto") {
+      if (step === 2) {
+        animStagePairs(board, data, token);
+        return;
+      }
       anim1Settled(board, data, step, token);
       return;
     }
@@ -4845,17 +5063,11 @@
       return;
     }
     if (step === 2) {
-      anim1Settled(board, data, 2, token);
-      animLater(token, 1400, () => anim1Run(3, "auto", token, data));
+      animStagePairs(board, data, token, () => anim1Run(3, "auto", token, data));
       return;
     }
     if (step === 3) {
-      anim1Settled(board, data, 3, token);
-      animLater(token, 2100, () => anim1Run(4, "auto", token, data));
-      return;
-    }
-    if (step === 4) {
-      animStagePlace(board, data, token, () => anim1Run(5, "auto", token, data));
+      animStagePlace(board, data, token, () => anim1Run(4, "auto", token, data));
       return;
     }
     animStageMedian(board, data, token);
