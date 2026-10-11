@@ -484,6 +484,7 @@
     .anim-grid { position: relative; display: grid; column-gap: 4px; row-gap: 16px; width: max-content; max-width: 100%; margin: 0 auto; padding: 18px 2px 16px; }
     .anim-chip { position: relative; box-sizing: border-box; width: 30px; height: 34px; display: flex; align-items: center; justify-content: center; border: 2px solid #334155; border-radius: 6px; background: white; color: #b91c1c; font-weight: 800; transition: opacity 0.16s linear, background 0.16s, border-color 0.16s, color 0.16s, transform 0.3s; }
     .anim-chip.gone { opacity: 0.2; border-color: #cbd5e1; background: #f8fafc; color: #94a3b8; }
+    .anim-board.slow-fade .anim-chip { transition: opacity 1.6s ease, background 1.6s ease, border-color 1.6s ease, color 1.6s ease, transform 0.35s; }
     .anim-chip.keep { border-color: #15803d; background: #dcfce7; color: #15803d; z-index: 1; }
     .anim-chip.grow { transform: scale(1.16); z-index: 2; }
     .anim-chip.cut::after { content: ""; position: absolute; top: 0; bottom: 0; right: -5px; width: 3px; background: #7c3aed; transform-origin: top center; animation: anim-drop 0.4s ease; }
@@ -660,7 +661,7 @@
     {
       id: "bridge",
       kind: "discrete",
-      title: "加數據",
+      title: "指定中位數",
       header: "數值",
       freqHeader: "個數",
       stem: "下面有 5 個數據。先選一個中位數。另一顏色的數據會逐個加上，直到正中間落到這個數。",
@@ -2630,7 +2631,7 @@
     if (tutor.solved) {
       if (current().id === "discrete") {
         const next = lessons.findIndex((lesson) => lesson.id === "bridge");
-        if (next >= 0) actions.appendChild(makeButton("去看加數據", "btn", () => showMode(next)));
+        if (next >= 0) actions.appendChild(makeButton("去看指定中位數", "btn", () => showMode(next)));
       } else if (current().id === "pens") {
         actions.appendChild(makeButton("回到離散數據", "btn btn-secondary", () => showMode(0)));
       }
@@ -4322,15 +4323,16 @@
       const who = data.sample === "bridge" ? "加上額外數據後。" : "這題。";
       return who + "1. 總數：由左至右，把頻數相加。";
     }
-    if (beat === 2) return "2. 由兩端一對一對撇走。";
-    if (beat === 3) {
+    if (beat === 2) return "2. 由小至大排好。全部先亮著。";
+    if (beat === 3) return odd ? "3. 剩下一項，所以是單數。" : "3. 剩下兩項，所以是雙數。";
+    if (beat === 4) {
       return odd
-        ? "3. 中位數位置。箭嘴指住正中間那一項。"
-        : "3. 中位數位置。線畫在正中間兩項之間。";
+        ? "4. 中位數位置。箭嘴指住正中間那一項。"
+        : "4. 中位數位置。線畫在正中間兩項之間。";
     }
     return odd
-      ? "4. 正中間那一項的數值就是中位數。"
-      : "4. 把正中間兩項的數值加起來，再除以 2。";
+      ? "5. 正中間那一項的數值就是中位數。"
+      : "5. 把正中間兩項的數值加起來，再除以 2。";
   }
 
   function animColumns(n, boardWidth) {
@@ -4439,13 +4441,13 @@
     });
     animMarkMids(grid, chips, mids);
     animShowMath(board, data, true);
-    animSetKicker(animKickerText(data, 4));
-    animBeat(4);
+    animSetKicker(animKickerText(data, 5));
+    animBeat(5);
   }
 
   function animStageMedian(board, data, token) {
-    animSetKicker(animKickerText(data, 4));
-    animBeat(4);
+    animSetKicker(animKickerText(data, 5));
+    animBeat(5);
     const mids = animMids(data.values.length);
     board.querySelectorAll(".anim-chip").forEach((chip, index) => {
       if (mids.indexOf(index) >= 0) chip.classList.add("grow");
@@ -4455,8 +4457,8 @@
   }
 
   function animStagePlace(board, data, token, done) {
-    animSetKicker(animKickerText(data, 3));
-    animBeat(3);
+    animSetKicker(animKickerText(data, 4));
+    animBeat(4);
     const grid = board.querySelector(".anim-grid");
     const chips = [...board.querySelectorAll(".anim-chip")];
     const mids = animMids(data.values.length);
@@ -4465,28 +4467,19 @@
     animLater(token, 2000, done);
   }
 
-  function animStagePairs(board, data, token, done) {
-    animSetKicker(animKickerText(data, 2));
-    animBeat(2);
+  function animPaintChips(board, data) {
+    board.classList.remove("slow-fade");
     board.innerHTML = "";
-    animLater(token, 30, () => {
-      const grid = animBuildGrid(board, data);
-      const chips = [...grid.querySelectorAll(".anim-chip")];
-      const odd = data.values.length % 2 === 1;
-      const leave = odd ? 1 : 2;
-      const pairs = Math.floor((chips.length - leave) / 2);
-      const stepMs = pairs <= 6 ? 340 : Math.max(90, Math.round(2100 / pairs));
-      for (let i = 0; i < pairs; i += 1) {
-        animLater(token, stepMs * i, () => {
-          chips[i].classList.add("gone");
-          chips[chips.length - 1 - i].classList.add("gone");
-        });
-      }
-      animLater(token, stepMs * pairs + 420, () => {
-        animSetKicker(odd ? "2. 剩下一項，所以是單數。" : "2. 剩下兩項，所以是雙數。");
-        animMids(chips.length).forEach((index) => chips[index].classList.add("keep"));
-        animLater(token, 900, done);
-      });
+    const grid = animBuildGrid(board, data);
+    const chips = [...grid.querySelectorAll(".anim-chip")];
+    return { grid, chips, mids: animMids(data.values.length) };
+  }
+
+  function animFadeToMedian(board, chips, mids, slow) {
+    if (slow) board.classList.add("slow-fade");
+    chips.forEach((chip, index) => {
+      if (mids.indexOf(index) < 0) chip.classList.add("gone");
+      else chip.classList.add("keep");
     });
   }
 
@@ -4547,7 +4540,7 @@
   }
 
   function animMaxStep() {
-    if (animTrial.clip !== 2) return 4;
+    if (animTrial.clip !== 2) return 5;
     const data = animDataset();
     if (!data) return 0;
     return animHitEnd(animCumModel(data)) + 1;
@@ -4779,25 +4772,28 @@
       board.append(sheet, total);
       return;
     }
-    const odd = data.values.length % 2 === 1;
-    animSetKicker(step === 2
-      ? (odd ? "2. 剩下一項，所以是單數。" : "2. 剩下兩項，所以是雙數。")
-      : animKickerText(data, step));
+    if (step === 2) {
+      animSetKicker(animKickerText(data, 2));
+      animBeat(2);
+      animPaintChips(board, data);
+      return;
+    }
+    const painted = animPaintChips(board, data);
+    animSetKicker(animKickerText(data, step));
     animBeat(step);
-    board.innerHTML = "";
-    const grid = animBuildGrid(board, data);
-    const chips = [...grid.querySelectorAll(".anim-chip")];
-    const mids = animMids(data.values.length);
-    chips.forEach((chip, index) => {
-      if (mids.indexOf(index) < 0) chip.classList.add("gone");
-      else chip.classList.add("keep");
-    });
-    if (step < 3) return;
+    if (step === 3) {
+      animLater(token, 60, () => {
+        if (token !== animTrial.token) return;
+        animFadeToMedian(board, painted.chips, painted.mids, true);
+      });
+      return;
+    }
+    animFadeToMedian(board, painted.chips, painted.mids, false);
     animLater(token, 30, () => {
       if (token !== animTrial.token) return;
-      animMarkMids(grid, chips, mids);
-      if (step < 4) return;
-      mids.forEach((index) => chips[index].classList.add("grow"));
+      animMarkMids(painted.grid, painted.chips, painted.mids);
+      if (step < 5) return;
+      painted.mids.forEach((index) => painted.chips[index].classList.add("grow"));
       animShowMath(board, data, true);
     });
   }
@@ -4805,18 +4801,34 @@
   function anim1Run(step, play, token, data) {
     const board = document.getElementById("animBoard");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (play === "auto" && step === 1 && !reduce) {
-      animStageTotal(board, data, token, () => {
-        animStagePairs(board, data, token, () => {
-          animStagePlace(board, data, token, () => animStageMedian(board, data, token));
-        });
-      });
+    if (reduce && play === "auto") {
+      anim1Settled(board, data, 5, token);
+      animFinishAuto(token);
       return;
     }
-    const show = reduce && play === "auto" ? 4 : step;
-    anim1Settled(board, data, show, token);
-    if (play === "auto" && show < 4) animLater(token, reduce ? 0 : 1600, () => anim1Run(show + 1, play, token, data));
-    else if (play === "auto") animFinishAuto(token);
+    if (play !== "auto") {
+      anim1Settled(board, data, step, token);
+      return;
+    }
+    if (step <= 1) {
+      animStageTotal(board, data, token, () => anim1Run(2, "auto", token, data));
+      return;
+    }
+    if (step === 2) {
+      anim1Settled(board, data, 2, token);
+      animLater(token, 1400, () => anim1Run(3, "auto", token, data));
+      return;
+    }
+    if (step === 3) {
+      anim1Settled(board, data, 3, token);
+      animLater(token, 2100, () => anim1Run(4, "auto", token, data));
+      return;
+    }
+    if (step === 4) {
+      animStagePlace(board, data, token, () => anim1Run(5, "auto", token, data));
+      return;
+    }
+    animStageMedian(board, data, token);
   }
 
   function animGo(step, play) {
