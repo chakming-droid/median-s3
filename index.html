@@ -664,13 +664,13 @@
       title: "指定中位數",
       header: "數值",
       freqHeader: "個數",
-      stem: "下面有 5 個數據。先選一個中位數。另一顏色的數據會逐個加上，直到正中間落到這個數。",
+      stem: "個數有一格寫著 x。先選一個中位數。紫色會逐個加上 x 的那個數值，直到正中間落到你選的數。",
       bridge: true,
       rows: [
         { val: 1, freq: "1" },
         { val: 2, freq: "1" },
         { val: 3, freq: "1" },
-        { val: 4, freq: "1" },
+        { val: 4, freq: "x" },
         { val: 5, freq: "1" }
       ],
       structure: 0
@@ -958,7 +958,7 @@
     if (lesson.bridge) {
       tutor.mode = "bridge";
       tutor.step = 1;
-      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值。紫色數據會逐個加上，直到正中間落到這個數。" });
+      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值。紫色會逐個加上寫著 x 的那個數值，直到正中間落到這個數。" });
       render();
       return;
     }
@@ -1153,7 +1153,8 @@
   function renderExtras() {
     const slot = document.getElementById("extraSlot");
     if (!slot) return;
-    const wanted = current().kind === "continuous" ? "plain" : (lessonHasX() ? "x" : "plain");
+    const bridge = !!current().bridge;
+    const wanted = current().kind === "continuous" || bridge ? "plain" : (lessonHasX() ? "x" : "plain");
     slot.dataset.mode = wanted;
     slot.innerHTML = "";
     const row = document.createElement("div");
@@ -2473,19 +2474,43 @@
     bridgeRun.timer = 0;
   }
 
-  function bridgePairs() {
+  function bridgeXState() {
+    const marked = current().rows.filter((row) => String(row.freq).trim() === "x");
+    if (marked.length > 1) return { error: "multi", val: null };
+    if (marked.length !== 1 || !Number.isFinite(Number(marked[0].val))) return { error: "none", val: null };
+    return { error: "", val: Number(marked[0].val) };
+  }
+
+  function bridgePairs(added) {
+    const extraCount = added == null ? bridgeRun.added : added;
+    const x = bridgeXState();
     const pairs = [];
     current().rows.forEach((row) => {
+      if (String(row.freq).trim() === "x") return;
       const count = Number(row.freq);
       const val = Number(row.val);
       if (!Number.isFinite(val) || !Number.isInteger(count) || count <= 0) return;
       for (let index = 0; index < count; index += 1) pairs.push({ val, extra: false });
     });
-    if (bridgeRun.target != null) {
-      for (let index = 0; index < bridgeRun.added; index += 1) pairs.push({ val: bridgeRun.target, extra: true });
+    if (!x.error && extraCount > 0) {
+      for (let index = 0; index < extraCount; index += 1) pairs.push({ val: x.val, extra: true });
     }
     pairs.sort((a, b) => a.val - b.val || Number(a.extra) - Number(b.extra));
     return pairs;
+  }
+
+  function bridgeCanReach(target) {
+    const x = bridgeXState();
+    if (x.error) return false;
+    for (let added = 0; added <= 16; added += 1) {
+      const pairs = bridgePairs(added);
+      if (bridgeHit(pairs, target)) return true;
+      const centers = bridgeCenterValues(pairs);
+      if (!centers.length) continue;
+      if (centers.every((value) => value > target) && x.val >= centers[0]) return false;
+      if (centers.every((value) => value < target) && x.val <= centers[centers.length - 1]) return false;
+    }
+    return false;
   }
 
   function bridgeCenterValues(pairs) {
@@ -2501,25 +2526,29 @@
   }
 
   function bridgeStatus() {
-    if (bridgeRun.target == null) return "選一個表裡的數值，當作中位數。";
+    const x = bridgeXState();
+    if (x.error === "multi") return "個數格只可以有一個 x。";
+    if (x.error) return "先在一個個數格寫上 x。紫色會加上這個數值。";
+    if (bridgeRun.target == null) return "選一個表裡的數值，當作中位數。紫色會加上 " + x.val + "。";
+    if (!bridgeCanReach(bridgeRun.target)) return "加上 " + x.val + "，正中間不能落到 " + bridgeRun.target + "。";
     const hit = bridgeHit(bridgePairs(), bridgeRun.target);
     if (bridgeRun.added === 0 && hit) return "正中間已經是 " + bridgeRun.target + "，不用再加。";
     if (!hit) return bridgeRun.added === 0
-      ? "正在逐個加上 " + bridgeRun.target + "。"
-      : "已額外加上 " + bridgeRun.added + " 個 " + bridgeRun.target + "。正中間還沒落到目標。";
-    return "已額外加上 " + bridgeRun.added + " 個 " + bridgeRun.target + "。正中間落到目標。";
+      ? "正在逐個加上 " + x.val + "。"
+      : "已額外加上 " + bridgeRun.added + " 個 " + x.val + "。正中間還沒落到目標。";
+    return "已額外加上 " + bridgeRun.added + " 個 " + x.val + "。正中間落到目標。";
   }
 
   function bridgeTick() {
     bridgeRun.timer = 0;
     if (!current().bridge || bridgeRun.target == null) return;
-    if (bridgeHit(bridgePairs(), bridgeRun.target) || bridgeRun.added >= 12) {
+    if (bridgeXState().error || !bridgeCanReach(bridgeRun.target) || bridgeHit(bridgePairs(), bridgeRun.target) || bridgeRun.added >= 16) {
       render();
       return;
     }
     bridgeRun.added += 1;
     render();
-    if (!bridgeHit(bridgePairs(), bridgeRun.target) && bridgeRun.added < 12) {
+    if (!bridgeHit(bridgePairs(), bridgeRun.target) && bridgeRun.added < 16) {
       bridgeRun.timer = setTimeout(bridgeTick, 700);
     }
   }
@@ -2529,6 +2558,7 @@
     bridgeRun.target = value;
     bridgeRun.added = 0;
     render();
+    if (bridgeXState().error || !bridgeCanReach(value)) return;
     if (!bridgeHit(bridgePairs(), value)) bridgeRun.timer = setTimeout(bridgeTick, 700);
   }
 
@@ -2925,7 +2955,7 @@
   function questionText() {
     if (phase === "type") return "做之前，先判斷：這是離散數據還是連續數據？";
     const lesson = current();
-    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。";
+    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。紫色加上的是寫著 x 的那個數值。";
     if (tutor.mode === "known") {
       const view = knownView();
       if (!view) return "請先填好頻數表。";
@@ -2957,7 +2987,7 @@
 
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
-    if (tutor.mode === "bridge") return "幫他觀察紫色數據逐個加上之後，正中間怎樣落到他選的數值。不要說出要加多少個。";
+    if (tutor.mode === "bridge") return "幫他觀察寫著 x 的那個數值逐個加上之後，正中間怎樣落到他選的數。不要說出要加多少個。";
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
       if (tutor.step === 2) return "幫他分辨總數是單數還是雙數。不能被 2 整除是單數。不要直接說是單數還是雙數。";
