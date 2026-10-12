@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>作答分析</title>
+  <script>
+    window.MEDIAN_TEACHER = window.MEDIAN_TEACHER || {
+      reviewPassword: "",
+      collectUrl: "https://script.google.com/macros/s/AKfycbyP0JuPGt4b2o4MeAwkl22MHLD73yEJ9-u7qumXBMVaddVK5W8yjAERZEJjN09Z-EQ7/exec"
+    };
+  </script>
+  <script src="teacher-config.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #f8fafc;
+      color: #1e293b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 8px; }
+    h2 { font-size: 1.05rem; margin: 20px 0 8px; }
+    p, li { line-height: 1.5; }
+    .note { color: #475569; }
+    .gate-error { color: #b91c1c; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+    input[type="password"], input[type="date"] {
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font: inherit;
+      max-width: 280px;
+    }
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+    .btn-secondary { background: #64748b; }
+    .filters, .links { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+    .filters { margin: 12px 0; }
+    .lead { background: #fff7ed; border-radius: 10px; padding: 10px 12px; margin: 8px 0 14px; }
+    .bar-block { margin: 0 0 14px; }
+    .bar-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .bar-track { display: flex; height: 18px; margin-top: 4px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
+    .bar-fill { background: #d97706; height: 100%; }
+    .stack-wrong { background: #d97706; height: 100%; }
+    .stack-right { background: #16a34a; height: 100%; }
+    .advice { margin: 4px 0 0; }
+    .legend { display: flex; gap: 14px; margin: 0 0 8px; font-size: 0.85rem; }
+    .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+    .swatch-wrong { background: #d97706; }
+    .swatch-right { background: #16a34a; }
+    .attempt {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin: 8px 0;
+    }
+    .attempt p { margin: 4px 0; }
+    .wrong { color: #b45309; font-weight: bold; }
+    .right { color: #15803d; font-weight: bold; }
+    a { color: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>作答分析</h1>
+    <p class="note">用橫條比較學習難點。逐次作答預設收起。不顯示正確答案，也不顯示姓名。</p>
+    <form id="gate">
+      <input type="text" name="username" autocomplete="username" value="老師" hidden>
+      <label>密碼
+        <input id="password" name="password" type="password" autocomplete="current-password">
+      </label>
+      <p><button class="btn" type="submit">進入</button></p>
+      <p id="gateError" class="gate-error" hidden>密碼不對。試算表若仍是預設密碼，讀取也會被拒絕。</p>
+    </form>
+    <div id="app" hidden>
+      <div class="filters">
+        <button type="button" class="btn" data-source="課堂" aria-pressed="true">課堂</button>
+        <button type="button" class="btn btn-secondary" data-source="試用" aria-pressed="false">試用</button>
+        <button type="button" class="btn btn-secondary" data-source="全部" aria-pressed="false">全部</button>
+        <label>由 <input id="from" type="date"></label>
+        <label>至 <input id="to" type="date"></label>
+      </div>
+      <p id="scopeNote" class="note"></p>
+      <p id="countNote"></p>
+      <h2>學習難點</h2>
+      <div id="gaps"></div>
+      <h2>各步驟</h2>
+      <div id="steps"></div>
+      <p><button type="button" class="btn btn-secondary" id="toggleRecent">展開逐次作答</button></p>
+      <div id="recent" hidden></div>
+      <p class="links">
+        <a href="index.html">課堂練習</a>
+        <a href="index.html?try=1">同工試用</a>
+      </p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const state = { source: "課堂", rows: [], sheetNote: "local", recentOpen: false };
+      const advice = {
+        "總數加錯": "先帶學生逐格把頻數加一次，加完再填總數。",
+        "單雙判斷錯": "總數加完後，先判斷單數還是雙數，再找中間的項。",
+        "中位數位置錯": "單數取中間一項的位置；雙數要找出中間那兩項。",
+        "雙數沒有取兩項的位置": "雙數要寫出中間兩項的位置，不是只寫一項。",
+        "雙數沒有取平均": "找到中間兩個數之後，還要把兩個數相加再除以 2。",
+        "中位數數值錯": "先確認中間是第幾項，再回到由小至大的數列讀出那個數。",
+        "最小 x 偏小": "再少一個就會離開目標。沿位置帶逐個加，剛落到目標就停。",
+        "最小 x 偏大": "還有更小的正整數也可以。往回試，直到再少一個就離開。",
+        "最大 x 偏小": "還可以再加。一直加到再多一個就離開目標。",
+        "最大 x 偏大": "再多一個就會離開目標。停在離開之前的那一個。",
+        "沒有填正整數": "最小和最大都要填正整數。",
+        "其他": "先看哪一類出現最多，下一節只重教那一步。"
+      };
+      const stepOrder = ["總數", "單雙", "第幾項", "中位數", "選擇中位數", "最小 x", "最大 x"];
+
+      function expectedPassword() {
+        return String((window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.reviewPassword) || "");
+      }
+
+      function localRows() {
+        try {
+          const list = JSON.parse(localStorage.getItem("median-attempts") || "[]");
+          return Array.isArray(list) ? list : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function hkDay(iso) {
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return String(iso).slice(0, 10);
+        return new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Hong_Kong",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).format(date);
+      }
+
+      function formatTime(iso) {
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return String(iso);
+        const parts = new Intl.DateTimeFormat("zh-HK", {
+          timeZone: "Asia/Hong_Kong",
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23"
+        }).formatToParts(date);
+        const part = (type) => parts.find((item) => item.type === type).value;
+        return part("month") + "月" + part("day") + "日 " + part("hour") + ":" + part("minute");
+      }
+
+      function normalize(row) {
+        const ok = row.ok === true || row.ok === "對";
+        return {
+          at: String(row.at || ""),
+          device: String(row.device || "").slice(0, 16),
+          source: row.source === "試用" ? "試用" : "課堂",
+          lesson: String(row.lesson || ""),
+          step: String(row.step || ""),
+          input: String(row.input == null ? "" : row.input).slice(0, 80),
+          ok: ok,
+          gap: ok ? "" : String(row.gap || "其他")
+        };
+      }
+
+      function merge(local, remote) {
+        const seen = new Set();
+        const out = [];
+        local.concat(remote).forEach((row) => {
+          const item = normalize(row);
+          const key = [item.at, item.device, item.source, item.step, item.input, item.ok].join("|");
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push(item);
+        });
+        out.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+        return out;
+      }
+
+      function loadSheet(password) {
+        const url = window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.collectUrl;
+        if (!url) return Promise.resolve({ skipped: true, ok: true, rows: [] });
+        return new Promise((resolve) => {
+          const cb = "medianSheet" + Date.now();
+          let done = false;
+          const finish = (payload) => {
+            if (done) return;
+            done = true;
+            delete window[cb];
+            const node = document.getElementById(cb);
+            if (node) node.remove();
+            resolve(payload || { ok: false, rows: [] });
+          };
+          window[cb] = (data) => finish(Object.assign({ denied: !data || data.ok === false }, data));
+          const script = document.createElement("script");
+          script.id = cb;
+          const join = String(url).indexOf("?") === -1 ? "?" : "&";
+          script.src = url + join + "password=" + encodeURIComponent(password) + "&callback=" + cb;
+          script.onerror = () => finish({ ok: false, rows: [] });
+          document.body.appendChild(script);
+          setTimeout(() => finish({ ok: false, rows: [], timeout: true }), 8000);
+        });
+      }
+
+      function selectedRows() {
+        const from = document.getElementById("from").value;
+        const to = document.getElementById("to").value;
+        return state.rows.filter((row) => {
+          if (state.source !== "全部" && row.source !== state.source) return false;
+          const day = hkDay(row.at);
+          if (from && day < from) return false;
+          if (to && day > to) return false;
+          return true;
+        });
+      }
+
+      function rankGaps(rows) {
+        const map = new Map();
+        rows.filter((row) => !row.ok && row.gap).forEach((row) => {
+          if (!map.has(row.gap)) map.set(row.gap, { gap: row.gap, count: 0, samples: [] });
+          const item = map.get(row.gap);
+          item.count += 1;
+          if (item.samples.length < 3 && row.input && item.samples.indexOf(row.input) === -1) item.samples.push(row.input);
+        });
+        return Array.from(map.values()).sort((a, b) => b.count - a.count || a.gap.localeCompare(b.gap, "zh-HK"));
+      }
+
+      function render() {
+        const rows = selectedRows();
+        const wrong = rows.filter((row) => !row.ok);
+        const scope = document.getElementById("scopeNote");
+        if (state.sheetNote === "sheet") {
+          scope.textContent = "已合併這部瀏覽器和試算表。預設只看課堂，試用要另外按。";
+        } else if (state.sheetNote === "denied") {
+          scope.textContent = "試算表拒絕讀取。請在 Apps Script 把密碼改成與這裡相同，再部署新版本。下面先顯示這部瀏覽器的作答。";
+        } else if (state.sheetNote === "sheet-fail") {
+          scope.textContent = "試算表暫時讀不到。下面先顯示這部瀏覽器的作答。";
+        } else {
+          scope.textContent = "現在只看這部瀏覽器。其他電話要等試算表接上之後，才會出現在這裡。";
+        }
+        document.getElementById("countNote").textContent = state.source + "：" + rows.length + " 次作答，" + wrong.length + " 次不對。";
+
+        const gaps = document.getElementById("gaps");
+        gaps.textContent = "";
+        const ranked = rankGaps(rows);
+        if (!ranked.length) {
+          const empty = document.createElement("p");
+          empty.className = "note";
+          empty.textContent = "這段還沒有不對的作答。";
+          gaps.appendChild(empty);
+        } else {
+          const lead = document.createElement("p");
+          lead.className = "lead";
+          const top = ranked.filter((group) => group.count === ranked[0].count);
+          lead.textContent = "建議先處理：" + top.map((group) => group.gap).join("、") + "。" + top.map((group) => advice[group.gap] || advice["其他"]).join("");
+          gaps.appendChild(lead);
+          const maxGap = ranked[0].count;
+          ranked.forEach((group) => {
+            const block = document.createElement("div");
+            block.className = "bar-block";
+            const head = document.createElement("div");
+            head.className = "bar-top";
+            const title = document.createElement("strong");
+            title.textContent = group.gap;
+            const count = document.createElement("span");
+            count.textContent = group.count + " 次";
+            head.append(title, count);
+            const track = document.createElement("div");
+            track.className = "bar-track";
+            const fill = document.createElement("div");
+            fill.className = "bar-fill";
+            fill.style.width = Math.max(8, Math.round(group.count / maxGap * 100)) + "%";
+            track.appendChild(fill);
+            const tip = document.createElement("p");
+            tip.className = "note advice";
+            tip.textContent = advice[group.gap] || advice["其他"];
+            block.append(head, track, tip);
+            gaps.appendChild(block);
+          });
+        }
+
+        const steps = document.getElementById("steps");
+        steps.textContent = "";
+        const stepMap = new Map();
+        rows.forEach((row) => {
+          if (!stepMap.has(row.step)) stepMap.set(row.step, { step: row.step, right: 0, wrong: 0 });
+          const item = stepMap.get(row.step);
+          if (row.ok) item.right += 1;
+          else item.wrong += 1;
+        });
+        const stepRows = Array.from(stepMap.values()).sort((a, b) => {
+          const ai = stepOrder.indexOf(a.step);
+          const bi = stepOrder.indexOf(b.step);
+          return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+        });
+        if (!stepRows.length) {
+          const empty = document.createElement("p");
+          empty.className = "note";
+          empty.textContent = "這段還沒有作答。";
+          steps.appendChild(empty);
+        } else {
+          const legend = document.createElement("p");
+          legend.className = "legend";
+          legend.textContent = "";
+          [["swatch swatch-wrong", "不對"], ["swatch swatch-right", "對"]].forEach((pair) => {
+            const span = document.createElement("span");
+            const mark = document.createElement("i");
+            mark.className = pair[0];
+            span.append(mark, document.createTextNode(pair[1]));
+            legend.appendChild(span);
+          });
+          steps.appendChild(legend);
+          const maxStep = Math.max.apply(null, stepRows.map((item) => item.right + item.wrong));
+          stepRows.forEach((item) => {
+            const block = document.createElement("div");
+            block.className = "bar-block";
+            const head = document.createElement("div");
+            head.className = "bar-top";
+            const title = document.createElement("strong");
+            title.textContent = item.step;
+            const count = document.createElement("span");
+            count.className = "note";
+            count.textContent = "不對 " + item.wrong + " · 對 " + item.right;
+            head.append(title, count);
+            const track = document.createElement("div");
+            track.className = "bar-track";
+            if (item.wrong) {
+              const wrongBar = document.createElement("div");
+              wrongBar.className = "stack-wrong";
+              wrongBar.style.width = Math.max(6, Math.round(item.wrong / maxStep * 100)) + "%";
+              track.appendChild(wrongBar);
+            }
+            if (item.right) {
+              const rightBar = document.createElement("div");
+              rightBar.className = "stack-right";
+              rightBar.style.width = Math.max(6, Math.round(item.right / maxStep * 100)) + "%";
+              track.appendChild(rightBar);
+            }
+            block.append(head, track);
+            steps.appendChild(block);
+          });
+        }
+
+        const toggle = document.getElementById("toggleRecent");
+        toggle.textContent = (state.recentOpen ? "收起逐次作答" : "展開逐次作答") + "（" + rows.length + "）";
+        const recent = document.getElementById("recent");
+        recent.hidden = !state.recentOpen;
+        recent.textContent = "";
+        const latest = rows.slice(-40).reverse();
+        if (!latest.length) {
+          const empty = document.createElement("p");
+          empty.className = "note";
+          empty.textContent = "這段還沒有作答。";
+          recent.appendChild(empty);
+          return;
+        }
+        latest.forEach((row) => {
+          const card = document.createElement("article");
+          card.className = "attempt";
+          const head = document.createElement("p");
+          head.textContent = formatTime(row.at) + " · " + row.source + " · " + row.lesson + " · " + row.step;
+          const body = document.createElement("p");
+          body.textContent = "輸入：" + (row.input || "（空白）") + " · ";
+          const mark = document.createElement("span");
+          mark.className = row.ok ? "right" : "wrong";
+          mark.textContent = row.ok ? "對" : "錯";
+          body.appendChild(mark);
+          if (!row.ok) body.appendChild(document.createTextNode(" · " + row.gap));
+          const id = document.createElement("p");
+          id.className = "note";
+          id.textContent = "編號 " + (row.device || "—");
+          card.append(head, body, id);
+          recent.appendChild(card);
+        });
+      }
+
+      document.getElementById("gate").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const typed = document.getElementById("password").value;
+        const error = document.getElementById("gateError");
+        const expected = expectedPassword();
+        const url = window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.collectUrl;
+        if ((expected && typed !== expected) || (!expected && !url)) {
+          error.hidden = false;
+          return;
+        }
+        error.hidden = true;
+        const local = localRows();
+        loadSheet(typed).then((sheet) => {
+          const sheetOk = !!(sheet && sheet.ok && !sheet.skipped);
+          if (!expected && !sheetOk) {
+            error.hidden = false;
+            return;
+          }
+          const remote = sheetOk && Array.isArray(sheet.rows) ? sheet.rows : [];
+          state.rows = merge(local, remote);
+          state.sheetNote = sheet && sheet.skipped ? "local" : (sheetOk ? "sheet" : (sheet && sheet.denied ? "denied" : "sheet-fail"));
+          document.getElementById("gate").hidden = true;
+          document.getElementById("app").hidden = false;
+          render();
+        });
+      });
+
+      document.querySelectorAll("[data-source]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.source = button.getAttribute("data-source");
+          document.querySelectorAll("[data-source]").forEach((item) => {
+            const on = item === button;
+            item.className = on ? "btn" : "btn btn-secondary";
+            item.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          render();
+        });
+      });
+      document.getElementById("from").addEventListener("change", render);
+      document.getElementById("to").addEventListener("change", render);
+      document.getElementById("toggleRecent").addEventListener("click", () => {
+        state.recentOpen = !state.recentOpen;
+        render();
+      });
+    })();
+  </script>
+</body>
+</html>

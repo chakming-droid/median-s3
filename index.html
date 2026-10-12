@@ -6,7 +6,11 @@
   <title>中位數</title>
   <script src="median.js"></script>
   <script>
-    window.MEDIAN_TEACHER = window.MEDIAN_TEACHER || { geminiKey: "" };
+    window.MEDIAN_TEACHER = window.MEDIAN_TEACHER || {
+      geminiKey: "",
+      reviewPassword: "",
+      collectUrl: "https://script.google.com/macros/s/AKfycbyP0JuPGt4b2o4MeAwkl22MHLD73yEJ9-u7qumXBMVaddVK5W8yjAERZEJjN09Z-EQ7/exec"
+    };
   </script>
   <script src="teacher-config.js"></script>
   <style>
@@ -73,6 +77,11 @@
 
     .sheet p { margin: 8px 0; font-size: 1.05rem; }
 
+    .table-block { margin-top: 4px; }
+    .table-corner { display: flex; justify-content: flex-end; margin: 0 0 6px; }
+    .table-corner .btn, .fold-bar .btn { padding: 5px 10px; font-size: 0.86rem; }
+    .fold-section { margin: 8px 0; }
+    .fold-bar { display: flex; justify-content: flex-end; margin: 0 0 4px; }
     .table-wrapper {
       overflow-x: auto;
       background: white;
@@ -221,7 +230,7 @@
     .raw-num { font-size: 1.02rem; font-weight: 700; color: #0f172a; line-height: 1.45; text-align: center; overflow-wrap: anywhere; }
     .raw-num.median-num { color: #1d4ed8; }
     .raw-under { min-height: 2.4em; border-top: 2px solid #334155; text-align: center; font-size: 0.92rem; padding-top: 3px; width: 100%; }
-    .list-and-trial { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+    .list-and-trial { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .item-scroll { overflow-x: auto; background: white; border: 1px solid #cbd5e1; border-radius: 8px; }
     .item-track { display: flex; align-items: flex-end; width: max-content; padding: 8px 6px 4px; }
     .item-cell { display: flex; flex-direction: column; align-items: center; min-width: 1.7rem; padding: 0 1px; }
@@ -711,6 +720,7 @@
   let experiment = null;
   let bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
   let showBlocks = false;
+  let showBand = true;
   let discreteRevealed = false;
   let casesRevealed = false;
   let asking = false;
@@ -904,6 +914,68 @@
     return String(Math.round(n * 1000) / 1000);
   }
 
+  function attemptSource() {
+    try {
+      return new URLSearchParams(location.search).get("try") === "1" ? "試用" : "課堂";
+    } catch (error) {
+      return "課堂";
+    }
+  }
+
+  function deviceId() {
+    try {
+      let id = localStorage.getItem("median-device");
+      if (!id) {
+        id = Math.random().toString(36).slice(2, 10);
+        localStorage.setItem("median-device", id);
+      }
+      return id;
+    } catch (error) {
+      return "local";
+    }
+  }
+
+  function recordAttempt(entry) {
+    const row = {
+      at: new Date().toISOString(),
+      device: deviceId(),
+      source: attemptSource(),
+      lesson: current().title,
+      step: entry.step,
+      input: String(entry.input == null ? "" : entry.input).slice(0, 80),
+      ok: !!entry.ok,
+      gap: entry.ok ? "" : (entry.gap || "其他")
+    };
+    try {
+      const list = JSON.parse(localStorage.getItem("median-attempts") || "[]");
+      list.push(row);
+      localStorage.setItem("median-attempts", JSON.stringify(list.slice(-500)));
+    } catch (error) {}
+    const url = window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.collectUrl;
+    if (!url) return;
+    try {
+      const frame = document.createElement("iframe");
+      frame.hidden = true;
+      frame.name = "collect-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = url;
+      form.target = frame.name;
+      form.acceptCharset = "UTF-8";
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "payload";
+      input.value = JSON.stringify(row);
+      form.appendChild(input);
+      document.body.append(frame, form);
+      form.submit();
+      setTimeout(function () {
+        form.remove();
+        frame.remove();
+      }, 4000);
+    } catch (error) {}
+  }
+
   function loadLesson(index) {
     lessons[index] = JSON.parse(JSON.stringify(lessonTemplates[index]));
     lessonIndex = index;
@@ -955,6 +1027,7 @@
     fieldDrafts = {};
     experiment = null;
     showBlocks = lesson.kind !== "continuous";
+    showBand = true;
     discreteRevealed = false;
     casesRevealed = false;
     asking = false;
@@ -1001,6 +1074,12 @@
       const button = makeButton(lesson.title, index === lessonIndex ? "btn" : "btn btn-secondary", () => showMode(index));
       bar.appendChild(button);
     });
+    if (attemptSource() === "試用") {
+      const note = document.createElement("span");
+      note.className = "problem-text";
+      note.textContent = "試用記錄，不計入課堂分析。";
+      bar.appendChild(note);
+    }
   }
 
   function teacherStatusText() {
@@ -1035,7 +1114,10 @@
       button.className = "btn btn-secondary";
       button.textContent = "檢查額度";
       button.addEventListener("click", checkQuota);
-      bar.append(heading, status, button);
+      const review = document.createElement("a");
+      review.href = "teacher.html";
+      review.textContent = "作答分析";
+      bar.append(heading, status, button, review);
     }
     status.textContent = teacherStatusText();
   }
@@ -1099,6 +1181,13 @@
   }
 
   function buildEditableTable(lesson) {
+    const block = document.createElement("div");
+    block.className = "table-block";
+    const corner = document.createElement("div");
+    corner.className = "table-corner";
+    const add = makeButton("+ 新增一欄", "btn btn-secondary", addColumn);
+    add.id = "addColumn";
+    corner.appendChild(add);
     const wrap = document.createElement("div");
     wrap.className = "table-wrapper";
     const stage = document.createElement("div");
@@ -1123,7 +1212,8 @@
     table.appendChild(body);
     stage.appendChild(table);
     wrap.appendChild(stage);
-    return wrap;
+    block.append(corner, wrap);
+    return block;
   }
 
   function inputRow(header, values, className, label, blankFirst) {
@@ -1177,9 +1267,11 @@
     if (current().kind !== "continuous") {
       const pair = document.createElement("div");
       pair.className = "list-and-trial";
-      const blocksButton = makeButton(showBlocks ? "收起原始數據" : "列出原始數據", "btn", toggleBlocks);
-      blocksButton.id = "toggleBlocks";
-      pair.appendChild(blocksButton);
+      if (current().id !== "pens") {
+        const blocksButton = makeButton(showBlocks ? "收起原始數據" : "列出原始數據", "btn", toggleBlocks);
+        blocksButton.id = "toggleBlocks";
+        pair.appendChild(blocksButton);
+      }
       if (wanted === "x") pair.appendChild(trialControls());
       row.appendChild(pair);
     }
@@ -1199,7 +1291,6 @@
     const row = document.createElement("div");
     row.className = "action-row";
     row.appendChild(makeButton("重置這一題", "btn btn-secondary", () => loadLesson(lessonIndex)));
-    row.appendChild(makeButton("+ 新增一欄", "btn btn-secondary", addColumn));
     slot.appendChild(row);
   }
 
@@ -1248,7 +1339,7 @@
       const previous = tutor.trials[tutor.trials.length - 1];
       if (!previous || previous.x !== x || previous.median !== median) tutor.trials.push({ x, median, hit });
     }
-    showBlocks = true;
+    showBand = true;
     tutor.lit = [];
     tutor.arrow = false;
     tutor.litTrial = null;
@@ -1262,7 +1353,14 @@
   function toggleBlocks() {
     showBlocks = !showBlocks;
     const button = document.getElementById("toggleBlocks");
-    if (button) button.textContent = showBlocks ? "收起原始數據" : "列出原始數據";
+    if (button) button.textContent = showBlocks ? (current().id === "pens" ? "收起數列" : "收起原始數據") : (current().id === "pens" ? "打開數列" : "列出原始數據");
+    renderQueue();
+  }
+
+  function toggleBand() {
+    showBand = !showBand;
+    const button = document.getElementById("toggleBand");
+    if (button) button.textContent = showBand ? "收起位置帶" : "打開位置帶";
     renderQueue();
   }
 
@@ -1314,6 +1412,7 @@
       return;
     }
     if (MedianMath.sameNumber(value, view.median)) {
+      recordAttempt({ step: "中位數", input: typed, ok: true });
       discreteRevealed = true;
       showBlocks = true;
       const button = document.getElementById("toggleBlocks");
@@ -1323,9 +1422,11 @@
       return;
     }
     if (!view.odd && view.values.some((item) => MedianMath.sameNumber(value, item))) {
+      recordAttempt({ step: "中位數", input: typed, ok: false, gap: "雙數沒有取平均" });
       note.textContent = "這是中間其中一個數值。雙數要把兩個數值平均。";
       return;
     }
+    recordAttempt({ step: "中位數", input: typed, ok: false, gap: "中位數數值錯" });
     note.textContent = "還未對。先判斷總數是單數還是雙數，再找中間是第幾項。";
   }
 
@@ -1856,7 +1957,10 @@
     const wrapper = document.getElementById("blocksWrapper");
     const resultBox = document.getElementById("resultBox");
     const result = document.getElementById("resultContent");
-    if (!(showBlocks || reveal || revealCases)) {
+    const wantBand = lesson.id === "pens" && showBand && !revealCases;
+    const pensFolds = lesson.id === "pens" && !revealCases;
+    if (title) title.hidden = wantBand && !showBlocks && !reveal && !revealCases;
+    if (!pensFolds && !(showBlocks || reveal || revealCases || wantBand)) {
       card.hidden = true;
       wrapper.innerHTML = "";
       result.innerHTML = "";
@@ -1867,11 +1971,11 @@
     wrapper.innerHTML = "";
     result.innerHTML = "";
     resultBox.hidden = true;
-    if (model.error === "multi-x") {
+    if (!pensFolds && model.error === "multi-x") {
       wrapper.textContent = "只可以有一個未知數。";
       return;
     }
-    if (model.error) {
+    if (!pensFolds && model.error) {
       wrapper.textContent = "請輸入有效的數據與頻數。頻數須為正整數，或 x。";
       return;
     }
@@ -1889,6 +1993,10 @@
     }
     if (lesson.bridge) {
       wrapper.appendChild(bridgeBoard());
+      return;
+    }
+    if (pensFolds) {
+      wrapper.appendChild(pensQueue(model, letter));
       return;
     }
     if (model.hasX) {
@@ -2747,7 +2855,10 @@
     current().rows.forEach((item) => {
       const value = Number(item.val);
       if (!Number.isFinite(value)) return;
-      row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => bridgeChoose(value)));
+      row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => {
+        recordAttempt({ step: "選擇中位數", input: String(value), ok: true });
+        bridgeChoose(value);
+      }));
     });
     form.appendChild(row);
     const status = document.createElement("p");
@@ -2760,6 +2871,7 @@
   }
 
   function pensChooseMedian(value) {
+    recordAttempt({ step: "選擇中位數", input: String(value), ok: true });
     current().target = String(value);
     bridgeChoose(value);
   }
@@ -2792,13 +2904,70 @@
     animGo(1, "auto");
   }
 
+  function foldBar(open, openLabel, closedLabel, onClick, id) {
+    const bar = document.createElement("div");
+    bar.className = "fold-bar";
+    const button = makeButton(open ? openLabel : closedLabel, "btn btn-secondary", onClick);
+    button.id = id;
+    bar.appendChild(button);
+    return bar;
+  }
+
+  function pensQueue(model, letter) {
+    const fragment = document.createDocumentFragment();
+    if (model.error === "multi-x" || model.error) {
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = model.error === "multi-x"
+        ? "只可以有一個未知數。"
+        : "請輸入有效的數據與頻數。頻數須為正整數，或 x。";
+      fragment.appendChild(note);
+    }
+    fragment.append(pensBandSection(model, letter), pensLineSection(model, letter));
+    return fragment;
+  }
+
+  function pensBandSection(model, letter) {
+    const section = document.createElement("section");
+    section.className = "fold-section";
+    section.appendChild(foldBar(showBand, "收起位置帶", "打開位置帶", toggleBand, "toggleBand"));
+    if (showBand && !model.error && model.rows) {
+      const x = currentTrial();
+      const view = MedianMath.medianForX(model.rows, x);
+      section.appendChild(xBand(model.rows, letter, x, view, Number(current().target)));
+    }
+    return section;
+  }
+
+  function pensLineSection(model, letter) {
+    const section = document.createElement("section");
+    section.className = "fold-section";
+    section.appendChild(foldBar(showBlocks, "收起數列", "打開數列", toggleBlocks, "toggleBlocks"));
+    if (!showBlocks || model.error || !model.rows) return section;
+    const rows = model.rows;
+    const x = currentTrial();
+    const view = MedianMath.medianForX(rows, x);
+    section.appendChild(pensExplorer());
+    if (!rowMarksOn() || !view) return section;
+    const count = expandedCount(rows, x);
+    if (count <= 400) section.appendChild(compactRow(expandRows(rows, x), view, false));
+    else {
+      section.appendChild(medianSplit(positionRuns(rows, x), view));
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = "這個數太大，未能逐項標出第幾項。試一個小一點的正整數。";
+      section.appendChild(note);
+    }
+    return section;
+  }
+
   function trialRaw(rows, letter) {
     const wrap = document.createElement("div");
     const x = currentTrial();
     const view = MedianMath.medianForX(rows, x);
-    wrap.appendChild(xBand(rows, letter, x, view, Number(current().target)));
-    if (current().id === "pens") wrap.appendChild(pensExplorer());
-    if (!rowMarksOn() || !view) return wrap;
+    if (showBand) wrap.appendChild(xBand(rows, letter, x, view, Number(current().target)));
+    if (showBlocks && current().id === "pens") wrap.appendChild(pensExplorer());
+    if (!showBlocks || !rowMarksOn() || !view) return wrap;
     const count = expandedCount(rows, x);
     if (count <= 400) wrap.appendChild(compactRow(expandRows(rows, x), view, false));
     else {
@@ -3405,6 +3574,7 @@
     tutor.litTrial = null;
     tutor.step = tutor.mode === "unknown" ? 2 : 1;
     showBlocks = lesson.kind !== "continuous";
+    showBand = true;
     askQuestion();
     render();
   }
@@ -3549,17 +3719,22 @@
     const value = Number(raw);
     if (tutor.step === 1) {
       tutor.log.push({ kind: "student", text: "總數 = " + raw });
+      recordAttempt({ step: "總數", input: raw, ok: value === view.N, gap: "總數加錯" });
       if (value === view.N) advance("對。總數是 " + view.N + "。");
       else tutor.log.push({ kind: "tutor", text: "還未對。把頻數全部相加。" });
     } else if (tutor.step === 3 && view.odd) {
       tutor.log.push({ kind: "student", text: "第 " + raw + " 項" });
+      recordAttempt({ step: "第幾項", input: raw, ok: value === view.positions[0], gap: "中位數位置錯" });
       if (value === view.positions[0]) advance("對。中位數是這一項。");
       else tutor.log.push({ kind: "tutor", text: "還未對。看箭嘴指住的第幾項。" });
     } else if (tutor.step === 4) {
       tutor.log.push({ kind: "student", text: "中位數 = " + raw });
-      if (MedianMath.sameNumber(value, view.median)) {
+      const hit = MedianMath.sameNumber(value, view.median);
+      const oneSide = view.values.some((item) => MedianMath.sameNumber(value, item));
+      recordAttempt({ step: "中位數", input: raw, ok: hit, gap: !view.odd && oneSide ? "雙數沒有取平均" : "中位數數值錯" });
+      if (hit) {
         markSolved("正確。中位數是 " + formatMedian(view.median) + "。");
-      } else if (view.values.some((item) => MedianMath.sameNumber(value, item))) {
+      } else if (oneSide) {
         tutor.log.push({ kind: "tutor", text: "這是中間其中一個數值。雙數要把兩個數值加起來再除以 2。" });
       } else tutor.log.push({ kind: "tutor", text: "還未對。把兩個中間數值相加，再除以 2。" });
     }
@@ -3575,6 +3750,7 @@
       return;
     }
     tutor.log.push({ kind: "student", text: saysOdd ? "單數" : "雙數" });
+    recordAttempt({ step: "單雙", input: saysOdd ? "單數" : "雙數", ok: saysOdd === view.odd, gap: "單雙判斷錯" });
     if (saysOdd === view.odd) advance(view.odd ? "對。總數是單數。" : "對。總數是雙數。");
     else tutor.log.push({ kind: "tutor", text: "還未對。不能被 2 整除是單數，可以整除是雙數。" });
     render();
@@ -3590,6 +3766,12 @@
       tutor.log.push({ kind: "tutor", text: "請先填好頻數表。" });
     } else {
       tutor.log.push({ kind: "student", text: "第 " + (firstField ? firstField.value : "") + " 項及第 " + (secondField ? secondField.value : "") + " 項" });
+      recordAttempt({
+        step: "第幾項",
+        input: (firstField ? firstField.value : "") + " 及 " + (secondField ? secondField.value : ""),
+        ok: first === view.positions[0] && second === view.positions[1],
+        gap: "雙數沒有取兩項的位置"
+      });
       if (first === view.positions[0] && second === view.positions[1]) advance("對。中位數在這兩項的中間。");
       else tutor.log.push({ kind: "tutor", text: "還未對。看分割線兩旁的第幾項。" });
     }
@@ -3763,13 +3945,19 @@
     const maxRaw = maxInput ? normalizeTyped(maxInput.value) : "";
     const max = maxInput ? Number(maxRaw) : null;
     tutor.log.push({ kind: "student", text: range.unbounded ? "最小 " + letter + " = " + minRaw + "，沒有最大" : "最小 " + letter + " = " + minRaw + "，最大 " + letter + " = " + maxRaw });
-    if (!Number.isInteger(min) || min <= 0 || (!range.unbounded && (!Number.isInteger(max) || max <= 0))) {
+    const minValid = Number.isInteger(min) && min > 0;
+    const maxValid = range.unbounded || (Number.isInteger(max) && max > 0);
+    if (!minValid) recordAttempt({ step: "最小 x", input: minRaw, ok: false, gap: "沒有填正整數" });
+    if (!maxValid) recordAttempt({ step: "最大 x", input: maxRaw, ok: false, gap: "沒有填正整數" });
+    if (!minValid || !maxValid) {
       tutor.log.push({ kind: "tutor", text: "請填正整數。" });
       render();
       return;
     }
     const minOk = min === range.min;
     const maxOk = range.unbounded ? true : max === range.max;
+    recordAttempt({ step: "最小 x", input: minRaw, ok: minOk, gap: min < range.min ? "最小 x 偏小" : "最小 x 偏大" });
+    if (!range.unbounded) recordAttempt({ step: "最大 x", input: maxRaw, ok: maxOk, gap: max > range.max ? "最大 x 偏大" : "最大 x 偏小" });
     if (minOk && maxOk) {
       casesRevealed = true;
       showBlocks = true;
