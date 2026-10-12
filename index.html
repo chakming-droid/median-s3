@@ -576,6 +576,8 @@
     @keyframes anim-drop { from { transform: scaleY(0); } to { transform: scaleY(1); } }
     @keyframes anim-rise { from { transform: translateX(-50%) translateY(8px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
     @keyframes anim-pop { to { transform: scale(1); opacity: 1; } }
+    #reviewFrame { width: 100%; height: 70vh; border: 0; background: white; }
+    #reviewCard .review-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
     @media (prefers-reduced-motion: reduce) {
       .walk-chip { transition: none !important; }
@@ -609,6 +611,13 @@
   <div id="teacherBar" class="teacher-bar" hidden></div>
   <h1>中位數</h1>
   <p id="progress" class="progress"></p>
+  <div class="card" id="reviewCard" hidden>
+    <div class="review-head">
+      <div class="card-title">作答分析</div>
+      <button type="button" class="btn btn-secondary" id="closeReview">返回練習</button>
+    </div>
+    <iframe id="reviewFrame" title="作答分析" hidden></iframe>
+  </div>
   <div class="card" id="pictureCard"></div>
   <div class="card anim-trial" id="animTrial" hidden>
     <div class="anim-head">
@@ -915,11 +924,7 @@
   }
 
   function attemptSource() {
-    try {
-      return new URLSearchParams(location.search).get("try") === "1" ? "試用" : "課堂";
-    } catch (error) {
-      return "課堂";
-    }
+    return "課堂";
   }
 
   function deviceId() {
@@ -1074,12 +1079,18 @@
       const button = makeButton(lesson.title, index === lessonIndex ? "btn" : "btn btn-secondary", () => showMode(index));
       bar.appendChild(button);
     });
-    if (attemptSource() === "試用") {
-      const note = document.createElement("span");
-      note.className = "problem-text";
-      note.textContent = "試用記錄，不計入課堂分析。";
-      bar.appendChild(note);
+    bar.appendChild(makeButton("老師", "btn btn-secondary", openReviewPanel));
+  }
+
+  function openReviewPanel() {
+    const card = document.getElementById("reviewCard");
+    const frame = document.getElementById("reviewFrame");
+    card.hidden = false;
+    if (!frame.getAttribute("src")) {
+      frame.src = "teacher.html?embed=1";
+      frame.hidden = false;
     }
+    card.scrollIntoView({ block: "start" });
   }
 
   function teacherStatusText() {
@@ -1114,9 +1125,7 @@
       button.className = "btn btn-secondary";
       button.textContent = "檢查額度";
       button.addEventListener("click", checkQuota);
-      const review = document.createElement("a");
-      review.href = "teacher.html";
-      review.textContent = "作答分析";
+      const review = makeButton("作答分析", "btn btn-secondary", openReviewPanel);
       bar.append(heading, status, button, review);
     }
     status.textContent = teacherStatusText();
@@ -5372,7 +5381,17 @@
   }, 5000);
 
   bindAnimTrial();
+  document.getElementById("closeReview").addEventListener("click", () => {
+    document.getElementById("reviewCard").hidden = true;
+  });
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin) return;
+    if (!event.data || event.data.type !== "median-review-height") return;
+    const frame = document.getElementById("reviewFrame");
+    frame.style.height = Math.max(480, Number(event.data.height) || 0) + "px";
+  });
   loadLesson(0);
+  if (location.hash === "#teacher") openReviewPanel();
 </script>
 </body>
 </html>

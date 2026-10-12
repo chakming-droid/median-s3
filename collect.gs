@@ -31,7 +31,13 @@ function doGet(e) {
   var callback = String(params.callback || "callback").replace(/[^\w]/g, "");
   if (!callback) callback = "callback";
   var allowed = REVIEW_PASSWORD && REVIEW_PASSWORD !== PLACEHOLDER_PASSWORD && params.password === REVIEW_PASSWORD;
-  var payload = allowed ? { ok: true, rows: readRows_() } : { ok: false };
+  var payload = { ok: false };
+  if (allowed && params.action === "delete") {
+    clearRows_();
+    payload = { ok: true, deleted: true, rows: [] };
+  } else if (allowed) {
+    payload = { ok: true, rows: readRows_() };
+  }
   return ContentService
     .createTextOutput(callback + "(" + JSON.stringify(payload) + ")")
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -45,6 +51,12 @@ function sheet_() {
     sheet.appendRow(["時間", "編號", "來源", "題目", "步驟", "輸入", "對錯", "難點"]);
   }
   return sheet;
+}
+
+function clearRows_() {
+  var sheet = sheet_();
+  var last = sheet.getLastRow();
+  if (last > 1) sheet.deleteRows(2, last - 1);
 }
 
 function appendRow_(row) {
