@@ -82,7 +82,7 @@
 <body>
   <div class="container">
     <h1>作答分析</h1>
-    <p class="note">用橫條比較學習難點。逐次作答預設收起。不顯示正確答案，也不顯示姓名。</p>
+    <p class="note">用橫條比較學習難點。這部瀏覽器記住密碼後，重新整理就會更新。不顯示正確答案，也不顯示姓名。</p>
     <form id="gate">
       <input type="text" name="username" autocomplete="username" value="老師" hidden>
       <label>密碼
@@ -110,6 +110,7 @@
       <p class="links">
         <a href="index.html">課堂練習</a>
         <a href="index.html?try=1">同工試用</a>
+        <button type="button" class="btn btn-secondary" id="lockReview">鎖定</button>
       </p>
     </div>
   </div>
@@ -396,24 +397,46 @@
         });
       }
 
-      document.getElementById("gate").addEventListener("submit", (event) => {
-        event.preventDefault();
-        const typed = document.getElementById("password").value;
+      function savedPassword() {
+        try { return localStorage.getItem("median-review-key") || ""; }
+        catch (error) { return ""; }
+      }
+
+      function rememberPassword(password) {
+        try { localStorage.setItem("median-review-key", password); }
+        catch (error) {}
+      }
+
+      function forgetPassword() {
+        try { localStorage.removeItem("median-review-key"); }
+        catch (error) {}
+      }
+
+      function showGate(message) {
         const error = document.getElementById("gateError");
+        error.hidden = !message;
+        document.getElementById("gate").hidden = false;
+        document.getElementById("app").hidden = true;
+      }
+
+      function openReview(typed) {
         const expected = expectedPassword();
         const url = window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.collectUrl;
-        if ((expected && typed !== expected) || (!expected && !url)) {
-          error.hidden = false;
+        if (!typed || (expected && typed !== expected) || (!expected && !url)) {
+          forgetPassword();
+          showGate(true);
           return;
         }
-        error.hidden = true;
+        document.getElementById("gateError").hidden = true;
         const local = localRows();
         loadSheet(typed).then((sheet) => {
           const sheetOk = !!(sheet && sheet.ok && !sheet.skipped);
           if (!expected && !sheetOk) {
-            error.hidden = false;
+            forgetPassword();
+            showGate(true);
             return;
           }
+          rememberPassword(typed);
           const remote = sheetOk && Array.isArray(sheet.rows) ? sheet.rows : [];
           state.rows = merge(local, remote);
           state.sheetNote = sheet && sheet.skipped ? "local" : (sheetOk ? "sheet" : (sheet && sheet.denied ? "denied" : "sheet-fail"));
@@ -421,7 +444,18 @@
           document.getElementById("app").hidden = false;
           render();
         });
+      }
+
+      document.getElementById("gate").addEventListener("submit", (event) => {
+        event.preventDefault();
+        openReview(document.getElementById("password").value);
       });
+      document.getElementById("lockReview").addEventListener("click", () => {
+        forgetPassword();
+        document.getElementById("password").value = "";
+        showGate(false);
+      });
+      if (savedPassword()) openReview(savedPassword());
 
       document.querySelectorAll("[data-source]").forEach((button) => {
         button.addEventListener("click", () => {
