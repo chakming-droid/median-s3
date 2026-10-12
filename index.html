@@ -2856,7 +2856,6 @@
       const value = Number(item.val);
       if (!Number.isFinite(value)) return;
       row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => {
-        recordAttempt({ step: "選擇中位數", input: String(value), ok: true });
         bridgeChoose(value);
       }));
     });
@@ -2871,7 +2870,6 @@
   }
 
   function pensChooseMedian(value) {
-    recordAttempt({ step: "選擇中位數", input: String(value), ok: true });
     current().target = String(value);
     bridgeChoose(value);
   }

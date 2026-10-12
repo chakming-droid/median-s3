@@ -131,7 +131,7 @@
         "沒有填正整數": "最小和最大都要填正整數。",
         "其他": "先看哪一類出現最多，下一節只重教那一步。"
       };
-      const stepOrder = ["總數", "單雙", "第幾項", "中位數", "選擇中位數", "最小 x", "最大 x"];
+      const stepOrder = ["總數", "單雙", "第幾項", "中位數", "最小 x", "最大 x"];
 
       function expectedPassword() {
         return String((window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.reviewPassword) || "");
@@ -249,7 +249,7 @@
       }
 
       function render() {
-        const rows = selectedRows();
+        const rows = selectedRows().filter((row) => row.step !== "選擇中位數");
         const wrong = rows.filter((row) => !row.ok);
         const scope = document.getElementById("scopeNote");
         if (state.sheetNote === "sheet") {
