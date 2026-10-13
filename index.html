@@ -853,6 +853,13 @@
     return "x";
   }
 
+  function unknownValue() {
+    const model = modelOf(current());
+    if (!model || model.error || !model.rows) return "";
+    const row = model.rows.find((item) => item.freq && item.freq.k);
+    return row ? String(row.val) : "";
+  }
+
   function trialNumber() {
     const raw = document.getElementById("trialX");
     if (raw && String(raw.value).trim() !== "") return Number(raw.value);
@@ -1132,10 +1139,22 @@
     if (id === "pens") {
       const letter = unknownLetter();
       const target = current().target;
+      const value = unknownValue();
+      const place = unknownPlacement();
+      const cell = value ? letter + " 在 " + value + " 那一格。" : letter + " 寫在表裡。";
+      let second = "先試 " + letter + " = 1。若寫「比 " + target + " 小」，再試一個大很多的，例如 20。";
+      let third = "「比 " + target + " 小」是太小，「比 " + target + " 大」是太大。在這兩個數中間再試。";
+      if (place === "left") {
+        second = "先試 " + letter + " = 1。若寫「比 " + target + " 大」，再試一個大很多的，例如 20。";
+        third = "「比 " + target + " 大」是太小，「比 " + target + " 小」是太大。在這兩個數中間再試。";
+      }
+      if (place === "mid") second = "先試 " + letter + " = 1，再試一個大很多的，例如 20。看有沒有寫「在 " + target + "」。";
       return [
-        "先試一個小的 " + letter + "，再試一個大的。看正中間在比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。",
-        "未明白就按提示一，再按提示二。在太小和太大中間再試。最小是剛變成「在 " + target + "」；最大是再大一點就離開「在 " + target + "」之前。",
-        "然後才填最小和最大。仍未明白才按最下面的「看動畫」。"
+        "中位數要是 " + target + "。" + cell,
+        second,
+        third,
+        "由小看到大：第一個寫「在 " + target + "」的是最小；最後一個仍然寫「在 " + target + "」的是最大。",
+        "然後才填下面兩格。還是不明白，才按最下面的「看動畫」。"
       ];
     }
     return [
@@ -2252,18 +2271,15 @@
   function pensPictureHint(level) {
     const target = current().target;
     const letter = unknownLetter();
+    const value = unknownValue();
     const place = unknownPlacement();
     if (level === 1) {
-      const open = "先試一個小的 " + letter + "，再試一個大的。";
-      if (place === "left") return open + letter + " 在 " + target + " 的左邊，" + letter + " 變大，正中間會向較小的數移。";
-      if (place === "mid") return open + "寫了 " + letter + " 的就是 " + target + "。看正中間有沒有留在 " + target + "。";
-      if (place !== "right") return open + "看正中間會移到比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。";
-      return open + letter + " 在 " + target + " 的右邊，" + letter + " 變大，正中間會向較大的數移。";
+      if (place === "left") return letter + " 在 " + value + " 那一格，在 " + target + " 的左邊。" + letter + " 愈大，正中間會向較小的數移。太大就試大一點，太小就試小一點。";
+      if (place === "mid") return "寫了 " + letter + " 的就是 " + target + "。再試大一點和小一點，看正中間有沒有留在 " + target + "。";
+      if (place !== "right") return "先試一個小的 " + letter + "，再試一個大的。看正中間寫的是比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。";
+      return letter + " 是有 " + value + " 枝筆的人數。" + letter + " 愈大，" + value + " 愈多，正中間會向較大的數移。太小就試大一點，太大就試小一點。";
     }
-    if (place === "left") return "最小是剛變成「在 " + target + "」的那個 " + letter + "。最大是仍「在 " + target + "」、再大一點就變成「比 " + target + " 小」之前的那個。";
-    if (place === "mid") return "最小是剛變成「在 " + target + "」的那個 " + letter + "。若再大仍然留在「在 " + target + "」，就沒有最大。";
-    if (place !== "right") return "最小是剛變成「在 " + target + "」的那個 " + letter + "。最大是再大一點就離開「在 " + target + "」之前的那個。";
-    return "最小是剛變成「在 " + target + "」的那個 " + letter + "。最大是仍「在 " + target + "」、再大一點就變成「比 " + target + " 大」之前的那個。";
+    return "看試過的列表，由小到大。第一個「在 " + target + "」填做最小，最後一個「在 " + target + "」填做最大。";
   }
 
   function pensHintLine(level) {
@@ -3098,17 +3114,27 @@
     const letter = unknownLetter();
     const target = String(current().target);
     const place = unknownPlacement();
-    if (!penProbes.length) return "先試一個小的正整數 " + letter + "。按「試這個」之後，只看正中間在哪裡。";
+    const rule = "由小看到大：第一個寫「在 " + target + "」的是最小；最後一個仍然寫「在 " + target + "」的是最大。";
+    if (!penProbes.length) {
+      if (place === "left") return "先試 " + letter + " = 1。若寫「比 " + target + " 大」，再試一個大很多的，例如 20。";
+      if (place === "mid") return "先試 " + letter + " = 1，再試一個大很多的，例如 20。看有沒有寫「在 " + target + "」。";
+      return "先試 " + letter + " = 1。若寫「比 " + target + " 小」，再試一個大很多的，例如 20。";
+    }
     const sides = {};
     penProbes.forEach((probe) => { sides[zoneSide(probe.zone)] = true; });
-    if (sides.on) return "你已經見過正中間「在 " + target + "」。再試旁邊的整數，找出剛變成「在 " + target + "」的那個，以及仍是「在 " + target + "」、再大一點就離開的那個。認好之後才填下面兩格。";
-    if (sides.low && sides.high) return "太小和太大你都試過了。在這兩個 " + letter + " 中間再試。剛變成「在 " + target + "」的是最小；仍是「在 " + target + "」、再大一點就離開之前的是最大。";
-    if (place === "right" && sides.low) return letter + " 寫在 " + target + " 的右邊。" + letter + " 變大，正中間會向較大的數移。再試一個大很多的 " + letter + "。";
-    if (place === "right" && sides.high) return letter + " 寫在 " + target + " 的右邊。剛才正中間已經到了比 " + target + " 大的一邊。再試一個小一點的 " + letter + "。";
-    if (place === "left" && sides.high) return letter + " 寫在 " + target + " 的左邊。" + letter + " 變大，正中間會向較小的數移。再試一個大很多的 " + letter + "。";
-    if (place === "left" && sides.low) return letter + " 寫在 " + target + " 的左邊。剛才正中間已經到了比 " + target + " 小的一邊。再試一個小一點的 " + letter + "。";
-    if (place === "mid") return "寫了 " + letter + " 的那格就是 " + target + "。再試另一個正整數，看正中間有沒有留在 " + target + "。";
-    return "再試另一個正整數，看正中間在比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。";
+    if (sides.on) return rule + "然後才填下面兩格。";
+    if (sides.low && sides.high) {
+      const which = place === "left"
+        ? "「比 " + target + " 大」是太小，「比 " + target + " 小」是太大。"
+        : "「比 " + target + " 小」是太小，「比 " + target + " 大」是太大。";
+      return which + "在這兩個數中間再試。" + rule;
+    }
+    if (place === "left" && sides.high) return "這次太大。再試一個大很多的 " + letter + "。";
+    if (place === "left" && sides.low) return "這次太小。再試一個小一點的 " + letter + "。";
+    if (place === "right" && sides.low) return "這次太小。再試一個大很多的，例如 20。";
+    if (place === "right" && sides.high) return "這次太大。再試一個小一點的 " + letter + "。";
+    if (place === "mid") return "再試另一個正整數，看有沒有寫「在 " + target + "」。" + rule;
+    return "再試另一個正整數。看寫的是比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。";
   }
 
   function penTryNote() {
@@ -3198,7 +3224,7 @@
     if (pictureHintOn(2)) form.appendChild(pensHintLine(2));
     const then = document.createElement("p");
     then.className = "problem-text";
-    then.textContent = "認好之後，才填下面的最小和最大。";
+    then.textContent = "然後才填下面兩格。";
     form.appendChild(then);
   }
 
@@ -3554,12 +3580,12 @@
     const model = modelOf(lesson);
     const view = !model.error && model.rows ? MedianMath.medianForX(model.rows, currentTrial()) : null;
     if (lesson.id === "pens") {
+      const value = unknownValue();
       const place = unknownPlacement();
-      let where = "";
-      if (place === "right") where = letter + " 寫在 " + lesson.target + " 的右邊。";
-      else if (place === "left") where = letter + " 寫在 " + lesson.target + " 的左邊。";
+      let where = value ? letter + " 在 " + value + " 那一格。" : "";
+      if (place === "left" && value) where = letter + " 在 " + value + " 那一格，在 " + lesson.target + " 的左邊。";
       else if (place === "mid") where = "寫了 " + letter + " 的就是 " + lesson.target + "。";
-      return "看這張表。中位數要是 " + lesson.target + "。" + where + "先在下面試一個正整數 " + letter + "。";
+      return "中位數要是 " + lesson.target + "。" + where + "先試 " + letter + " = 1。";
     }
     if (tutor.step === 1) {
       if (!view) return "先用 − 和 + 選定一個正整數。";
