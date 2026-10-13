@@ -71,6 +71,9 @@
       font-size: 1.1rem;
       margin-bottom: 12px;
     }
+    .how-to .card-title { margin-bottom: 6px; }
+    .how-to ol { margin: 0; padding-left: 1.3em; }
+    .how-to li { margin: 4px 0; line-height: 1.5; }
 
     .problem-text { line-height: 1.6; margin: 8px 0 12px; }
     .problem-img { max-width: 100%; height: auto; border: 1px solid #cbd5e1; border-radius: 8px; background: white; display: block; margin: 8px 0 12px; }
@@ -348,6 +351,7 @@
     .bubble-hint { background: #fffbeb; border: 1px solid #fcd34d; }
     .bubble-label { display: block; font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 2px; }
     .trial-list { margin: 0; padding-left: 1.2rem; }
+    .pen-probes { max-height: 9.5rem; overflow-y: auto; margin-top: 6px; }
     .trial-readout { font-weight: 800; font-size: 1.2rem; min-width: 4.8rem; text-align: center; }
     .trial-stepper { display: inline-flex; align-items: center; gap: 6px; }
     .step-btn { min-width: 52px; min-height: 48px; font-size: 1.45rem; line-height: 1; padding: 8px 14px; }
@@ -619,29 +623,15 @@
     <iframe id="reviewFrame" title="作答分析" hidden></iframe>
   </div>
   <div class="card" id="pictureCard"></div>
-  <div class="card anim-trial" id="animTrial" hidden>
-    <div class="anim-head">
-      <div class="card-title">動畫試做</div>
-    </div>
-    <div id="animBody">
-      <p class="anim-note">動畫1由兩端找中間。動畫2沿項次位置帶逐行累加，找到中央項次。可逐步，或自動播放。</p>
-      <p class="anim-kicker" id="animKicker" aria-live="polite"></p>
-      <div class="anim-board" id="animBoard"></div>
-      <div class="action-row">
-        <button type="button" class="btn" id="animClip1">動畫1</button>
-        <button type="button" class="btn btn-secondary" id="animClip2">動畫2</button>
-        <button type="button" class="btn btn-secondary" id="animClose">收起</button>
-      </div>
-      <div class="action-row">
-        <button type="button" class="btn btn-secondary" id="animPrev">上一步</button>
-        <button type="button" class="btn" id="animNext">下一步</button>
-        <button type="button" class="btn btn-secondary" id="animAuto">自動播放</button>
-        <button type="button" class="btn btn-secondary" id="animReplay" hidden>重新示範</button>
-      </div>
-    </div>
-    <div id="animReopen" hidden>
-      <button type="button" class="btn btn-secondary" id="animOpen">看動畫試做</button>
-    </div>
+  <div class="card how-to" id="guideCard">
+    <div class="card-title">怎樣做</div>
+    <ol id="guideList"></ol>
+  </div>
+  <div class="card" id="tutorCard">
+    <div class="card-title">先回答這些問題</div>
+    <div id="tutorLog"></div>
+    <div id="tutorForm"></div>
+    <div class="form-row" id="tutorActions"></div>
   </div>
   <div class="card" id="queueCard" hidden>
     <div class="card-title">由小至大排列的原始數據</div>
@@ -651,10 +641,24 @@
       <div id="resultContent"></div>
     </div>
   </div>
-  <div class="card" id="tutorCard">
-    <div id="tutorLog"></div>
-    <div id="tutorForm"></div>
-    <div class="form-row" id="tutorActions"></div>
+  <div class="card anim-trial" id="animTrial" hidden>
+    <div class="anim-head">
+      <div class="card-title">動畫</div>
+    </div>
+    <div id="animBody">
+      <p class="anim-note">由兩端逐個去掉，找到正中間。可逐步，或自動播放。</p>
+      <p class="anim-kicker" id="animKicker" aria-live="polite"></p>
+      <div class="anim-board" id="animBoard"></div>
+      <div class="action-row">
+        <button type="button" class="btn btn-secondary" id="animPrev">上一步</button>
+        <button type="button" class="btn" id="animNext">下一步</button>
+        <button type="button" class="btn btn-secondary" id="animAuto">自動播放</button>
+        <button type="button" class="btn btn-secondary" id="animClose">收起</button>
+      </div>
+    </div>
+    <div id="animReopen" hidden>
+      <button type="button" class="btn btn-secondary" id="animOpen">看動畫</button>
+    </div>
   </div>
   <div class="card" id="checkCard" hidden>
     <div id="checkSlot"></div>
@@ -730,6 +734,9 @@
   let bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
   let showBlocks = false;
   let showBand = true;
+  let purpleOpen = false;
+  let penProbes = [];
+  let penMessage = "";
   let discreteRevealed = false;
   let casesRevealed = false;
   let asking = false;
@@ -1006,6 +1013,7 @@
     renderProgress();
     renderTeacher();
     renderPicture();
+    renderGuide();
     renderQueue();
     renderTutor();
     renderCheck();
@@ -1039,6 +1047,9 @@
     bridgeStop();
     bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
     animTrial.pensOpen = false;
+    purpleOpen = false;
+    penProbes = [];
+    penMessage = "";
     animTrial.closed = true;
     animTrial.seen = false;
     animStop();
@@ -1107,6 +1118,42 @@
       return "問得太密，問答暫停約一分鐘。學生頁不會說明原因，時間過了會自己恢復。";
     }
     return teacherNote || "免費問答可用。學生頁不會顯示這列。檢查額度會用掉一次免費問答。";
+  }
+
+  function guideLines() {
+    const id = current().id;
+    if (id === "bridge") {
+      return [
+        "在下面選一個表裡已有的數，當作中位數。",
+        "看紫色怎樣加到正中間。先看最少，再看最多。",
+        "未明白就按「看動畫」。"
+      ];
+    }
+    if (id === "pens") {
+      const letter = unknownLetter();
+      const target = current().target;
+      return [
+        "先試一個小的 " + letter + "，再試一個大的。看正中間在比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。",
+        "未明白就按提示一，再按提示二。在太小和太大中間再試。最小是剛變成「在 " + target + "」；最大是再大一點就離開「在 " + target + "」之前。",
+        "然後才填最小和最大。仍未明白才按最下面的「看動畫」。"
+      ];
+    }
+    return [
+      "先回答下面的問題，一步一步做。",
+      "未明白就按提示一，再按提示二。",
+      "仍未明白就按「看動畫」。中位數留到最後一題才填。"
+    ];
+  }
+
+  function renderGuide() {
+    const list = document.getElementById("guideList");
+    if (!list) return;
+    list.innerHTML = "";
+    guideLines().forEach((line) => {
+      const item = document.createElement("li");
+      item.textContent = line;
+      list.appendChild(item);
+    });
   }
 
   function renderTeacher() {
@@ -1267,8 +1314,9 @@
   function renderExtras() {
     const slot = document.getElementById("extraSlot");
     if (!slot) return;
-    const bridge = !!current().bridge;
-    const wanted = current().kind === "continuous" || bridge ? "plain" : (lessonHasX() ? "x" : "plain");
+    const lesson = current();
+    const bridge = !!lesson.bridge;
+    const wanted = lesson.kind === "continuous" || bridge ? "plain" : (lessonHasX() ? "x" : "plain");
     slot.dataset.mode = wanted;
     slot.innerHTML = "";
     const row = document.createElement("div");
@@ -1281,8 +1329,8 @@
         blocksButton.id = "toggleBlocks";
         pair.appendChild(blocksButton);
       }
-      if (wanted === "x") pair.appendChild(trialControls());
-      row.appendChild(pair);
+      if (wanted === "x" && current().id !== "pens") pair.appendChild(trialControls());
+      if (pair.childElementCount) row.appendChild(pair);
     }
     if (row.childElementCount) slot.appendChild(row);
     if (current().kind === "continuous") {
@@ -1736,6 +1784,10 @@
     bridgeRun.view = "min";
     bridgeRun.minAdded = null;
     bridgeRun.maxAdded = null;
+    if (current().id === "pens") {
+      penProbes = [];
+      penMessage = "";
+    }
     if (current().bridge) {
       renderTutor();
       renderQueue();
@@ -1968,7 +2020,8 @@
     const result = document.getElementById("resultContent");
     const wantBand = lesson.id === "pens" && showBand && !revealCases;
     const pensFolds = lesson.id === "pens" && !revealCases;
-    if (title) title.hidden = wantBand && !showBlocks && !reveal && !revealCases;
+    if (title) title.hidden = !pensFolds && wantBand && !showBlocks && !reveal && !revealCases;
+    if (title && pensFolds) title.textContent = "動畫";
     if (!pensFolds && !(showBlocks || reveal || revealCases || wantBand)) {
       card.hidden = true;
       wrapper.innerHTML = "";
@@ -2018,7 +2071,12 @@
       return;
     }
     const expanded = expandRows(model.rows, 1);
-    if (!reveal) wrapper.appendChild(pictureHintButtons());
+    if (!reveal) {
+      const hintNote = document.createElement("p");
+      hintNote.className = "problem-text";
+      hintNote.textContent = "未明白上面的問題，就按提示一，再按提示二。";
+      wrapper.append(hintNote, pictureHintButtons());
+    }
     if (!reveal && !rowMarksOn()) {
       wrapper.appendChild(plainLine(expanded, view));
       return;
@@ -2045,7 +2103,7 @@
     const slot = document.getElementById("checkSlot");
     if (!card || !slot) return;
     const letter = current().kind === "continuous" ? "" : unknownLetter();
-    if (current().bridge || current().id === "pens") {
+    if (current().bridge || current().id === "pens" || current().id === "discrete") {
       card.hidden = true;
       slot.innerHTML = "";
       slot.dataset.mode = "";
@@ -2182,11 +2240,37 @@
   }
 
   function itemLabelsOn() {
+    if (current().id === "pens") return false;
     return pictureHintOn(1) || pictureHintOn(2);
   }
 
   function cutLineOn() {
+    if (current().id === "pens") return false;
     return pictureHintOn(2);
+  }
+
+  function pensPictureHint(level) {
+    const target = current().target;
+    const letter = unknownLetter();
+    const place = unknownPlacement();
+    if (level === 1) {
+      const open = "先試一個小的 " + letter + "，再試一個大的。";
+      if (place === "left") return open + letter + " 在 " + target + " 的左邊，" + letter + " 變大，正中間會向較小的數移。";
+      if (place === "mid") return open + "寫了 " + letter + " 的就是 " + target + "。看正中間有沒有留在 " + target + "。";
+      if (place !== "right") return open + "看正中間會移到比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。";
+      return open + letter + " 在 " + target + " 的右邊，" + letter + " 變大，正中間會向較大的數移。";
+    }
+    if (place === "left") return "最小是剛變成「在 " + target + "」的那個 " + letter + "。最大是仍「在 " + target + "」、再大一點就變成「比 " + target + " 小」之前的那個。";
+    if (place === "mid") return "最小是剛變成「在 " + target + "」的那個 " + letter + "。若再大仍然留在「在 " + target + "」，就沒有最大。";
+    if (place !== "right") return "最小是剛變成「在 " + target + "」的那個 " + letter + "。最大是再大一點就離開「在 " + target + "」之前的那個。";
+    return "最小是剛變成「在 " + target + "」的那個 " + letter + "。最大是仍「在 " + target + "」、再大一點就變成「比 " + target + " 大」之前的那個。";
+  }
+
+  function pensHintLine(level) {
+    const text = document.createElement("p");
+    text.className = "bubble bubble-hint";
+    text.textContent = pensPictureHint(level);
+    return text;
   }
 
   function pictureHintButton(level, title) {
@@ -2216,6 +2300,7 @@
     }
     showBlocks = true;
     render();
+    if (current().id === "pens") return;
     if (!open && level === 2) scrollMark();
   }
 
@@ -2930,7 +3015,7 @@
         : "請輸入有效的數據與頻數。頻數須為正整數，或 x。";
       fragment.appendChild(note);
     }
-    fragment.append(pensBandSection(model, letter), pensLineSection(model, letter));
+    fragment.appendChild(pensLineSection(model, letter));
     return fragment;
   }
 
@@ -2946,25 +3031,16 @@
     return section;
   }
 
-  function pensLineSection(model, letter) {
+  function togglePurple() {
+    purpleOpen = !purpleOpen;
+    renderQueue();
+  }
+
+  function pensLineSection(model) {
     const section = document.createElement("section");
     section.className = "fold-section";
-    section.appendChild(foldBar(showBlocks, "收起數列", "打開數列", toggleBlocks, "toggleBlocks"));
-    if (!showBlocks || model.error || !model.rows) return section;
-    const rows = model.rows;
-    const x = currentTrial();
-    const view = MedianMath.medianForX(rows, x);
-    section.appendChild(pensExplorer());
-    if (!rowMarksOn() || !view) return section;
-    const count = expandedCount(rows, x);
-    if (count <= 400) section.appendChild(compactRow(expandRows(rows, x), view, false));
-    else {
-      section.appendChild(medianSplit(positionRuns(rows, x), view));
-      const note = document.createElement("p");
-      note.className = "problem-text";
-      note.textContent = "這個數太大，未能逐項標出第幾項。試一個小一點的正整數。";
-      section.appendChild(note);
-    }
+    section.appendChild(foldBar(purpleOpen, "收起動畫", "看動畫", togglePurple, "togglePurple"));
+    if (purpleOpen && model && !model.error && model.rows) section.appendChild(pensExplorer());
     return section;
   }
 
@@ -2972,8 +3048,6 @@
     const wrap = document.createElement("div");
     const x = currentTrial();
     const view = MedianMath.medianForX(rows, x);
-    if (showBand) wrap.appendChild(xBand(rows, letter, x, view, Number(current().target)));
-    if (showBlocks && current().id === "pens") wrap.appendChild(pensExplorer());
     if (!showBlocks || !rowMarksOn() || !view) return wrap;
     const count = expandedCount(rows, x);
     if (count <= 400) wrap.appendChild(compactRow(expandRows(rows, x), view, false));
@@ -2987,7 +3061,150 @@
     return wrap;
   }
 
+  function compareToTarget(value, target) {
+    if (MedianMath.sameNumber(value, target)) return 0;
+    return value < target ? -1 : 1;
+  }
+
+  function zoneOf(view, target) {
+    const values = (view && view.values ? view.values : []).filter((value) => Number.isFinite(value));
+    if (!values.length || !Number.isFinite(target)) return "";
+    const marks = values.map((value) => compareToTarget(value, target));
+    if (marks.every((mark) => mark < 0)) return "below";
+    if (marks.every((mark) => mark > 0)) return "above";
+    if (marks.every((mark) => mark === 0)) return "on";
+    if (marks.some((mark) => mark < 0) && !marks.some((mark) => mark > 0)) return "between-low";
+    if (marks.some((mark) => mark > 0) && !marks.some((mark) => mark < 0)) return "between-high";
+    return "split";
+  }
+
+  function zonePhrase(zone, target) {
+    if (zone === "below") return "比 " + target + " 小";
+    if (zone === "between-low") return "在比 " + target + " 小和 " + target + " 之間";
+    if (zone === "on") return "在 " + target;
+    if (zone === "between-high") return "在 " + target + " 和比 " + target + " 大之間";
+    if (zone === "above") return "比 " + target + " 大";
+    return "還未能對上 " + target;
+  }
+
+  function zoneSide(zone) {
+    if (zone === "below" || zone === "between-low") return "low";
+    if (zone === "above" || zone === "between-high") return "high";
+    if (zone === "on") return "on";
+    return "other";
+  }
+
+  function pensCoachText() {
+    const letter = unknownLetter();
+    const target = String(current().target);
+    const place = unknownPlacement();
+    if (!penProbes.length) return "先試一個小的正整數 " + letter + "。按「試這個」之後，只看正中間在哪裡。";
+    const sides = {};
+    penProbes.forEach((probe) => { sides[zoneSide(probe.zone)] = true; });
+    if (sides.on) return "你已經見過正中間「在 " + target + "」。再試旁邊的整數，找出剛變成「在 " + target + "」的那個，以及仍是「在 " + target + "」、再大一點就離開的那個。認好之後才填下面兩格。";
+    if (sides.low && sides.high) return "太小和太大你都試過了。在這兩個 " + letter + " 中間再試。剛變成「在 " + target + "」的是最小；仍是「在 " + target + "」、再大一點就離開之前的是最大。";
+    if (place === "right" && sides.low) return letter + " 寫在 " + target + " 的右邊。" + letter + " 變大，正中間會向較大的數移。再試一個大很多的 " + letter + "。";
+    if (place === "right" && sides.high) return letter + " 寫在 " + target + " 的右邊。剛才正中間已經到了比 " + target + " 大的一邊。再試一個小一點的 " + letter + "。";
+    if (place === "left" && sides.high) return letter + " 寫在 " + target + " 的左邊。" + letter + " 變大，正中間會向較小的數移。再試一個大很多的 " + letter + "。";
+    if (place === "left" && sides.low) return letter + " 寫在 " + target + " 的左邊。剛才正中間已經到了比 " + target + " 小的一邊。再試一個小一點的 " + letter + "。";
+    if (place === "mid") return "寫了 " + letter + " 的那格就是 " + target + "。再試另一個正整數，看正中間有沒有留在 " + target + "。";
+    return "再試另一個正整數，看正中間在比 " + target + " 小、在 " + target + "，還是比 " + target + " 大。";
+  }
+
+  function penTryNote() {
+    if (penMessage) return penMessage;
+    if (!penProbes.length) return "試過的結果會留在這裡。";
+    const last = penProbes[penProbes.length - 1];
+    return "這次 " + unknownLetter() + " = " + last.x + "，正中間" + zonePhrase(last.zone, current().target) + "。";
+  }
+
+  function tryPenX() {
+    const input = document.getElementById("penTry");
+    const raw = input ? String(input.value).trim() : "";
+    const x = Number(raw);
+    const letter = unknownLetter();
+    if (!/^\d+$/.test(raw) || !Number.isInteger(x) || x < 1) {
+      penMessage = "請填一個正整數。";
+      render();
+      return;
+    }
+    if (x > 4000) {
+      penMessage = "這個數太大，試一個小一點的正整數。";
+      render();
+      return;
+    }
+    const model = modelOf(current());
+    const target = Number(current().target);
+    if (model.error || !model.rows || !Number.isFinite(target)) {
+      penMessage = "請先填好頻數表，並確認中位數是表裡的一個數值。";
+      render();
+      return;
+    }
+    const view = MedianMath.medianForX(model.rows, x);
+    if (!view) {
+      penMessage = "這個 " + letter + " 還看不出正中間在哪裡。";
+      render();
+      return;
+    }
+    penProbes = penProbes.filter((probe) => probe.x !== x);
+    penProbes.push({ x: x, zone: zoneOf(view, target) });
+    penMessage = "";
+    render();
+  }
+
+  function renderPensTry(form) {
+    const letter = unknownLetter();
+    const target = current().target;
+    const coach = document.createElement("p");
+    coach.className = "problem-text";
+    coach.textContent = pensCoachText();
+    form.appendChild(coach);
+    const row = document.createElement("div");
+    row.className = "form-row";
+    const label = document.createElement("label");
+    label.append(document.createTextNode(letter + " = "));
+    const input = document.createElement("input");
+    input.id = "penTry";
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.autocomplete = "off";
+    input.placeholder = "正整數";
+    restoreField(input);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        tryPenX();
+      }
+    });
+    label.appendChild(input);
+    row.append(label, makeButton("試這個", "btn", tryPenX));
+    form.appendChild(row);
+    const note = document.createElement("p");
+    note.className = "problem-text";
+    note.textContent = penTryNote();
+    form.appendChild(note);
+    if (penProbes.length) {
+      const list = document.createElement("ul");
+      list.className = "trial-list pen-probes";
+      penProbes.forEach((probe) => {
+        const item = document.createElement("li");
+        item.textContent = letter + " = " + probe.x + "：正中間" + zonePhrase(probe.zone, target);
+        list.appendChild(item);
+      });
+      form.appendChild(list);
+    }
+    form.appendChild(pictureHintButtons());
+    if (pictureHintOn(1)) form.appendChild(pensHintLine(1));
+    if (pictureHintOn(2)) form.appendChild(pensHintLine(2));
+    const then = document.createElement("p");
+    then.className = "problem-text";
+    then.textContent = "認好之後，才填下面的最小和最大。";
+    form.appendChild(then);
+  }
+
   function renderTutor() {
+    const tutorTitle = document.querySelector("#tutorCard > .card-title");
+    if (tutorTitle) tutorTitle.textContent = current().id === "pens" && !tutor.solved ? "先試一個數" : "先回答這些問題";
     renderLog();
     const form = document.getElementById("tutorForm");
     const actions = document.getElementById("tutorActions");
@@ -3025,7 +3242,10 @@
       updateBalance();
       return;
     }
-    if (tutor.mode === "unknown" && tutor.step > 1) {
+    if (current().id === "pens" && tutor.mode === "unknown") {
+      renderPensTry(form);
+      renderUnknownControls(form, actions);
+    } else if (tutor.mode === "unknown" && tutor.step > 1) {
       renderUnknownControls(form, actions);
     } else if (tutor.mode === "known" && tutor.step === 2) {
       actions.append(makeButton("單數", "btn", () => chooseParity(true)), makeButton("雙數", "btn btn-secondary", () => chooseParity(false)));
@@ -3333,6 +3553,14 @@
     const letter = unknownLetter();
     const model = modelOf(lesson);
     const view = !model.error && model.rows ? MedianMath.medianForX(model.rows, currentTrial()) : null;
+    if (lesson.id === "pens") {
+      const place = unknownPlacement();
+      let where = "";
+      if (place === "right") where = letter + " 寫在 " + lesson.target + " 的右邊。";
+      else if (place === "left") where = letter + " 寫在 " + lesson.target + " 的左邊。";
+      else if (place === "mid") where = "寫了 " + letter + " 的就是 " + lesson.target + "。";
+      return "看這張表。中位數要是 " + lesson.target + "。" + where + "先在下面試一個正整數 " + letter + "。";
+    }
     if (tutor.step === 1) {
       if (!view) return "先用 − 和 + 選定一個正整數。";
       return view.odd
@@ -3357,6 +3585,7 @@
       return "幫他在一半的高度看曲線交點，再讀橫軸最接近的數值。不要說出那個數。";
     }
     const letter = unknownLetter();
+    if (current().id === "pens") return "幫他先試小的正整數，再試大的，看正中間在題目的中位數、還是在小的一邊或大的一邊。不要說出最小、最大，也不要說出試出來的中位數。";
     if (tutor.step === 1) return "幫他找出現在這個數的中位數是第幾項。奇數是正中間一項，偶數是正中間兩項。不要說出第幾項。";
     return "幫他分最小和最大兩種情況。中位數放在正中間，左邊的項數等於右邊的項數，從而自己寫出等式。不要寫出等式，不要說出最小和最大，也不要說出 " + letter + " 的值。";
   }
@@ -3459,6 +3688,7 @@
   function unknownHint(level) {
     const letter = unknownLetter();
     const model = modelOf(current());
+    if (current().id === "pens") return pensPictureHint(level);
     if (model.error || !model.rows) return "請先填好頻數表。";
     if (!MedianMath.groupSpan(model.rows, Number(current().target)).found) return "請先確認中位數是表裡的其中一個數值。";
     if (tutor.step === 1) {
@@ -3552,6 +3782,9 @@
     tutor.trap = false;
     tutor.solved = false;
     tutor.trials = [];
+    penProbes = [];
+    penMessage = "";
+    purpleOpen = false;
     if (hasX && !Number.isFinite(Number(lesson.target))) {
       tutor.blocked = true;
       tutor.log.push({ kind: "tutor", text: "表裡有未知數。請先按表裡的一個數值，當作中位數。" });
@@ -4340,10 +4573,10 @@
       return "最小 " + unknownLetter();
     }
     if (tutor.mode === "known") {
-      const view = knownView();
       if (tutor.step === 1) return "總數";
       if (tutor.step === 3) return "第幾項";
-      return "中位數";
+      if (tutor.step === 4) return "中位數";
+      return "答案";
     }
     if (tutor.step === 1) return "總頻數";
     if (tutor.step === 2) return "累積頻數";
@@ -5282,10 +5515,9 @@
       animBeat(0);
       return;
     }
-    const floor = animTrial.clip === 2 ? 0 : 1;
-    const capped = Math.max(floor, Math.min(animMaxStep(), step));
-    if (animTrial.clip === 2) anim2Run(capped, play, token, data);
-    else anim1Run(capped, play, token, data);
+    animTrial.clip = 1;
+    const capped = Math.max(1, Math.min(animMaxStep(), step));
+    anim1Run(capped, play, token, data);
   }
 
   function animSyncControls() {
@@ -5296,27 +5528,20 @@
     const next = document.getElementById("animNext");
     const auto = document.getElementById("animAuto");
     const replay = document.getElementById("animReplay");
-    const floor = animTrial.clip === 2 ? 0 : 1;
-    if (card) card.dataset.clip = String(animTrial.clip);
-    if (clip1) {
-      clip1.className = animTrial.clip === 1 ? "btn" : "btn btn-secondary";
-      clip1.textContent = animTrial.clip === 2 ? "回看動畫1" : "動畫1";
-    }
-    const lessonId = current().id;
-    if (clip2) {
-      clip2.hidden = lessonId === "pens";
-      clip2.className = animTrial.clip === 2 ? "btn" : "btn btn-secondary";
-    }
+    animTrial.clip = 1;
+    if (card) card.dataset.clip = "1";
+    if (clip1) clip1.hidden = true;
+    if (clip2) clip2.hidden = true;
     if (auto) {
       auto.className = animTrial.play === "auto" ? "btn" : "btn btn-secondary";
-      auto.textContent = animTrial.clip === 2 ? "自動播放定位" : "自動播放";
+      auto.textContent = "自動播放";
     }
     if (next) {
-      next.textContent = animTrial.clip === 2 ? "累加下一行" : "下一步";
-      next.classList.toggle("anim-next-locate", animTrial.clip === 2);
+      next.textContent = "下一步";
+      next.classList.remove("anim-next-locate");
     }
-    if (replay) replay.hidden = animTrial.clip !== 2;
-    if (prev) prev.disabled = animTrial.step <= floor;
+    if (replay) replay.hidden = true;
+    if (prev) prev.disabled = animTrial.step <= 1;
     if (next) next.disabled = animTrial.step >= animMaxStep();
   }
 
@@ -5337,7 +5562,8 @@
     if (reopen) reopen.hidden = !animTrial.closed;
     if (!animTrial.closed && !animTrial.seen) {
       animTrial.seen = true;
-      animGo(current().id === "pens" ? 1 : (animTrial.clip === 2 ? 0 : 1), current().id === "pens" ? "auto" : "step");
+      animTrial.clip = 1;
+      animGo(1, "step");
     }
   }
 
@@ -5354,14 +5580,9 @@
       animTrial.clip = 1;
       animGo(1, "step");
     });
-    if (clip2) clip2.addEventListener("click", () => {
-      animTrial.clip = 2;
-      animGo(0, "step");
-    });
     if (prev) prev.addEventListener("click", () => animGo(animTrial.step - 1, "step"));
     if (next) next.addEventListener("click", () => animGo(animTrial.step + 1, "step"));
-    if (auto) auto.addEventListener("click", () => animGo(animTrial.clip === 2 ? 0 : 1, "auto"));
-    if (replay) replay.addEventListener("click", () => animGo(0, "step"));
+    if (auto) auto.addEventListener("click", () => animGo(1, "auto"));
     if (closeBtn) closeBtn.addEventListener("click", () => {
       animTrial.closed = true;
       animStop();
