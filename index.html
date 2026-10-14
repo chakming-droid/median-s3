@@ -504,13 +504,17 @@
     .anim-chip.extra-x, .anim-pill.extra-x { background: #fde68a; color: #92400e; border-color: #d97706; }
     .anim-chip.extra.gone, .anim-chip.extra-x.gone { opacity: 0.2; border-color: #cbd5e1; background: #f8fafc; color: #94a3b8; }
     .bridge-row { display: flex; flex-wrap: wrap; column-gap: 4px; row-gap: 18px; justify-content: center; align-items: flex-end; padding-top: 18px; padding-bottom: 16px; }
+    .pen-guide { margin: 4px 0 8px; }
     .bridge-chip { position: relative; width: 30px; height: 32px; box-sizing: border-box; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; background: #e2e8f0; color: #0f172a; }
     .bridge-chip.extra { background: #ddd6fe; color: #5b21b6; }
     .bridge-group { display: flex; column-gap: 4px; position: relative; padding-bottom: 4px; box-shadow: inset 0 -3px 0 #7c3aed; }
     .bridge-group::before { content: attr(data-label); position: absolute; left: 50%; top: -16px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 800; color: #6d28d9; }
     .bridge-chip.outside { box-shadow: inset 0 0 0 2px #64748b; }
-    .bridge-chip.mid { box-shadow: inset 0 0 0 2px #ea580c; }
-    .bridge-chip.mid::after { content: "▲"; position: absolute; left: 0; right: 0; bottom: -14px; text-align: center; font-size: 10px; color: #ea580c; }
+    .bridge-chip.mid::after { content: "▲"; position: absolute; left: 0; right: 0; bottom: -14px; text-align: center; font-size: 10px; }
+    .bridge-chip.mid.hit { box-shadow: inset 0 0 0 2px #15803d; }
+    .bridge-chip.mid.hit::after { color: #15803d; }
+    .bridge-chip.mid.miss { box-shadow: inset 0 0 0 2px #dc2626; }
+    .bridge-chip.mid.miss::after { color: #dc2626; }
     .anim-arrow { position: absolute; left: 50%; bottom: -15px; color: #15803d; font-size: 0.8rem; font-weight: 800; line-height: 1; transform: translateX(-50%); animation: anim-rise 0.35s ease; }
     .anim-mark { position: absolute; color: #2563eb; font-size: 0.72rem; font-weight: 800; line-height: 1; white-space: nowrap; transform: translateX(-50%); }
     .anim-math { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; min-height: 52px; margin-top: 8px; font-weight: 800; font-size: 1.25rem; }
@@ -737,6 +741,9 @@
   let purpleOpen = false;
   let penProbes = [];
   let penMessage = "";
+  let penGuide = 0;
+  let penEqReady = false;
+  let penEqNote = "";
   let discreteRevealed = false;
   let casesRevealed = false;
   let asking = false;
@@ -1052,18 +1059,21 @@
     casesRevealed = false;
     asking = false;
     bridgeStop();
-    bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
+    bridgeRun = { target: lesson.id === "pens" ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
     animTrial.pensOpen = false;
     purpleOpen = false;
     penProbes = [];
     penMessage = "";
+    penGuide = 0;
+    penEqReady = false;
+    penEqNote = "";
     animTrial.closed = true;
     animTrial.seen = false;
     animStop();
     if (lesson.bridge) {
       tutor.mode = "bridge";
       tutor.step = 1;
-      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值。紫色會逐個加上這個數，先停在最少，再按繼續看最多。" });
+      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值，當作中位數。" });
       render();
       return;
     }
@@ -1165,8 +1175,15 @@
   }
 
   function renderGuide() {
+    const card = document.getElementById("guideCard");
     const list = document.getElementById("guideList");
-    if (!list) return;
+    if (!list || !card) return;
+    if (current().id === "pens") {
+      card.hidden = true;
+      list.innerHTML = "";
+      return;
+    }
+    card.hidden = false;
     list.innerHTML = "";
     guideLines().forEach((line) => {
       const item = document.createElement("li");
@@ -1368,6 +1385,15 @@
     row.className = "action-row";
     row.appendChild(makeButton("重置這一題", "btn btn-secondary", () => loadLesson(lessonIndex)));
     slot.appendChild(row);
+    if (current().id === "bridge") {
+      const next = lessons.findIndex((lesson) => lesson.id === "pens");
+      if (next >= 0) {
+        const bottom = document.createElement("div");
+        bottom.className = "action-row";
+        bottom.appendChild(makeButton("去看求未知頻數", "btn", () => showMode(next)));
+        slot.appendChild(bottom);
+      }
+    }
   }
 
   function trialControls() {
@@ -1806,6 +1832,7 @@
     if (current().id === "pens") {
       penProbes = [];
       penMessage = "";
+      penEqNote = "";
     }
     if (current().bridge) {
       renderTutor();
@@ -2040,7 +2067,6 @@
     const wantBand = lesson.id === "pens" && showBand && !revealCases;
     const pensFolds = lesson.id === "pens" && !revealCases;
     if (title) title.hidden = !pensFolds && wantBand && !showBlocks && !reveal && !revealCases;
-    if (title && pensFolds) title.textContent = "動畫";
     if (!pensFolds && !(showBlocks || reveal || revealCases || wantBand)) {
       card.hidden = true;
       wrapper.innerHTML = "";
@@ -2865,7 +2891,7 @@
   }
 
   function appendBridgePhaseButtons(parent) {
-    if (bridgeRun.phase === "min") parent.appendChild(makeButton("繼續，看最多", "btn", bridgeContinueMax));
+    if (bridgeRun.phase === "min") parent.appendChild(makeButton("去最多", "btn", bridgeContinueMax));
     if (bridgeRun.phase === "done" && bridgeRun.maxAdded != null && bridgeRun.minAdded !== bridgeRun.maxAdded) parent.appendChild(bridgeSwitchButtons());
     if (bridgeRun.phase === "free") parent.appendChild(makeButton("再加一個", "btn btn-secondary", bridgeAddOne));
   }
@@ -2901,6 +2927,32 @@
     bridgeRun.timer = setTimeout(bridgeTick, 700);
   }
 
+  function adjustPenCount(delta) {
+    const next = bridgeRun.added + delta;
+    if (next < 0 || next > 30) return;
+    bridgeStop();
+    bridgeRun.added = next;
+    bridgeRun.phase = "idle";
+    render();
+  }
+
+  function penStepper() {
+    const letter = unknownLetter();
+    const row = document.createElement("div");
+    row.className = "action-row";
+    const minus = makeButton("−", "btn btn-secondary", () => adjustPenCount(-1));
+    minus.disabled = bridgeRun.added <= 0;
+    minus.setAttribute("aria-label", "減少 " + letter);
+    const plus = makeButton("+", "btn btn-secondary", () => adjustPenCount(1));
+    plus.disabled = bridgeRun.added >= 30;
+    plus.setAttribute("aria-label", "增加 " + letter);
+    const readout = document.createElement("span");
+    readout.className = "trial-readout";
+    readout.textContent = letter + " = " + bridgeRun.added;
+    row.append(minus, readout, plus);
+    return row;
+  }
+
   function bridgeAddOne() {
     if (bridgeRun.phase !== "free" || bridgeRun.added >= 20) return;
     bridgeRun.added += 1;
@@ -2915,10 +2967,18 @@
 
   function bridgeBoard() {
     const wrap = document.createElement("div");
+    if (current().id === "pens") wrap.appendChild(penStepper());
+    else {
+      const actions = document.createElement("div");
+      actions.className = "action-row";
+      appendBridgePhaseButtons(actions);
+      if (actions.childElementCount) wrap.appendChild(actions);
+    }
     const pairs = bridgePairs();
     const count = pairs.length;
     const mids = count % 2 === 1 ? [(count + 1) / 2] : [count / 2, count / 2 + 1];
     const mark = bridgeMark();
+    const hit = bridgeRun.target != null && bridgeHit(pairs, bridgeRun.target);
     const row = document.createElement("div");
     row.className = "bridge-row";
     let extraSeen = 0;
@@ -2932,7 +2992,9 @@
       const chip = document.createElement("div");
       const covered = !!(item.extra && mark && extraSeen < mark.cover);
       const outside = !!(item.extra && mark && bridgeRun.phase === "done" && extraSeen >= mark.cover);
-      chip.className = "bridge-chip" + (item.extra ? " extra" : "") + (mids.indexOf(index + 1) >= 0 ? " mid" : "") + (outside ? " outside" : "");
+      const mid = mids.indexOf(index + 1) >= 0 && bridgeRun.target != null;
+      const tone = mid ? (hit ? " hit" : " miss") : "";
+      chip.className = "bridge-chip" + (item.extra ? " extra" : "") + (mid ? " mid" + tone : "") + (outside ? " outside" : "");
       chip.textContent = String(item.val);
       if (item.extra) extraSeen += 1;
       if (covered) {
@@ -2950,56 +3012,37 @@
     flush();
     const note = document.createElement("p");
     note.className = "anim-loc-note";
-    note.textContent = bridgeStatus() + "紫色是額外加上的。";
+    note.textContent = "綠框是中了。紅框是未中。";
     wrap.append(row, note);
     return wrap;
   }
 
-  function renderBridge(form, actions) {
-    const note = document.createElement("p");
-    note.className = "problem-text";
-    note.textContent = "選一個表裡已有的數值。先看到最少，再按繼續看最多。";
-    form.appendChild(note);
+  function medianChoiceButtons(onChoose) {
     const row = document.createElement("div");
     row.className = "action-row";
     current().rows.forEach((item) => {
       const value = Number(item.val);
       if (!Number.isFinite(value)) return;
-      row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => {
-        bridgeChoose(value);
-      }));
+      row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => onChoose(value)));
     });
-    form.appendChild(row);
-    const status = document.createElement("p");
-    status.className = "problem-text";
-    status.textContent = bridgeStatus();
-    form.appendChild(status);
-    appendBridgePhaseButtons(form);
-    const next = lessons.findIndex((lesson) => lesson.id === "pens");
-    if (next >= 0) actions.appendChild(makeButton("去看求未知頻數", "btn", () => showMode(next)));
+    return row;
+  }
+
+  function renderBridge(form) {
+    form.appendChild(medianChoiceButtons((value) => bridgeChoose(value)));
   }
 
   function pensChooseMedian(value) {
-    current().target = String(value);
-    bridgeChoose(value);
+    bridgeStop();
+    bridgeRun.target = value;
+    bridgeRun.phase = "idle";
+    render();
   }
 
   function pensExplorer() {
     const wrap = document.createElement("div");
     wrap.id = "pensExplorer";
     wrap.appendChild(bridgeBoard());
-    const note = document.createElement("p");
-    note.className = "problem-text";
-    note.textContent = "選一個表裡已有的數值，當作中位數。紫色會逐個加上寫了 x 的那個數，先停在最少，再按繼續看最多。";
-    const row = document.createElement("div");
-    row.className = "action-row";
-    current().rows.forEach((item) => {
-      const value = Number(item.val);
-      if (!Number.isFinite(value)) return;
-      row.appendChild(makeButton(String(value), bridgeRun.target === value ? "btn" : "btn btn-secondary", () => pensChooseMedian(value)));
-    });
-    wrap.append(note, row);
-    appendBridgePhaseButtons(wrap);
     return wrap;
   }
 
@@ -3031,8 +3074,114 @@
         : "請輸入有效的數據與頻數。頻數須為正整數，或 x。";
       fragment.appendChild(note);
     }
-    fragment.appendChild(pensLineSection(model, letter));
+    if (!model.error && model.rows) fragment.appendChild(bridgeBoard());
+    fragment.appendChild(pensAnswer());
     return fragment;
+  }
+
+  function togglePenGuide(level) {
+    penGuide = penGuide === level ? 0 : level;
+    render();
+  }
+
+  function knownTotal() {
+    const model = modelOf(current());
+    if (!model || model.error || !model.rows) return null;
+    let sum = 0;
+    for (const row of model.rows) {
+      if (!row.freq || typeof row.freq.c !== "number") return null;
+      sum += row.freq.c;
+    }
+    return sum;
+  }
+
+  function positionOk(raw) {
+    let text = String(raw).trim().toLowerCase();
+    text = text.replace(/\s+/g, "");
+    text = text.replace(/（/g, "(").replace(/）/g, ")");
+    text = text.replace(/＋/g, "+").replace(/／/g, "/").replace(/÷/g, "/");
+    text = text.replace(/^第/, "").replace(/項。?$/, "");
+    return text === "(n+1)/2"
+      || text === "n/2和n/2+1"
+      || text === "n/2及n/2+1"
+      || text === "n/2與n/2+1"
+      || text === "n/2、n/2+1"
+      || text === "n/2,n/2+1"
+      || text === "n/2，n/2+1"
+      || text === "(n/2)和(n/2+1)"
+      || text === "(n/2)及(n/2+1)";
+  }
+
+  function checkPenEquation() {
+    const knownInput = document.getElementById("eqKnown");
+    const posInput = document.getElementById("eqPos");
+    if (!knownInput || !posInput) return;
+    const knownRaw = knownInput.value.trim();
+    const posRaw = posInput.value.trim();
+    if (!knownRaw && !posRaw) {
+      penEqNote = "";
+      return;
+    }
+    const total = knownTotal();
+    const knownOk = !!knownRaw && total != null && Number(knownRaw) === total;
+    const posGood = !!posRaw && positionOk(posRaw);
+    if (knownRaw && !knownOk) penEqNote = "再加一次已知的人數。";
+    else if (posRaw && !posGood) penEqNote = "再寫正中間是第幾項。";
+    else if (knownOk && posGood) penEqNote = "式對了。";
+    else penEqNote = "還有一格。";
+  }
+
+  function penGuideBlock() {
+    const wrap = document.createElement("div");
+    wrap.className = "pen-guide";
+    const row = document.createElement("div");
+    row.className = "action-row";
+    const items = [
+      [1, "怎樣試", "選一個數。按 + 或 −，看正中間的框。"],
+      [2, "看到什麼", "綠框是中了。紅框是未中。有兩個框，就要兩個都綠。"],
+      [3, "怎樣填", "第一個綠的填最小。最後一個綠的填最大。"]
+    ];
+    items.forEach((item) => {
+      row.appendChild(makeButton(item[1], penGuide === item[0] ? "btn" : "btn btn-secondary", () => togglePenGuide(item[0])));
+    });
+    if (penEqReady) {
+      row.appendChild(makeButton("寫成一條式", penGuide === 4 ? "btn" : "btn btn-secondary", () => togglePenGuide(4)));
+    }
+    wrap.appendChild(row);
+    const open = items.find((item) => item[0] === penGuide);
+    if (open) {
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = open[2];
+      wrap.appendChild(note);
+    }
+    if (penGuide === 4) {
+      const line = document.createElement("div");
+      line.className = "form-row";
+      line.append(text("N = "), fieldLabel("", "eqKnown"), text(" + x"));
+      const place = document.createElement("div");
+      place.className = "form-row";
+      place.append(text("正中間是第 "), fieldLabel("", "eqPos"), text(" 項。"));
+      wrap.append(line, place);
+      if (penEqNote) {
+        const note = document.createElement("p");
+        note.className = "problem-text";
+        note.textContent = penEqNote;
+        wrap.appendChild(note);
+      }
+    }
+    return wrap;
+  }
+
+  function pensAnswer() {
+    const wrap = document.createElement("div");
+    wrap.className = "pens-answer";
+    wrap.appendChild(penGuideBlock());
+    const actions = document.createElement("div");
+    actions.className = "action-row";
+    renderUnknownControls(wrap, actions);
+    if (actions.childElementCount) wrap.appendChild(actions);
+    return wrap;
   }
 
   function pensBandSection(model, letter) {
@@ -3230,7 +3379,7 @@
 
   function renderTutor() {
     const tutorTitle = document.querySelector("#tutorCard > .card-title");
-    if (tutorTitle) tutorTitle.textContent = current().id === "pens" && !tutor.solved ? "先試一個數" : "先回答這些問題";
+    if (tutorTitle) tutorTitle.textContent = current().id === "pens" && !tutor.solved ? "選一個中位數" : "先回答這些問題";
     renderLog();
     const form = document.getElementById("tutorForm");
     const actions = document.getElementById("tutorActions");
@@ -3254,7 +3403,7 @@
       return;
     }
     if (tutor.mode === "bridge") {
-      renderBridge(form, actions);
+      renderBridge(form);
       updateBalance();
       return;
     }
@@ -3269,8 +3418,7 @@
       return;
     }
     if (current().id === "pens" && tutor.mode === "unknown") {
-      renderPensTry(form);
-      renderUnknownControls(form, actions);
+      form.appendChild(medianChoiceButtons(pensChooseMedian));
     } else if (tutor.mode === "unknown" && tutor.step > 1) {
       renderUnknownControls(form, actions);
     } else if (tutor.mode === "known" && tutor.step === 2) {
@@ -3296,6 +3444,7 @@
       form.appendChild(hintRow);
     }
     if (aiOpen()) form.appendChild(askRow());
+    actions.hidden = actions.childElementCount === 0;
     updateBalance();
     if (tutor.phase === "shown" && tutor.walk && !tutor.walkPlayed) {
       tutor.walkPlayed = true;
@@ -3558,7 +3707,7 @@
   function questionText() {
     if (phase === "type") return "做之前，先判斷：這是離散數據還是連續數據？";
     const lesson = current();
-    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。紫色會逐個加上這個數。";
+    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。";
     if (tutor.mode === "known") {
       const view = knownView();
       if (!view) return "請先填好頻數表。";
@@ -3579,14 +3728,7 @@
     const letter = unknownLetter();
     const model = modelOf(lesson);
     const view = !model.error && model.rows ? MedianMath.medianForX(model.rows, currentTrial()) : null;
-    if (lesson.id === "pens") {
-      const value = unknownValue();
-      const place = unknownPlacement();
-      let where = value ? letter + " 在 " + value + " 那一格。" : "";
-      if (place === "left" && value) where = letter + " 在 " + value + " 那一格，在 " + lesson.target + " 的左邊。";
-      else if (place === "mid") where = "寫了 " + letter + " 的就是 " + lesson.target + "。";
-      return "中位數要是 " + lesson.target + "。" + where + "先試 " + letter + " = 1。";
-    }
+    if (lesson.id === "pens") return "選一個表裡的數值，當作中位數。";
     if (tutor.step === 1) {
       if (!view) return "先用 − 和 + 選定一個正整數。";
       return view.odd
@@ -3810,6 +3952,9 @@
     tutor.trials = [];
     penProbes = [];
     penMessage = "";
+    penGuide = 0;
+    penEqReady = false;
+    penEqNote = "";
     purpleOpen = false;
     if (hasX && !Number.isFinite(Number(lesson.target))) {
       tutor.blocked = true;
@@ -4190,6 +4335,10 @@
   }
 
   function checkFinalAnswer() {
+    if (current().id === "pens") {
+      penEqReady = true;
+      checkPenEquation();
+    }
     const model = modelOf(current());
     const letter = unknownLetter();
     if (model.error || !model.rows) {
