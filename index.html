@@ -739,6 +739,7 @@
   let showBlocks = false;
   let showBand = true;
   let purpleOpen = false;
+  let solvedChipsOpen = false;
   let penProbes = [];
   let penMessage = "";
   let penGuide = 0;
@@ -1062,6 +1063,7 @@
     bridgeRun = { target: lesson.id === "pens" ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null };
     animTrial.pensOpen = false;
     purpleOpen = false;
+    solvedChipsOpen = false;
     penProbes = [];
     penMessage = "";
     penGuide = 0;
@@ -1833,6 +1835,7 @@
       penProbes = [];
       penMessage = "";
       penEqNote = "";
+      solvedChipsOpen = false;
     }
     if (current().bridge) {
       renderTutor();
@@ -2087,6 +2090,18 @@
       return;
     }
     const letter = unknownLetter();
+    if (model.hasX && revealCases && lesson.id === "pens") {
+      const range = MedianMath.rangeForTarget(model.rows, Number(lesson.target));
+      if (!range || range.none) {
+        wrapper.textContent = "按現在這張表，沒有正整數能使中位數等於題目。";
+        return;
+      }
+      wrapper.appendChild(foldBar(solvedChipsOpen, "收起數列", "打開數列", toggleSolvedChips, "toggleSolvedChips"));
+      if (solvedChipsOpen) wrapper.appendChild(caseFigure(model.rows, letter, range));
+      resultBox.hidden = false;
+      result.append(stepLine("中位數 = " + formatMedian(Number(lesson.target)) + "。"));
+      return;
+    }
     if (model.hasX && revealCases) {
       const range = MedianMath.rangeForTarget(model.rows, Number(lesson.target));
       if (!range || range.none) {
@@ -3074,7 +3089,13 @@
         : "請輸入有效的數據與頻數。頻數須為正整數，或 x。";
       fragment.appendChild(note);
     }
-    if (!model.error && model.rows) fragment.appendChild(bridgeBoard());
+    const solved = !!(tutor.solved || casesRevealed);
+    if (!model.error && model.rows) {
+      if (solved) {
+        fragment.appendChild(foldBar(solvedChipsOpen, "收起數列", "打開數列", toggleSolvedChips, "toggleSolvedChips"));
+        if (solvedChipsOpen) fragment.appendChild(bridgeBoard());
+      } else fragment.appendChild(bridgeBoard());
+    }
     fragment.appendChild(pensAnswer());
     return fragment;
   }
@@ -3144,9 +3165,6 @@
     items.forEach((item) => {
       row.appendChild(makeButton(item[1], penGuide === item[0] ? "btn" : "btn btn-secondary", () => togglePenGuide(item[0])));
     });
-    if (penEqReady) {
-      row.appendChild(makeButton("寫成一條式", penGuide === 4 ? "btn" : "btn btn-secondary", () => togglePenGuide(4)));
-    }
     wrap.appendChild(row);
     const open = items.find((item) => item[0] === penGuide);
     if (open) {
@@ -3154,21 +3172,6 @@
       note.className = "problem-text";
       note.textContent = open[2];
       wrap.appendChild(note);
-    }
-    if (penGuide === 4) {
-      const line = document.createElement("div");
-      line.className = "form-row";
-      line.append(text("N = "), fieldLabel("", "eqKnown"), text(" + x"));
-      const place = document.createElement("div");
-      place.className = "form-row";
-      place.append(text("正中間是第 "), fieldLabel("", "eqPos"), text(" 項。"));
-      wrap.append(line, place);
-      if (penEqNote) {
-        const note = document.createElement("p");
-        note.className = "problem-text";
-        note.textContent = penEqNote;
-        wrap.appendChild(note);
-      }
     }
     return wrap;
   }
@@ -3198,6 +3201,11 @@
 
   function togglePurple() {
     purpleOpen = !purpleOpen;
+    renderQueue();
+  }
+
+  function toggleSolvedChips() {
+    solvedChipsOpen = !solvedChipsOpen;
     renderQueue();
   }
 
@@ -3956,6 +3964,7 @@
     penEqReady = false;
     penEqNote = "";
     purpleOpen = false;
+    solvedChipsOpen = false;
     if (hasX && !Number.isFinite(Number(lesson.target))) {
       tutor.blocked = true;
       tutor.log.push({ kind: "tutor", text: "表裡有未知數。請先按表裡的一個數值，當作中位數。" });
@@ -4375,6 +4384,7 @@
     if (!range.unbounded) recordAttempt({ step: "最大 x", input: maxRaw, ok: maxOk, gap: max > range.max ? "最大 x 偏大" : "最大 x 偏小" });
     if (minOk && maxOk) {
       casesRevealed = true;
+      solvedChipsOpen = true;
       showBlocks = true;
       const gap = !range.unbounded && range.intervals.length > 1 ? "\n不過中間並非每一個整數都可以。" : "";
       markSolved(successText(model, range) + gap);
@@ -4410,7 +4420,7 @@
       if (position === end) return "第 " + position + " 項剛好是「" + target + "」的最後一個";
       return "第 " + position + " 項是 " + target;
     });
-    return letter + " = " + x + " 時，N = " + view.N + "，" + places.join("，") + "。";
+    return letter + " = " + x + " 時，總數 = " + view.N + "，" + places.join("，") + "。";
   }
 
   function balanceMode() {

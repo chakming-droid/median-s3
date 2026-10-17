@@ -425,6 +425,11 @@
       function showGate(message) {
         const error = document.getElementById("gateError");
         error.hidden = !message;
+        if (message && !expectedPassword()) {
+          error.textContent = "公開頁讀不到試算表，所以進不去。請開老師電腦的本機頁，用 teacher-config.js 裡的密碼。";
+        } else if (message) {
+          error.textContent = "密碼不對。";
+        }
         document.getElementById("gate").hidden = false;
         document.getElementById("app").hidden = true;
       }
