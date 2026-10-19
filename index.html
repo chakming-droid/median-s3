@@ -1850,6 +1850,7 @@
       penMedianNote = "";
       penInquiry = null;
       solvedChipsOpen = false;
+      purpleOpen = false;
     }
     if (current().bridge) {
       renderTutor();
@@ -2064,7 +2065,7 @@
     const card = document.getElementById("queueCard");
     const lesson = current();
     const title = card.querySelector(".card-title");
-    if (title) title.textContent = "由小至大排列的原始數據";
+    if (title) title.textContent = lesson.id === "pens" ? "核對" : "由小至大排列的原始數據";
     if (lesson.kind === "continuous") {
       card.hidden = true;
       const stale = document.getElementById("blocksWrapper");
@@ -2110,8 +2111,17 @@
         wrapper.textContent = "按現在這張表，沒有正整數能使中位數等於題目。";
         return;
       }
-      wrapper.appendChild(foldBar(solvedChipsOpen, "收起數列", "打開數列", toggleSolvedChips, "toggleSolvedChips"));
-      if (solvedChipsOpen) wrapper.appendChild(caseFigure(model.rows, letter, range));
+      wrapper.appendChild(stepLine("最小 " + letter + " = " + range.min));
+      if (!range.unbounded && range.max != null) wrapper.appendChild(stepLine("最大 " + letter + " = " + range.max));
+      wrapper.appendChild(foldBar(solvedChipsOpen, "收起動畫", "看動畫", toggleSolvedChips, "toggleSolvedChips"));
+      if (solvedChipsOpen) {
+        const check = document.createElement("p");
+        check.className = "problem-text";
+        check.textContent = range.unbounded || range.max == null
+          ? "看這個 " + letter + " 的正中間，核對是不是第一個 " + lesson.target + "。"
+          : "看這兩個 " + letter + " 的正中間，核對是不是第一個 " + lesson.target + " 和最後一個 " + lesson.target + "。";
+        wrapper.append(check, caseFigure(model.rows, letter, range));
+      }
       resultBox.hidden = false;
       result.append(stepLine("中位數 = " + formatMedian(Number(lesson.target)) + "。"));
       return;
@@ -3205,14 +3215,21 @@
       penInquiry.which = "";
       penInquiry.remainOk = false;
       penInquiry.side = "";
-      penInquiry.note = "最小的 x 是 " + answer + "。接著做最大。";
+      penInquiry.note = "最小的 " + unknownLetter() + " 是 " + answer + "。接著做最大。";
       clearInquiryInputs();
+      purpleOpen = true;
+      recordAttempt({ step: "最小 x", input: String(answer), ok: true });
     } else {
       penInquiry.maxX = answer;
       penInquiry.maxEq = written;
       penInquiry.stage = "done";
-      penInquiry.note = "最大的 x 是 " + answer + "。";
+      penInquiry.note = "最大的 " + unknownLetter() + " 是 " + answer + "。";
       clearInquiryInputs();
+      recordAttempt({ step: "最大 x", input: String(answer), ok: true });
+      casesRevealed = true;
+      solvedChipsOpen = true;
+      showBlocks = true;
+      markSolved("兩種情況都解出了。下面列出最小和最大，用來核對正中間。");
     }
     render();
   }
@@ -3358,24 +3375,46 @@
     return bar;
   }
 
+  function penCheckBoard(rows, x, sentence) {
+    const box = document.createElement("div");
+    box.className = "raw-case";
+    const view = MedianMath.medianForX(rows, x);
+    if (view) box.appendChild(markedLine(expandRows(rows, x), view));
+    const note = document.createElement("p");
+    note.className = "problem-text";
+    note.textContent = sentence;
+    box.appendChild(note);
+    return box;
+  }
+
   function pensQueue(model, letter) {
     const fragment = document.createDocumentFragment();
-    if (model.error === "multi-x" || model.error) {
+    if (model.error === "multi-x" || model.error || !model.rows) {
       const note = document.createElement("p");
       note.className = "problem-text";
       note.textContent = model.error === "multi-x"
         ? "只可以有一個未知數。"
         : "請輸入有效的數據與頻數。頻數須為正整數，或 x。";
       fragment.appendChild(note);
+      return fragment;
     }
-    const solved = !!(tutor.solved || casesRevealed);
-    if (!model.error && model.rows) {
-      if (solved) {
-        fragment.appendChild(foldBar(solvedChipsOpen, "收起數列", "打開數列", toggleSolvedChips, "toggleSolvedChips"));
-        if (solvedChipsOpen) fragment.appendChild(bridgeBoard());
-      } else fragment.appendChild(bridgeBoard());
+    const inquiry = penInquiry;
+    const target = String(current().target);
+    if (inquiry && inquiry.minX != null) fragment.appendChild(stepLine("最小 " + letter + " = " + inquiry.minX));
+    if (inquiry && inquiry.maxX != null) fragment.appendChild(stepLine("最大 " + letter + " = " + inquiry.maxX));
+    fragment.appendChild(foldBar(purpleOpen, "收起動畫", "看動畫", togglePurple, "togglePurple"));
+    if (!purpleOpen) return fragment;
+    if (!inquiry || inquiry.minX == null) {
+      const wait = document.createElement("p");
+      wait.className = "problem-text";
+      wait.textContent = penMedianOk
+        ? letter + " 仍留在數列裡。先用上面的數式算出 " + letter + "，再回來核對正中間落在哪一個 " + target + "。"
+        : "先選對中位數，再用數式算出 " + letter + "。下面先列出已知的數據，" + letter + " 仍留在數列裡。";
+      fragment.append(wait, symbolicLine(model.rows, letter));
+      return fragment;
     }
-    fragment.appendChild(pensAnswer());
+    fragment.appendChild(penCheckBoard(model.rows, inquiry.minX, "核對：正中間是不是第一個 " + target + "。"));
+    if (inquiry.maxX != null) fragment.appendChild(penCheckBoard(model.rows, inquiry.maxX, "核對：正中間是不是最後一個 " + target + "。"));
     return fragment;
   }
 
