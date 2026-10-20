@@ -354,6 +354,32 @@
     .pen-probes { max-height: 9.5rem; overflow-y: auto; margin-top: 6px; }
     .pen-inquiry { margin-top: 14px; padding-top: 10px; border-top: 1px solid #cbd5e1; }
     .pen-inquiry-title { font-weight: 800; margin: 0 0 8px; }
+    .inq-scene { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; }
+    .inq-pile { flex: 1 1 0; min-width: 0; border-radius: 12px; padding: 8px 6px; text-align: center; }
+    .inq-pile.small { background: #e2e8f0; }
+    .inq-pile.big { background: #ede9fe; }
+    .inq-name { font-weight: 800; font-size: 0.82rem; margin-bottom: 6px; }
+    .inq-flow { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+    .inq-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+    .inq-groupline { width: 100%; box-sizing: border-box; padding: 4px 4px; border-radius: 7px; background: white; font-weight: 800; font-size: 0.78rem; line-height: 1.35; display: flex; flex-wrap: wrap; justify-content: center; column-gap: 4px; }
+    .inq-groupline.lift { background: #dcfce7; box-shadow: inset 0 0 0 2px #15803d; color: #166534; }
+    .inq-mid { width: 92px; flex: 0 0 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .inq-mid.compact { width: max-content; flex: 0 0 auto; min-width: 0; }
+    .inq-mid.compact .inq-chips { flex-wrap: nowrap; }
+    .inq-ellipsis { align-self: center; color: #64748b; font-weight: 800; line-height: 1; padding: 0 1px; }
+    .inq-total { font-size: 0.75rem; font-weight: 800; color: #475569; white-space: nowrap; line-height: 1.2; }
+    .inq-tag { min-height: 1em; font-size: 0.75rem; font-weight: 800; color: #15803d; }
+    .inq-chip { width: 26px; height: 26px; box-sizing: border-box; border-radius: 7px; background: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.78rem; }
+    button.inq-chip { cursor: pointer; font: inherit; padding: 0; border: 0; color: inherit; touch-action: manipulation; }
+    .inq-chip.x { width: auto; min-width: 42px; padding: 0 6px; border: 2px dashed #7c3aed; color: #6d28d9; }
+    .inq-chip.lift { background: #dcfce7; box-shadow: inset 0 0 0 2px #15803d; color: #166534; }
+    .inq-chip.hole { background: transparent; border: 2px dashed #94a3b8; }
+    .inq-join { animation: inq-join 0.45s ease; }
+    .inq-banner { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 8px 0 0; font-weight: 800; }
+    .inq-eq { align-self: center; font-size: 1.35rem; font-weight: 800; padding-top: 22px; }
+    .inq-count { display: block; margin-top: 8px; font-size: 0.82rem; font-weight: 800; }
+    .inq-count input { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px; font: inherit; text-align: center; border: 1px solid #94a3b8; border-radius: 6px; }
+    @keyframes inq-join { from { transform: translateX(var(--inq-from, 0)); } to { transform: none; } }
     .trial-readout { font-weight: 800; font-size: 1.2rem; min-width: 4.8rem; text-align: center; }
     .trial-stepper { display: inline-flex; align-items: center; gap: 6px; }
     .step-btn { min-width: 52px; min-height: 48px; font-size: 1.45rem; line-height: 1; padding: 8px 14px; }
@@ -593,7 +619,7 @@
       .walk-chip { transition: none !important; }
       #pictureCard td.hl-walk-now { animation: none; }
       .cut-board, .cut-knife::before, .cut-knife::after { transition: none !important; }
-      .anim-chip, .anim-pill.freq, .anim-chip.cut::after, .anim-arrow, .anim-math .answer { transition: none !important; animation: none !important; }
+      .anim-chip, .anim-pill.freq, .anim-chip.cut::after, .anim-arrow, .anim-math .answer, .inq-join { transition: none !important; animation: none !important; }
       .anim-math .answer { transform: none; opacity: 1; }
     }
 
@@ -700,7 +726,7 @@
       title: "指定中位數",
       header: "數值",
       freqHeader: "個數",
-      stem: "表裡的個數先固定。選一個中位數後，紫色會逐個加上這個數，直到正中間砌到它。先停在最少，再按繼續看最多。",
+      stem: "表裡的個數先固定。選一個中位數後，紫色會逐個加上這個數，直到正中間砌到它。先停在最少，再按「去最多」。也可以用 − 和 + 自己試。",
       bridge: true,
       rows: [
         { val: 1, freq: "1" },
@@ -1155,7 +1181,7 @@
       return [
         "在下面選一個表裡已有的數，當作中位數。",
         "看紫色怎樣加到正中間。先看最少，再看最多。",
-        "未明白就按「看動畫」。"
+        "用 − 和 + 自己加減，再試一次。"
       ];
     }
     if (id === "pens") {
@@ -1176,7 +1202,7 @@
         second,
         third,
         "由小看到大：第一個寫「在 " + target + "」的是最小；最後一個仍然寫「在 " + target + "」的是最大。",
-        "然後才填下面兩格。還是不明白，才按最下面的「看動畫」。"
+        "然後才填下面兩格。還是不明白，才按最下面的「看提示」。"
       ];
     }
     return [
@@ -1251,6 +1277,7 @@
       card.appendChild(buildEditableTable(lesson));
       if (lesson.closing) {
         const closing = document.createElement("p");
+        closing.id = "closingLine";
         closing.className = "problem-text";
         closing.textContent = lesson.closing;
         card.appendChild(closing);
@@ -1845,12 +1872,41 @@
       penProbes = [];
       penMessage = "";
       penEqNote = "";
-      penMedianPick = null;
-      penMedianOk = false;
-      penMedianNote = "";
-      penInquiry = null;
       solvedChipsOpen = false;
       purpleOpen = false;
+      casesRevealed = false;
+      tutor.solved = false;
+      tutor.stale = false;
+      const lesson = current();
+      const model = modelOf(lesson);
+      const picked = penMedianPick;
+      const tableOk = !!(model && !model.error && model.rows);
+      const still = picked != null && tableOk && MedianMath.groupSpan(model.rows, Number(picked)).found;
+      if (!tableOk) {
+        penInquiry = null;
+        clearInquiryInputs();
+      } else if (still) {
+        lesson.target = String(picked);
+        lesson.closing = "該分佈的中位數為 " + picked + "。";
+        bridgeRun.target = Number(picked);
+        penMedianOk = true;
+        penMedianNote = "";
+        penInquiry = freshInquiry();
+        clearInquiryInputs();
+        syncClosingLine();
+      } else if (picked != null) {
+        penMedianOk = false;
+        penInquiry = null;
+        penMedianNote = "這個中位數不是表裡的一組。換一個數。";
+        clearInquiryInputs();
+      } else {
+        penMedianOk = false;
+        penInquiry = null;
+        penMedianNote = "";
+      }
+      renderTutor();
+      renderQueue();
+      return;
     }
     if (current().bridge) {
       renderTutor();
@@ -2096,6 +2152,8 @@
     wrapper.innerHTML = "";
     result.innerHTML = "";
     resultBox.hidden = true;
+    const resultTitle = resultBox.querySelector(".result-title");
+    if (resultTitle) resultTitle.textContent = "中位數";
     if (!pensFolds && model.error === "multi-x") {
       wrapper.textContent = "只可以有一個未知數。";
       return;
@@ -2111,19 +2169,25 @@
         wrapper.textContent = "按現在這張表，沒有正整數能使中位數等於題目。";
         return;
       }
-      wrapper.appendChild(stepLine("最小 " + letter + " = " + range.min));
-      if (!range.unbounded && range.max != null) wrapper.appendChild(stepLine("最大 " + letter + " = " + range.max));
-      wrapper.appendChild(foldBar(solvedChipsOpen, "收起動畫", "看動畫", toggleSolvedChips, "toggleSolvedChips"));
+      wrapper.appendChild(foldBar(solvedChipsOpen, "收起提示", "看提示", toggleSolvedChips, "toggleSolvedChips"));
       if (solvedChipsOpen) {
         const check = document.createElement("p");
         check.className = "problem-text";
+        const plan = inquiryPlan();
+        const minLabel = plan && plan.min && !plan.min.outside ? plan.min.label : "第一個 " + lesson.target;
+        const maxLabel = plan && plan.max && !plan.max.outside ? plan.max.label : "最後一個 " + lesson.target;
         check.textContent = range.unbounded || range.max == null
-          ? "看這個 " + letter + " 的正中間，核對是不是第一個 " + lesson.target + "。"
-          : "看這兩個 " + letter + " 的正中間，核對是不是第一個 " + lesson.target + " 和最後一個 " + lesson.target + "。";
+          ? "看這個 " + letter + " 的正中間，核對是不是" + minLabel + "。"
+          : "看這兩個 " + letter + " 的正中間，核對是不是" + minLabel + "和" + maxLabel + "。";
         wrapper.append(check, caseFigure(model.rows, letter, range));
       }
-      resultBox.hidden = false;
-      result.append(stepLine("中位數 = " + formatMedian(Number(lesson.target)) + "。"));
+      if (penInquiry && penInquiry.maxEq) {
+        const second = document.createElement("p");
+        second.className = "problem-text";
+        second.textContent = "情況二：x 最大。" + penInquiry.maxEq + "，x = " + penInquiry.maxX + "。";
+        wrapper.appendChild(second);
+      }
+      showRangeResult(range, letter);
       return;
     }
     if (model.hasX && revealCases) {
@@ -2133,8 +2197,7 @@
         return;
       }
       wrapper.appendChild(caseFigure(model.rows, letter, range));
-      resultBox.hidden = false;
-      result.append(stepLine("中位數 = " + formatMedian(Number(lesson.target)) + "。"));
+      showRangeResult(range, letter);
       return;
     }
     if (lesson.bridge) {
@@ -2206,8 +2269,9 @@
   function runLabel(val, count) {
     const text = String(val);
     const n = Number(count);
-    // Ellipsis only for an unknown frequency (s, x, or an expression). 2000 keeps a mistyped huge count from freezing the page.
+    // 2000 keeps a mistyped huge count from freezing the page. Longer known runs use the same ellipsis as an unknown frequency.
     if (!Number.isInteger(n) || n < 0 || n > 2000) return text + ", …, " + text + "（" + count + " 個）";
+    if (n > 8) return text + ", …, " + text + "（共 " + n + " 個）";
     return Array.from({ length: n }, () => text).join(", ");
   }
 
@@ -2289,6 +2353,17 @@
     line.className = "formula-step";
     line.textContent = text;
     return line;
+  }
+
+  function showRangeResult(range, letter) {
+    const box = document.getElementById("resultBox");
+    const content = document.getElementById("resultContent");
+    const title = box.querySelector(".result-title");
+    if (title) title.textContent = "最小和最大";
+    box.hidden = false;
+    content.appendChild(stepLine("最小 " + letter + " = " + range.min + "。"));
+    if (!range.unbounded && range.max != null) content.appendChild(stepLine("最大 " + letter + " = " + range.max + "。"));
+    else content.appendChild(stepLine("沒有最大的 " + letter + "。"));
   }
 
   function expandRows(rows, x) {
@@ -2837,7 +2912,13 @@
       if (marked && !x.error && x.val != null) return "選一個表裡的數值，當作中位數。紫色會逐個加上寫了 x 的 " + x.val + "。";
       return "選一個表裡的數值，當作中位數。紫色會逐個加上這個數。";
     }
-    if (bridgeRun.phase === "idle") return "加上 " + x.val + "，正中間不能落到 " + bridgeRun.target + "。";
+    if (bridgeRun.phase === "idle") {
+      if (bridgeRun.added > 0 && bridgeHit(bridgePairs(), bridgeRun.target)) {
+        return "已加上 " + bridgeRun.added + " 個 " + x.val + "。正中間是 " + bridgeRun.target + "。";
+      }
+      if (bridgeRun.added > 0) return "已加上 " + bridgeRun.added + " 個 " + x.val + "。正中間還不是 " + bridgeRun.target + "。";
+      return "加上 " + x.val + "，正中間不能落到 " + bridgeRun.target + "。";
+    }
     if (bridgeRun.phase === "seek-min") {
       return bridgeRun.added === 0
         ? "正在逐個加上 " + x.val + "。"
@@ -2983,7 +3064,7 @@
     minus.disabled = bridgeRun.added <= 0;
     minus.setAttribute("aria-label", "減少 " + letter);
     const plus = makeButton("+", "btn btn-secondary", () => adjustPenCount(1));
-    plus.disabled = bridgeRun.added >= 30;
+    plus.disabled = bridgeRun.added >= 30 || !!bridgeAddValue().error;
     plus.setAttribute("aria-label", "增加 " + letter);
     const readout = document.createElement("span");
     readout.className = "trial-readout";
@@ -3006,8 +3087,8 @@
 
   function bridgeBoard() {
     const wrap = document.createElement("div");
-    if (current().id === "pens") wrap.appendChild(penStepper());
-    else {
+    if (current().id === "pens" || current().bridge) wrap.appendChild(penStepper());
+    if (current().id !== "pens") {
       const actions = document.createElement("div");
       actions.className = "action-row";
       appendBridgePhaseButtons(actions);
@@ -3073,20 +3154,60 @@
   }
 
   function freshInquiry() {
-    return { stage: "min", which: "", remainOk: false, side: "", note: "", minX: null, maxX: null, minEq: "", maxEq: "" };
+    return { stage: "min", which: "", slid: false, animateSlide: false, note: "", minX: null, maxX: null, minEq: "", maxEq: "" };
+  }
+
+  function syncClosingLine() {
+    const node = document.getElementById("closingLine");
+    if (node) {
+      node.textContent = current().closing || "";
+      return;
+    }
+    const card = document.getElementById("pictureCard");
+    if (card) card.dataset.key = "";
   }
 
   function pensChooseMedian(value) {
     penMedianPick = Number(value);
-    const target = Number(current().target);
-    if (penMedianPick === target) {
-      penMedianOk = true;
-      penMedianNote = "";
-      if (!penInquiry) penInquiry = freshInquiry();
-    } else {
+    const lesson = current();
+    const model = modelOf(lesson);
+    if (!model || model.error || !model.rows) {
       penMedianOk = false;
       penInquiry = null;
-      penMedianNote = "題目的中位數是 " + current().target + "。選對之後才開始探究。";
+      penMedianNote = "請先填好頻數表。";
+      render();
+      return;
+    }
+    if (!MedianMath.groupSpan(model.rows, penMedianPick).found) {
+      penMedianOk = false;
+      penInquiry = null;
+      penMedianNote = "這個中位數不是表裡的一組。換一個數。";
+      render();
+      return;
+    }
+    const changed = String(lesson.target) !== String(penMedianPick);
+    lesson.target = String(penMedianPick);
+    lesson.closing = "該分佈的中位數為 " + penMedianPick + "。";
+    if (changed) {
+      bridgeStop();
+      bridgeRun.added = 0;
+      bridgeRun.phase = "idle";
+      bridgeRun.view = "min";
+      bridgeRun.minAdded = null;
+      bridgeRun.maxAdded = null;
+    }
+    bridgeRun.target = penMedianPick;
+    penMedianOk = true;
+    penMedianNote = "";
+    tutor.stale = false;
+    syncClosingLine();
+    if (changed || !penInquiry) {
+      penInquiry = freshInquiry();
+      clearInquiryInputs();
+      casesRevealed = false;
+      solvedChipsOpen = false;
+      purpleOpen = false;
+      tutor.solved = false;
     }
     render();
   }
@@ -3098,19 +3219,6 @@
     if (!Number.isFinite(target)) return null;
     const parts = MedianMath.balanceParts(model.rows, target);
     return parts.found ? parts : null;
-  }
-
-  function inquiryExpected(parts, stage) {
-    if (stage === "max") {
-      return {
-        left: { c: parts.left.c + parts.spare.c, k: parts.left.k + parts.spare.k },
-        right: { c: parts.right.c, k: parts.right.k }
-      };
-    }
-    return {
-      left: { c: parts.left.c, k: parts.left.k },
-      right: { c: parts.spare.c + parts.right.c, k: parts.spare.k + parts.right.k }
-    };
   }
 
   function inquirySame(parsed, expected) {
@@ -3131,94 +3239,178 @@
     return x;
   }
 
+  function shapeLabel(lift, count, target) {
+    const phrase = (index) => {
+      if (count <= 1) return String(target);
+      if (index === 0) return "第一個 " + target;
+      if (index === count - 1) return "最後一個 " + target;
+      return "第 " + (index + 1) + " 個 " + target;
+    };
+    if (lift.length === 1) return phrase(lift[0]);
+    if (lift.length === 2 && lift[0] === count - 2 && lift[1] === count - 1) return "最後兩個 " + target;
+    if (lift.length === 2 && lift[0] === 0 && lift[1] === 1) return "最先兩個 " + target;
+    return phrase(lift[0]) + "和" + phrase(lift[1]);
+  }
+
+  function inquiryPlan() {
+    const parts = penBalance();
+    const model = modelOf(current());
+    const target = Number(current().target);
+    if (!parts || !model || model.error || !model.rows || !Number.isFinite(target)) return null;
+    const range = MedianMath.rangeForTarget(model.rows, target);
+    const fixed = parts.spare.k === 0 && parts.midFreq.k === 0 && parts.midFreq.c >= 1;
+    function shapeFor(x) {
+      if (!fixed || x == null) return null;
+      const view = MedianMath.medianForX(model.rows, x);
+      const span = MedianMath.groupSpan(model.rows, target);
+      if (!view || !span.found || span.count.k !== 0) return { outside: true };
+      const start = span.start.c + span.start.k * x;
+      const count = span.count.c;
+      const lift = view.positions.map((position) => position - start).filter((index) => index >= 0 && index < count);
+      if (!lift.length || lift.length !== view.positions.length) return { outside: true };
+      return {
+        outside: false,
+        lift: lift,
+        earlier: lift[0],
+        later: count - 1 - lift[lift.length - 1],
+        label: shapeLabel(lift, count, target)
+      };
+    }
+    return {
+      fixed: fixed,
+      none: !!range.none,
+      unbounded: !!range.unbounded,
+      min: range.none ? null : shapeFor(range.min),
+      max: range.none || range.unbounded || range.max == null ? null : shapeFor(range.max)
+    };
+  }
+
+  function inquiryShape() {
+    const plan = inquiryPlan();
+    if (!plan || !penInquiry) return null;
+    return penInquiry.stage === "max" ? plan.max : plan.min;
+  }
+
+  function middleNote(shape) {
+    const lead = penInquiry && penInquiry.stage === "max" ? "x 最大時，正中間是" : "x 最小時，正中間是";
+    return lead + (shape && shape.label ? shape.label : "這個數") + "。";
+  }
+
   function clearInquiryInputs() {
-    ["inqRemain", "inqLeft", "inqRight", "inqX"].forEach((id) => {
+    ["inqSmall", "inqBig", "inqX"].forEach((id) => {
       const field = document.getElementById(id);
       if (field) field.value = "";
       delete fieldDrafts[id];
     });
   }
 
-  function chooseInquiryWhich(choice) {
-    if (!penInquiry || penInquiry.stage === "done") return;
-    const want = penInquiry.stage === "max" ? "last" : "first";
-    const target = current().target;
-    if (choice !== want) {
+  function chooseInquiryWhich(index, name) {
+    if (!penInquiry || penInquiry.stage === "done" || penInquiry.slid) return;
+    const shape = inquiryShape();
+    if (!shape || shape.outside) return;
+    const stageName = penInquiry.stage === "max" ? "情況二" : "情況一";
+    const ok = shape.lift.indexOf(index) >= 0;
+    recordAttempt({
+      step: "正中間",
+      input: stageName + " " + (name || index),
+      ok: ok,
+      gap: ok ? "" : "正中間選錯"
+    });
+    if (!ok) {
       penInquiry.which = "";
-      penInquiry.note = penInquiry.stage === "max"
-        ? "x 最大時，正中間是最後一個 " + target + "。"
-        : "x 最小時，正中間是第一個 " + target + "。";
+      penInquiry.slid = false;
+      penInquiry.note = middleNote(shape);
     } else {
-      penInquiry.which = choice;
-      penInquiry.note = "這 1 個是正中間，左右都不加。";
+      penInquiry.which = "ok";
+      if (!shape.earlier && !shape.later) {
+        penInquiry.slid = true;
+        penInquiry.note = shape.lift.length > 1 ? "這兩個是正中間，不加入任何一堆。" : "這 1 個是正中間，不加入任何一堆。";
+      } else {
+        penInquiry.slid = false;
+        penInquiry.note = "";
+      }
     }
     render();
   }
 
-  function chooseInquirySide(side) {
-    if (!penInquiry || penInquiry.stage === "done") return;
-    const parts = penBalance();
-    const field = document.getElementById("inqRemain");
-    const remain = Number(normalizeTyped(field ? field.value : ""));
+  function slideInquiry() {
+    if (!penInquiry || penInquiry.stage === "done" || penInquiry.slid) return;
+    const shape = inquiryShape();
     const target = current().target;
-    if (!parts || parts.spare.k !== 0 || !Number.isInteger(remain) || remain !== parts.spare.c) {
-      penInquiry.remainOk = false;
-      penInquiry.side = "";
-      penInquiry.note = "拿出正中間這 1 個之後，再數還剩幾個 " + target + "。";
+    if (!shape || shape.outside || penInquiry.which !== "ok") {
+      if (shape && !shape.outside) penInquiry.note = middleNote(shape);
       render();
       return;
     }
-    const want = penInquiry.stage === "max" ? "left" : "right";
-    penInquiry.remainOk = true;
-    if (side !== want) {
-      penInquiry.side = "";
-      penInquiry.note = want === "right"
-        ? "其餘的 " + target + " 在正中間後面，放右方。"
-        : "其餘的 " + target + " 在正中間前面，放左方。";
-    } else {
-      penInquiry.side = side;
-      penInquiry.note = "";
-    }
+    const stageName = penInquiry.stage === "max" ? "情況二" : "情況一";
+    const piles = [];
+    if (shape.earlier) piles.push("比 " + target + " 小");
+    if (shape.later) piles.push("比 " + target + " 大");
+    recordAttempt({ step: "跟哪一堆", input: stageName + " " + piles.join("、"), ok: true });
+    penInquiry.slid = true;
+    penInquiry.animateSlide = true;
+    if (shape.earlier && shape.later) penInquiry.note = "剩下的，前面的跟住比 " + target + " 小，後面的跟住比 " + target + " 大。";
+    else if (shape.later) penInquiry.note = "剩下的在正中間後面，跟住比 " + target + " 大。";
+    else penInquiry.note = "剩下的在正中間前面，跟住比 " + target + " 小。";
     render();
   }
 
   function submitInquiryEquation() {
     if (!penInquiry || penInquiry.stage === "done") return;
     const parts = penBalance();
-    const leftField = document.getElementById("inqLeft");
-    const rightField = document.getElementById("inqRight");
+    const leftField = document.getElementById("inqSmall");
+    const rightField = document.getElementById("inqBig");
     const answerField = document.getElementById("inqX");
     const leftRaw = normalizeTyped(leftField ? leftField.value : "");
     const rightRaw = normalizeTyped(rightField ? rightField.value : "");
     const answerRaw = normalizeTyped(answerField ? answerField.value : "");
     const parsed = MedianMath.parseEquation(leftRaw + "=" + rightRaw);
-    const expected = parts ? inquiryExpected(parts, penInquiry.stage) : null;
+    const shape = inquiryShape();
+    const expected = parts && shape && !shape.outside ? {
+      left: { c: parts.left.c + shape.earlier, k: parts.left.k },
+      right: { c: parts.right.c + shape.later, k: parts.right.k }
+    } : null;
     const equationOk = !!(expected && inquirySame(parsed, expected));
     const solved = expected ? inquirySolve(expected) : null;
     const answer = Number(answerRaw);
     const answerOk = Number.isInteger(answer) && solved != null && answer === solved;
+    const stageName = penInquiry.stage === "max" ? "情況二" : "情況一";
+    const writtenInput = stageName + " 比" + current().target + "小 " + (leftRaw || "（空白）") + " = 比" + current().target + "大 " + (rightRaw || "（空白）") + "，x = " + (answerRaw || "（空白）");
     if (!equationOk) {
-      penInquiry.note = "左右的人數還沒有相等。再寫一次。";
+      recordAttempt({ step: "數式", input: writtenInput, ok: false, gap: "兩堆人數還沒相等" });
+      penInquiry.note = "兩堆的人數還沒有相等。再數一次。";
       render();
       return;
     }
     if (!answerOk) {
+      recordAttempt({ step: "數式", input: writtenInput, ok: false, gap: "x 還沒解出" });
       penInquiry.note = "數式對了。再解出 x。";
       render();
       return;
     }
+    recordAttempt({ step: "數式", input: writtenInput, ok: true });
     const written = leftRaw + " = " + rightRaw;
     if (penInquiry.stage === "min") {
       penInquiry.minX = answer;
       penInquiry.minEq = written;
-      penInquiry.stage = "max";
       penInquiry.which = "";
-      penInquiry.remainOk = false;
-      penInquiry.side = "";
-      penInquiry.note = "最小的 " + unknownLetter() + " 是 " + answer + "。接著做最大。";
+      penInquiry.slid = false;
+      penInquiry.animateSlide = false;
       clearInquiryInputs();
       purpleOpen = true;
       recordAttempt({ step: "最小 x", input: String(answer), ok: true });
+      const plan = inquiryPlan();
+      if (plan && plan.max && !plan.max.outside) {
+        penInquiry.stage = "max";
+        penInquiry.note = "";
+      } else {
+        penInquiry.stage = "done";
+        penInquiry.note = "沒有最大的 " + unknownLetter() + "。";
+        casesRevealed = true;
+        solvedChipsOpen = true;
+        showBlocks = true;
+        markSolved("這一種情況解出了。下面用來核對正中間。沒有最大的 " + unknownLetter() + "。");
+      }
     } else {
       penInquiry.maxX = answer;
       penInquiry.maxEq = written;
@@ -3237,109 +3429,272 @@
   function penInquiryPanel() {
     const wrap = document.createElement("div");
     wrap.className = "pen-inquiry";
-    const title = document.createElement("p");
-    title.className = "pen-inquiry-title";
-    title.textContent = "探究";
-    wrap.appendChild(title);
     const inquiry = penInquiry;
     const parts = penBalance();
     if (!inquiry || !parts) return wrap;
-    if (parts.spare.k !== 0 || parts.midFreq.c < 1) {
-      const note = document.createElement("p");
-      note.className = "problem-text";
-      note.textContent = "中位數這一組的個數要是固定的數目，才用左右相等來計算。";
-      wrap.appendChild(note);
-      return wrap;
-    }
     if (inquiry.minEq) {
       const done = document.createElement("p");
       done.className = "problem-text";
       done.textContent = "情況一：x 最小。" + inquiry.minEq + "，x = " + inquiry.minX + "。";
       wrap.appendChild(done);
     }
-    if (inquiry.stage === "done") {
-      const done = document.createElement("p");
-      done.className = "problem-text";
-      done.textContent = "情況二：x 最大。" + inquiry.maxEq + "，x = " + inquiry.maxX + "。";
-      wrap.appendChild(done);
-      return wrap;
+    if (inquiry.stage !== "min") return wrap;
+    appendInquiryWorkspace(wrap);
+    return wrap;
+  }
+
+  function appendCaseTwo(parent) {
+    if (!penInquiry || penInquiry.stage !== "max") return;
+    const box = document.createElement("div");
+    box.className = "pen-inquiry";
+    appendInquiryWorkspace(box);
+    if (box.childElementCount) parent.appendChild(box);
+  }
+
+  function appendInquiryWorkspace(wrap) {
+    const inquiry = penInquiry;
+    const parts = penBalance();
+    const plan = inquiryPlan();
+    if (!inquiry || !parts || !plan) return;
+    if (!plan.fixed || parts.left.k + parts.right.k + parts.midFreq.k === 0) {
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      if (parts.left.k + parts.right.k + parts.midFreq.k === 0) note.textContent = "表裡要有一個 x，才可以探究。";
+      else if (plan.unbounded) note.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。這個中位數沒有最大的 x。";
+      else note.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
+      wrap.appendChild(note);
+      return;
     }
+    if (plan.none || !plan.min || plan.min.outside) {
+      const note = document.createElement("p");
+      note.className = "problem-text";
+      note.textContent = plan.min && plan.min.outside
+        ? "正中間是兩邊的數平均出來的，不能抽起這個數來計算。"
+        : "按現在這張表，沒有正整數能使中位數是 " + current().target + "。";
+      wrap.appendChild(note);
+      return;
+    }
+    const shape = inquiry.stage === "max" ? plan.max : plan.min;
+    if (!shape || shape.outside) return;
     const target = String(current().target);
     const letter = unknownLetter();
+    const count = parts.midFreq.c;
+    const lifted = inquiry.which === "ok";
+    const ask = shape.lift.length > 1 ? "點哪兩個 " : "點哪一個 ";
     const heading = document.createElement("p");
     heading.className = "problem-text";
-    heading.textContent = inquiry.stage === "max" ? "情況二：x 最大。正中間是哪一個 " + target + "？" : "情況一：x 最小。正中間是哪一個 " + target + "？";
+    heading.textContent = inquiry.slid
+      ? "數兩堆的人，再解 " + letter + "。"
+      : lifted
+        ? "點剩下的 " + target + "。"
+        : (inquiry.stage === "max" ? "情況二：x 最大。" : "情況一：x 最小。") + ask + target + " 是正中間？";
     wrap.appendChild(heading);
-    const choices = document.createElement("div");
-    choices.className = "action-row";
-    const count = parts.midFreq.c;
-    if (count <= 6) {
-      for (let index = 0; index < count; index += 1) {
-        const choice = index === 0 ? "first" : index === count - 1 ? "last" : "mid-" + index;
-        const name = count === 1 ? target : (index === 0 ? "第一個 " : index === count - 1 ? "最後一個 " : "第 " + (index + 1) + " 個 ") + target;
-        choices.appendChild(makeButton(name, inquiry.which === choice ? "btn" : "btn btn-secondary", () => chooseInquiryWhich(choice)));
-      }
+    if (inquiry.slid) {
+      const banner = document.createElement("p");
+      banner.className = "inq-banner";
+      shape.lift.forEach(() => banner.appendChild(inquiryChip(target, "lift")));
+      banner.append(document.createTextNode(shape.lift.length > 1 ? "這兩個是正中間，不加入任何一堆。" : "是正中間，不加入任何一堆。"));
+      wrap.appendChild(banner);
+    }
+    const scene = document.createElement("div");
+    scene.className = "inq-scene";
+    const small = inquiryPile("small", "比 " + target + " 小");
+    const big = inquiryPile("big", "比 " + target + " 大");
+    const animate = !!inquiry.animateSlide;
+    inquiry.animateSlide = false;
+    fillInquiryPile(small, parts.leftRows, letter);
+    if (inquiry.slid && shape.earlier) appendInquirySpare(small, shape.earlier, target, animate, "40px");
+    if (inquiry.slid && shape.later) appendInquirySpare(big, shape.later, target, animate, "-40px");
+    fillInquiryPile(big, parts.rightRows, letter);
+    if (inquiry.slid) {
+      small.appendChild(inquiryCountField("inqSmall"));
+      big.appendChild(inquiryCountField("inqBig"));
+      const eq = document.createElement("div");
+      eq.className = "inq-eq";
+      eq.textContent = "=";
+      scene.append(small, eq, big);
     } else {
-      choices.append(
-        makeButton("第一個 " + target, inquiry.which === "first" ? "btn" : "btn btn-secondary", () => chooseInquiryWhich("first")),
-        makeButton("最後一個 " + target, inquiry.which === "last" ? "btn" : "btn btn-secondary", () => chooseInquiryWhich("last"))
-      );
+      const mid = document.createElement("div");
+      mid.className = "inq-mid" + (count > 6 ? " compact" : "");
+      const tag = document.createElement("div");
+      tag.className = "inq-tag";
+      tag.textContent = lifted ? "正中間" : "";
+      mid.appendChild(tag);
+      if (lifted) shape.lift.forEach(() => mid.appendChild(inquiryChip(target, "lift")));
+      const row = document.createElement("div");
+      row.className = "inq-chips";
+      const shown = inquiryIndexes(count, shape.lift);
+      shown.forEach((index, place) => {
+        if (place > 0 && index - shown[place - 1] > 1) {
+          const gap = document.createElement("span");
+          gap.className = "inq-ellipsis";
+          gap.textContent = "…";
+          gap.setAttribute("aria-hidden", "true");
+          row.appendChild(gap);
+        }
+        const choice = inquiryChoiceAt(index, count);
+        if (lifted && shape.lift.indexOf(index) >= 0) {
+          row.appendChild(inquiryChip("", "hole"));
+          return;
+        }
+        const name = inquiryChoiceName(choice, target, count);
+        row.appendChild(inquiryChip(target, "", lifted ? slideInquiry : () => chooseInquiryWhich(index, name), lifted ? "剩下的 " + target : name));
+      });
+      mid.appendChild(row);
+      if (count > 6) {
+        const total = document.createElement("div");
+        total.className = "inq-total";
+        total.textContent = "（共 " + count + " 個）";
+        mid.appendChild(total);
+      }
+      scene.append(small, mid, big);
     }
-    wrap.appendChild(choices);
-    const want = inquiry.stage === "max" ? "last" : "first";
-    if (inquiry.which !== want) {
-      appendInquiryNote(wrap, inquiry.note);
-      return wrap;
+    wrap.appendChild(scene);
+    if (inquiry.slid) {
+      const solve = document.createElement("div");
+      solve.className = "form-row";
+      const answer = document.createElement("input");
+      answer.id = "inqX";
+      answer.type = "text";
+      answer.inputMode = "numeric";
+      answer.autocomplete = "off";
+      answer.placeholder = letter;
+      restoreField(answer);
+      answer.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          submitInquiryEquation();
+        }
+      });
+      solve.append(text(letter + " = "), answer, makeButton("確定", "btn", submitInquiryEquation));
+      wrap.appendChild(solve);
     }
-    const remainLine = document.createElement("p");
-    remainLine.className = "problem-text";
-    remainLine.textContent = "拿出正中間這 1 個。還剩幾個 " + target + "？放在左方還是右方？";
-    wrap.appendChild(remainLine);
-    const remainRow = document.createElement("div");
-    remainRow.className = "form-row";
-    const remain = document.createElement("input");
-    remain.id = "inqRemain";
-    remain.type = "text";
-    remain.inputMode = "numeric";
-    remain.autocomplete = "off";
-    remain.placeholder = "還剩幾個";
-    restoreField(remain);
-    remainRow.append(remain, makeButton("放左", inquiry.side === "left" ? "btn" : "btn btn-secondary", () => chooseInquirySide("left")), makeButton("放右", inquiry.side === "right" ? "btn" : "btn btn-secondary", () => chooseInquirySide("right")));
-    wrap.appendChild(remainRow);
-    const wantSide = inquiry.stage === "max" ? "left" : "right";
-    if (!inquiry.remainOk || inquiry.side !== wantSide) {
-      appendInquiryNote(wrap, inquiry.note);
-      return wrap;
-    }
-    const write = document.createElement("p");
-    write.className = "problem-text";
-    write.textContent = "把比 " + target + " 小的人數、剩下的 " + target + "、比 " + target + " 大的人數，寫成左右相等。再解 " + letter + "。";
-    wrap.appendChild(write);
-    const equation = document.createElement("div");
-    equation.className = "form-row";
-    const left = document.createElement("input");
-    left.id = "inqLeft";
-    left.type = "text";
-    left.autocomplete = "off";
-    left.placeholder = "左方";
-    restoreField(left);
-    const right = document.createElement("input");
-    right.id = "inqRight";
-    right.type = "text";
-    right.autocomplete = "off";
-    right.placeholder = "右方";
-    restoreField(right);
-    const answer = document.createElement("input");
-    answer.id = "inqX";
-    answer.type = "text";
-    answer.inputMode = "numeric";
-    answer.autocomplete = "off";
-    answer.placeholder = letter;
-    restoreField(answer);
-    equation.append(text("左"), left, text("="), text("右"), right, text(letter + " ="), answer, makeButton("確定", "btn", submitInquiryEquation));
-    wrap.appendChild(equation);
     appendInquiryNote(wrap, inquiry.note);
     return wrap;
+  }
+
+  function inquiryChip(label, extra, onClick, aria) {
+    const node = document.createElement(onClick ? "button" : "div");
+    if (onClick) node.type = "button";
+    node.className = "inq-chip" + (extra ? " " + extra : "");
+    node.textContent = label;
+    if (extra === "hole") node.setAttribute("aria-hidden", "true");
+    if (aria) node.setAttribute("aria-label", aria);
+    if (onClick) node.addEventListener("click", onClick);
+    return node;
+  }
+
+  function inquiryPile(kind, name) {
+    const pile = document.createElement("div");
+    pile.className = "inq-pile " + kind;
+    const title = document.createElement("div");
+    title.className = "inq-name";
+    title.textContent = name;
+    const flow = document.createElement("div");
+    flow.className = "inq-flow";
+    pile.append(title, flow);
+    return pile;
+  }
+
+  function inquiryChipBox(flow) {
+    const last = flow.lastElementChild;
+    if (last && last.classList.contains("inq-chips")) return last;
+    const box = document.createElement("div");
+    box.className = "inq-chips";
+    flow.appendChild(box);
+    return box;
+  }
+
+  function inquiryGroupLine(val, n, extra) {
+    const line = document.createElement("div");
+    line.className = "inq-groupline" + (extra ? " " + extra : "");
+    const ends = document.createElement("span");
+    ends.textContent = String(val) + " … " + val;
+    const total = document.createElement("span");
+    total.textContent = "（共 " + n + " 個）";
+    line.append(ends, total);
+    return line;
+  }
+
+  function fillInquiryPile(pile, rows, letter) {
+    const flow = pile.querySelector(".inq-flow");
+    rows.forEach((row) => {
+      if (row.freq.c > 8) {
+        flow.appendChild(inquiryGroupLine(row.val, row.freq.c));
+      } else if (row.freq.c > 0) {
+        const box = inquiryChipBox(flow);
+        for (let i = 0; i < row.freq.c; i += 1) box.appendChild(inquiryChip(String(row.val)));
+      }
+      if (row.freq.k > 0) {
+        inquiryChipBox(flow).appendChild(inquiryChip(row.freq.k === 1 ? letter + " 人" : String(row.freq.k) + letter, "x"));
+      }
+    });
+  }
+
+  function appendInquirySpare(pile, n, target, animate, from) {
+    if (n <= 0) return;
+    const flow = pile.querySelector(".inq-flow");
+    const extra = "lift" + (animate ? " inq-join" : "");
+    if (n > 8) {
+      const line = inquiryGroupLine(target, n, extra);
+      if (animate) line.style.setProperty("--inq-from", from);
+      flow.appendChild(line);
+      return;
+    }
+    const box = inquiryChipBox(flow);
+    for (let i = 0; i < n; i += 1) {
+      const chip = inquiryChip(String(target), extra);
+      if (animate) chip.style.setProperty("--inq-from", from);
+      box.appendChild(chip);
+    }
+  }
+
+  function inquiryIndexes(count, lift) {
+    const picked = new Set();
+    if (count <= 6) {
+      for (let index = 0; index < count; index += 1) picked.add(index);
+    } else {
+      picked.add(0);
+      if (count > 1) picked.add(count - 1);
+    }
+    (lift || []).forEach((index) => {
+      if (index >= 0 && index < count) picked.add(index);
+    });
+    return [...picked].sort((a, b) => a - b);
+  }
+
+  function inquiryChoiceAt(index, count) {
+    if (count <= 1 || index === 0) return "first";
+    if (index === count - 1) return "last";
+    return "mid-" + index;
+  }
+
+  function inquiryChoiceName(choice, target, count) {
+    if (count <= 1) return String(target);
+    if (choice === "first") return "第一個 " + target;
+    if (choice === "last") return "最後一個 " + target;
+    const mid = /^mid-(\d+)$/.exec(choice);
+    return mid ? "第 " + (Number(mid[1]) + 1) + " 個 " + target : String(target);
+  }
+
+  function inquiryCountField(id) {
+    const label = document.createElement("label");
+    label.className = "inq-count";
+    label.append(document.createTextNode("人數"));
+    const input = document.createElement("input");
+    input.id = id;
+    input.type = "text";
+    input.autocomplete = "off";
+    input.setAttribute("aria-label", "人數");
+    restoreField(input);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitInquiryEquation();
+      }
+    });
+    label.appendChild(input);
+    return label;
   }
 
   function appendInquiryNote(parent, message) {
@@ -3402,19 +3757,28 @@
     const target = String(current().target);
     if (inquiry && inquiry.minX != null) fragment.appendChild(stepLine("最小 " + letter + " = " + inquiry.minX));
     if (inquiry && inquiry.maxX != null) fragment.appendChild(stepLine("最大 " + letter + " = " + inquiry.maxX));
-    fragment.appendChild(foldBar(purpleOpen, "收起動畫", "看動畫", togglePurple, "togglePurple"));
-    if (!purpleOpen) return fragment;
+    fragment.appendChild(foldBar(purpleOpen, "收起提示", "看提示", togglePurple, "togglePurple"));
+    if (!purpleOpen) {
+      appendCaseTwo(fragment);
+      return fragment;
+    }
     if (!inquiry || inquiry.minX == null) {
+      const planNow = inquiryPlan();
       const wait = document.createElement("p");
       wait.className = "problem-text";
-      wait.textContent = penMedianOk
-        ? letter + " 仍留在數列裡。先用上面的數式算出 " + letter + "，再回來核對正中間落在哪一個 " + target + "。"
-        : "先選對中位數，再用數式算出 " + letter + "。下面先列出已知的數據，" + letter + " 仍留在數列裡。";
+      if (planNow && penMedianOk && !planNow.fixed) wait.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
+      else if (planNow && penMedianOk && planNow.none) wait.textContent = "按現在這張表，沒有正整數能使中位數是 " + target + "。";
+      else if (penMedianOk) wait.textContent = letter + " 仍留在數列裡。先用上面的數式算出 " + letter + "，再回來核對正中間落在哪一個 " + target + "。";
+      else wait.textContent = "先選一個表裡的中位數，再用數式算出 " + letter + "。下面先列出已知的數據，" + letter + " 仍留在數列裡。";
       fragment.append(wait, symbolicLine(model.rows, letter));
       return fragment;
     }
-    fragment.appendChild(penCheckBoard(model.rows, inquiry.minX, "核對：正中間是不是第一個 " + target + "。"));
-    if (inquiry.maxX != null) fragment.appendChild(penCheckBoard(model.rows, inquiry.maxX, "核對：正中間是不是最後一個 " + target + "。"));
+    const plan = inquiryPlan();
+    const minLabel = plan && plan.min && !plan.min.outside ? plan.min.label : "第一個 " + target;
+    const maxLabel = plan && plan.max && !plan.max.outside ? plan.max.label : "最後一個 " + target;
+    fragment.appendChild(penCheckBoard(model.rows, inquiry.minX, "核對：正中間是不是" + minLabel + "。"));
+    if (inquiry.maxX != null) fragment.appendChild(penCheckBoard(model.rows, inquiry.maxX, "核對：正中間是不是" + maxLabel + "。"));
+    appendCaseTwo(fragment);
     return fragment;
   }
 
@@ -3530,7 +3894,7 @@
   function pensLineSection(model) {
     const section = document.createElement("section");
     section.className = "fold-section";
-    section.appendChild(foldBar(purpleOpen, "收起動畫", "看動畫", togglePurple, "togglePurple"));
+    section.appendChild(foldBar(purpleOpen, "收起提示", "看提示", togglePurple, "togglePurple"));
     if (purpleOpen && model && !model.error && model.rows) section.appendChild(pensExplorer());
     return section;
   }
@@ -3734,7 +4098,7 @@
       return;
     }
     if (tutor.solved) {
-      if (current().id === "pens" && penMedianOk) form.appendChild(penInquiryPanel());
+      if (current().id === "pens" && penMedianOk && penInquiry) form.appendChild(penInquiryPanel());
       if (current().id === "discrete") {
         const next = lessons.findIndex((lesson) => lesson.id === "bridge");
         if (next >= 0) actions.appendChild(makeButton("去看指定中位數", "btn", () => showMode(next)));
@@ -3752,7 +4116,7 @@
         note.textContent = penMedianNote;
         form.appendChild(note);
       }
-      if (penMedianOk) form.appendChild(penInquiryPanel());
+      if (penMedianOk && penInquiry) form.appendChild(penInquiryPanel());
     } else if (tutor.mode === "unknown" && tutor.step > 1) {
       renderUnknownControls(form, actions);
     } else if (tutor.mode === "known" && tutor.step === 2) {
@@ -6064,7 +6428,7 @@
     const card = document.getElementById("animTrial");
     if (!card) return;
     const id = current().id;
-    const onLesson = id === "discrete" || id === "bridge" || (id === "pens" && animTrial.pensOpen);
+    const onLesson = id === "discrete" || (id === "pens" && animTrial.pensOpen);
     card.hidden = !onLesson;
     if (!onLesson) {
       animStop();

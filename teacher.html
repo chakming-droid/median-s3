@@ -76,6 +76,17 @@
       margin: 8px 0;
     }
     .attempt p { margin: 4px 0; }
+    .input-list { list-style: none; margin: 4px 0 0; padding: 0; }
+    .input-list li {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      justify-content: space-between;
+      align-items: baseline;
+      border-top: 1px solid #e2e8f0;
+      padding: 6px 0;
+    }
+    .input-text { min-width: 0; word-break: break-word; }
     .wrong { color: #b45309; font-weight: bold; }
     .right { color: #15803d; font-weight: bold; }
     a { color: #1d4ed8; }
@@ -104,6 +115,9 @@
       <div id="gaps"></div>
       <h2>各步驟</h2>
       <div id="steps"></div>
+      <h2>不同輸入</h2>
+      <p class="note">同一種寫法合在一起。字不同就分開列。</p>
+      <div id="inputs"></div>
       <p><button type="button" class="btn btn-secondary" id="toggleRecent">展開逐次作答</button></p>
       <div id="recent" hidden></div>
       <p class="links">
@@ -129,9 +143,15 @@
         "最大 x 偏小": "還可以再加。一直加到再多一個就離開目標。",
         "最大 x 偏大": "再多一個就會離開目標。停在離開之前的那一個。",
         "沒有填正整數": "最小和最大都要填正整數。",
+        "正中間選錯": "x 最小時，正中間是第一個目標數。x 最大時，是最後一個。",
+        "剩下的人數錯": "先拿出正中間那 1 個，再數這一組還剩幾個。",
+        "放錯邊": "x 最小時，剩下的放右方。x 最大時，放左方。",
+        "左右還沒相等": "左方和右方的人數要寫到相等，再解 x。",
+        "兩堆人數還沒相等": "看圖數兩堆的人。正中間那個不要加進任何一堆。有 x 的那堆，人數要連 x 一起寫。",
+        "x 還沒解出": "數式對了之後，再解出 x。",
         "其他": "先看哪一類出現最多，下一節只重教那一步。"
       };
-      const stepOrder = ["總數", "單雙", "第幾項", "中位數", "最小 x", "最大 x"];
+      const stepOrder = ["總數", "單雙", "第幾項", "中位數", "正中間", "跟哪一堆", "剩下幾個", "數式", "最小 x", "最大 x"];
 
       function expectedPassword() {
         return String((window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.reviewPassword) || "");
@@ -239,12 +259,31 @@
       function rankGaps(rows) {
         const map = new Map();
         rows.filter((row) => !row.ok && row.gap).forEach((row) => {
-          if (!map.has(row.gap)) map.set(row.gap, { gap: row.gap, count: 0, samples: [] });
-          const item = map.get(row.gap);
-          item.count += 1;
-          if (item.samples.length < 3 && row.input && item.samples.indexOf(row.input) === -1) item.samples.push(row.input);
+          if (!map.has(row.gap)) map.set(row.gap, { gap: row.gap, count: 0 });
+          map.get(row.gap).count += 1;
         });
         return Array.from(map.values()).sort((a, b) => b.count - a.count || a.gap.localeCompare(b.gap, "zh-HK"));
+      }
+
+      function groupInputs(rows) {
+        const steps = new Map();
+        rows.forEach((row) => {
+          if (!steps.has(row.step)) steps.set(row.step, new Map());
+          const inputs = steps.get(row.step);
+          const key = row.input || "";
+          if (!inputs.has(key)) inputs.set(key, { input: key, right: 0, wrong: 0 });
+          const item = inputs.get(key);
+          if (row.ok) item.right += 1;
+          else item.wrong += 1;
+        });
+        return Array.from(steps.entries()).map(([step, inputs]) => ({
+          step: step,
+          inputs: Array.from(inputs.values()).sort((a, b) => (b.wrong - a.wrong) || (b.right - a.right) || a.input.localeCompare(b.input, "zh-HK"))
+        })).sort((a, b) => {
+          const ai = stepOrder.indexOf(a.step);
+          const bi = stepOrder.indexOf(b.step);
+          return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+        });
       }
 
       function render() {
@@ -362,6 +401,55 @@
             }
             block.append(head, track);
             steps.appendChild(block);
+          });
+        }
+
+        const inputs = document.getElementById("inputs");
+        inputs.textContent = "";
+        const grouped = groupInputs(rows);
+        if (!grouped.length) {
+          const empty = document.createElement("p");
+          empty.className = "note";
+          empty.textContent = "這段還沒有作答。";
+          inputs.appendChild(empty);
+        } else {
+          grouped.forEach((group) => {
+            const block = document.createElement("div");
+            block.className = "bar-block";
+            const head = document.createElement("div");
+            head.className = "bar-top";
+            const title = document.createElement("strong");
+            title.textContent = group.step;
+            const count = document.createElement("span");
+            count.className = "note";
+            count.textContent = group.inputs.length + " 種";
+            head.append(title, count);
+            const list = document.createElement("ul");
+            list.className = "input-list";
+            group.inputs.forEach((item) => {
+              const line = document.createElement("li");
+              const text = document.createElement("span");
+              text.className = "input-text";
+              text.textContent = item.input || "（空白）";
+              const marks = document.createElement("span");
+              if (item.wrong) {
+                const wrong = document.createElement("span");
+                wrong.className = "wrong";
+                wrong.textContent = "錯 " + item.wrong;
+                marks.appendChild(wrong);
+              }
+              if (item.right) {
+                if (item.wrong) marks.appendChild(document.createTextNode(" · "));
+                const right = document.createElement("span");
+                right.className = "right";
+                right.textContent = "對 " + item.right;
+                marks.appendChild(right);
+              }
+              line.append(text, marks);
+              list.appendChild(line);
+            });
+            block.append(head, list);
+            inputs.appendChild(block);
           });
         }
 
