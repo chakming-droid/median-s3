@@ -62,6 +62,15 @@
     .bar-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
     .bar-track { display: flex; height: 18px; margin-top: 4px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
     .bar-fill { background: #d97706; height: 100%; }
+    .page-back { margin: 0 0 8px; }
+    .weak-row { display: grid; grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr); gap: 4px 12px; align-items: center; }
+    .weak-label strong { display: block; }
+    .weak-label .note { margin: 0; }
+    .focus-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+    .focus-card .bar-track { margin-top: 0; }
+    @media (max-width: 640px) {
+      .weak-row { grid-template-columns: minmax(0, 1fr); }
+    }
     .stack-wrong { background: #d97706; height: 100%; }
     .stack-right { background: #16a34a; height: 100%; }
     .advice { margin: 4px 0 0; }
@@ -94,8 +103,9 @@
 </head>
 <body>
   <div class="container">
+    <p class="page-back"><a href="index.html">返回練習</a></p>
     <h1>作答分析</h1>
-    <p class="note">用橫條比較學習難點。這部瀏覽器記住密碼後，重新整理就會更新。不顯示正確答案，也不顯示姓名。</p>
+    <p class="note">第一眼是次數最多的一項。名稱和次數在橫條左邊。其餘不對的步驟要按開。全對的步驟不列出。這部瀏覽器記住密碼後，重新整理就會更新。不顯示姓名。</p>
     <form id="gate">
       <input type="text" name="username" autocomplete="username" value="老師" hidden>
       <label>密碼
@@ -111,15 +121,20 @@
       </div>
       <p id="scopeNote" class="note"></p>
       <p id="countNote"></p>
-      <h2>學習難點</h2>
-      <div id="gaps"></div>
-      <h2>各步驟</h2>
-      <div id="steps"></div>
-      <h2>不同輸入</h2>
-      <p class="note">同一種寫法合在一起。字不同就分開列。</p>
-      <div id="inputs"></div>
-      <p><button type="button" class="btn btn-secondary" id="toggleRecent">展開逐次作答</button></p>
-      <div id="recent" hidden></div>
+      <h2>現在最弱</h2>
+      <div id="focus"></div>
+      <p><button type="button" class="btn btn-secondary" id="toggleRest">其他步驟</button></p>
+      <div id="rest" hidden>
+        <h2>其他難點</h2>
+        <div id="gaps"></div>
+        <h2>有不對的步驟</h2>
+        <div id="steps"></div>
+        <h2>不同輸入</h2>
+        <p class="note">同一種寫法合在一起。錯的先列，對的寫法要按開。</p>
+        <div id="inputs"></div>
+        <p><button type="button" class="btn btn-secondary" id="toggleRecent">展開逐次作答</button></p>
+        <div id="recent" hidden></div>
+      </div>
       <p class="links">
         <a href="index.html">課堂練習</a>
         <button type="button" class="btn btn-secondary" id="clearReview">清除全部作答</button>
@@ -130,7 +145,7 @@
   <script>
     (function () {
       if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
-      const state = { rows: [], sheetNote: "local", recentOpen: false };
+      const state = { rows: [], sheetNote: "local", recentOpen: false, restOpen: false, correctOpen: {} };
       const advice = {
         "總數加錯": "先帶學生逐格把頻數加一次，加完再填總數。",
         "單雙判斷錯": "總數加完後，先判斷單數還是雙數，再找中間的項。",
@@ -265,6 +280,66 @@
         return Array.from(map.values()).sort((a, b) => b.count - a.count || a.gap.localeCompare(b.gap, "zh-HK"));
       }
 
+      function tallyInputs(list) {
+        const map = new Map();
+        list.forEach((row) => {
+          const key = row.input || "";
+          if (!map.has(key)) map.set(key, { input: key, right: 0, wrong: 0 });
+          const item = map.get(key);
+          if (row.ok) item.right += 1;
+          else item.wrong += 1;
+        });
+        return Array.from(map.values()).sort((a, b) => (b.wrong - a.wrong) || (b.right - a.right) || a.input.localeCompare(b.input, "zh-HK"));
+      }
+
+      function weakLabel(name, countText) {
+        const label = document.createElement("div");
+        label.className = "weak-label";
+        const title = document.createElement("strong");
+        title.textContent = name;
+        const count = document.createElement("div");
+        count.className = "note";
+        count.textContent = countText;
+        label.append(title, count);
+        return label;
+      }
+
+      function weakRow(name, countText, ratio) {
+        const row = document.createElement("div");
+        row.className = "weak-row";
+        const track = document.createElement("div");
+        track.className = "bar-track";
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = Math.max(8, Math.round(ratio * 100)) + "%";
+        track.appendChild(fill);
+        row.append(weakLabel(name, countText), track);
+        return row;
+      }
+
+      function inputLine(item) {
+        const line = document.createElement("li");
+        const text = document.createElement("span");
+        text.className = "input-text";
+        text.textContent = item.input || "（空白）";
+        const marks = document.createElement("span");
+        if (item.wrong) {
+          const wrong = document.createElement("span");
+          wrong.className = "wrong";
+          wrong.textContent = "錯 " + item.wrong;
+          marks.appendChild(wrong);
+        }
+        if (item.right) {
+          if (item.wrong) marks.appendChild(document.createTextNode(" · "));
+          const right = document.createElement("span");
+          right.className = "right";
+          right.textContent = "對 " + item.right;
+          marks.appendChild(right);
+        }
+        line.append(text, marks);
+        return line;
+      }
+
       function groupInputs(rows) {
         const steps = new Map();
         rows.forEach((row) => {
@@ -303,41 +378,93 @@
         }
         document.getElementById("countNote").textContent = rows.length + " 次作答，" + wrong.length + " 次不對。";
 
-        const gaps = document.getElementById("gaps");
-        gaps.textContent = "";
         const ranked = rankGaps(rows);
+        const focus = document.getElementById("focus");
+        focus.textContent = "";
         if (!ranked.length) {
           const empty = document.createElement("p");
           empty.className = "note";
           empty.textContent = "這段還沒有不對的作答。";
+          focus.appendChild(empty);
+        } else {
+          const top = ranked[0];
+          const card = document.createElement("div");
+          card.className = "focus-card";
+          card.appendChild(weakRow(top.gap, top.count + " 次", 1));
+          const tip = document.createElement("p");
+          tip.className = "note advice";
+          tip.textContent = advice[top.gap] || advice["其他"];
+          card.appendChild(tip);
+          const tied = ranked.slice(1).filter((group) => group.count === top.count);
+          if (tied.length) {
+            const same = document.createElement("p");
+            same.className = "note";
+            same.textContent = "同樣多次：" + tied.map((group) => group.gap).join("、") + "。";
+            card.appendChild(same);
+          }
+          const wrongs = rows.filter((row) => !row.ok && row.gap === top.gap);
+          const writings = tallyInputs(wrongs);
+          if (writings.length) {
+            const caption = document.createElement("p");
+            caption.className = "note";
+            caption.textContent = "最常見的錯法";
+            const list = document.createElement("ul");
+            list.className = "input-list";
+            list.appendChild(inputLine(writings[0]));
+            card.append(caption, list);
+            const step = wrongs[0] ? wrongs[0].step : "";
+            const others = writings.slice(1);
+            const correct = tallyInputs(rows.filter((row) => row.ok && row.step === step)).filter((item) => item.right);
+            if (others.length || correct.length) {
+              const more = document.createElement("button");
+              more.type = "button";
+              more.className = "btn btn-secondary";
+              const key = "gap:" + top.gap;
+              more.textContent = state.correctOpen[key] ? "收起其餘寫法" : "其餘寫法";
+              const extra = document.createElement("div");
+              extra.hidden = !state.correctOpen[key];
+              if (others.length) {
+                const otherList = document.createElement("ul");
+                otherList.className = "input-list";
+                others.forEach((item) => otherList.appendChild(inputLine(item)));
+                extra.appendChild(otherList);
+              }
+              if (correct.length) {
+                const rightNote = document.createElement("p");
+                rightNote.className = "note";
+                rightNote.textContent = "對的寫法";
+                const rightList = document.createElement("ul");
+                rightList.className = "input-list";
+                correct.forEach((item) => rightList.appendChild(inputLine(item)));
+                extra.append(rightNote, rightList);
+              }
+              more.addEventListener("click", () => {
+                state.correctOpen[key] = !state.correctOpen[key];
+                render();
+              });
+              card.append(more, extra);
+            }
+          }
+          focus.appendChild(card);
+        }
+
+        const gaps = document.getElementById("gaps");
+        gaps.textContent = "";
+        const otherGaps = ranked.slice(1);
+        if (!otherGaps.length) {
+          const empty = document.createElement("p");
+          empty.className = "note";
+          empty.textContent = "沒有其他難點。";
           gaps.appendChild(empty);
         } else {
-          const lead = document.createElement("p");
-          lead.className = "lead";
-          const top = ranked.filter((group) => group.count === ranked[0].count);
-          lead.textContent = "建議先處理：" + top.map((group) => group.gap).join("、") + "。" + top.map((group) => advice[group.gap] || advice["其他"]).join("");
-          gaps.appendChild(lead);
-          const maxGap = ranked[0].count;
-          ranked.forEach((group) => {
+          otherGaps.forEach((group) => {
             const block = document.createElement("div");
             block.className = "bar-block";
-            const head = document.createElement("div");
-            head.className = "bar-top";
-            const title = document.createElement("strong");
-            title.textContent = group.gap;
-            const count = document.createElement("span");
-            count.textContent = group.count + " 次";
-            head.append(title, count);
-            const track = document.createElement("div");
-            track.className = "bar-track";
-            const fill = document.createElement("div");
-            fill.className = "bar-fill";
-            fill.style.width = Math.max(8, Math.round(group.count / maxGap * 100)) + "%";
-            track.appendChild(fill);
+            block.appendChild(weakRow(group.gap, group.count + " 次", group.count / ranked[0].count));
             const tip = document.createElement("p");
             tip.className = "note advice";
             tip.textContent = advice[group.gap] || advice["其他"];
-            block.append(head, track, tip);
+            block.appendChild(tip);
             gaps.appendChild(block);
           });
         }
@@ -356,10 +483,11 @@
           const bi = stepOrder.indexOf(b.step);
           return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
         });
-        if (!stepRows.length) {
+        const wrongSteps = stepRows.filter((item) => item.wrong > 0);
+        if (!wrongSteps.length) {
           const empty = document.createElement("p");
           empty.className = "note";
-          empty.textContent = "這段還沒有作答。";
+          empty.textContent = "沒有不對的步驟。";
           steps.appendChild(empty);
         } else {
           const legend = document.createElement("p");
@@ -373,18 +501,12 @@
             legend.appendChild(span);
           });
           steps.appendChild(legend);
-          const maxStep = Math.max.apply(null, stepRows.map((item) => item.right + item.wrong));
-          stepRows.forEach((item) => {
+          const maxStep = Math.max.apply(null, wrongSteps.map((item) => item.right + item.wrong));
+          wrongSteps.forEach((item) => {
             const block = document.createElement("div");
             block.className = "bar-block";
-            const head = document.createElement("div");
-            head.className = "bar-top";
-            const title = document.createElement("strong");
-            title.textContent = item.step;
-            const count = document.createElement("span");
-            count.className = "note";
-            count.textContent = "不對 " + item.wrong + " · 對 " + item.right;
-            head.append(title, count);
+            const row = document.createElement("div");
+            row.className = "weak-row";
             const track = document.createElement("div");
             track.className = "bar-track";
             if (item.wrong) {
@@ -399,18 +521,19 @@
               rightBar.style.width = Math.max(6, Math.round(item.right / maxStep * 100)) + "%";
               track.appendChild(rightBar);
             }
-            block.append(head, track);
+            row.append(weakLabel(item.step, "不對 " + item.wrong + " · 對 " + item.right), track);
+            block.appendChild(row);
             steps.appendChild(block);
           });
         }
 
         const inputs = document.getElementById("inputs");
         inputs.textContent = "";
-        const grouped = groupInputs(rows);
+        const grouped = groupInputs(rows).filter((group) => group.inputs.some((item) => item.wrong));
         if (!grouped.length) {
           const empty = document.createElement("p");
           empty.className = "note";
-          empty.textContent = "這段還沒有作答。";
+          empty.textContent = "這段還沒有不對的寫法。";
           inputs.appendChild(empty);
         } else {
           grouped.forEach((group) => {
@@ -420,38 +543,43 @@
             head.className = "bar-top";
             const title = document.createElement("strong");
             title.textContent = group.step;
+            const wrongKinds = group.inputs.filter((item) => item.wrong);
+            const rightKinds = group.inputs.filter((item) => item.right && !item.wrong);
             const count = document.createElement("span");
             count.className = "note";
-            count.textContent = group.inputs.length + " 種";
+            count.textContent = wrongKinds.length + " 種錯法";
             head.append(title, count);
             const list = document.createElement("ul");
             list.className = "input-list";
-            group.inputs.forEach((item) => {
-              const line = document.createElement("li");
-              const text = document.createElement("span");
-              text.className = "input-text";
-              text.textContent = item.input || "（空白）";
-              const marks = document.createElement("span");
-              if (item.wrong) {
-                const wrong = document.createElement("span");
-                wrong.className = "wrong";
-                wrong.textContent = "錯 " + item.wrong;
-                marks.appendChild(wrong);
-              }
-              if (item.right) {
-                if (item.wrong) marks.appendChild(document.createTextNode(" · "));
-                const right = document.createElement("span");
-                right.className = "right";
-                right.textContent = "對 " + item.right;
-                marks.appendChild(right);
-              }
-              line.append(text, marks);
-              list.appendChild(line);
-            });
+            wrongKinds.forEach((item) => list.appendChild(inputLine(item)));
             block.append(head, list);
+            if (rightKinds.length) {
+              const key = "step:" + group.step;
+              const more = document.createElement("button");
+              more.type = "button";
+              more.className = "btn btn-secondary";
+              more.textContent = state.correctOpen[key] ? "收起對的寫法" : "對的寫法";
+              const extra = document.createElement("ul");
+              extra.className = "input-list";
+              extra.hidden = !state.correctOpen[key];
+              rightKinds.forEach((item) => extra.appendChild(inputLine(item)));
+              more.addEventListener("click", () => {
+                state.correctOpen[key] = !state.correctOpen[key];
+                render();
+              });
+              block.append(more, extra);
+            }
             inputs.appendChild(block);
           });
         }
+
+        const rest = document.getElementById("rest");
+        const restButton = document.getElementById("toggleRest");
+        const hasOther = ranked.length > 0;
+        restButton.hidden = !hasOther;
+        if (!hasOther) state.restOpen = false;
+        rest.hidden = !state.restOpen;
+        restButton.textContent = state.restOpen ? "收起其他步驟" : "其他步驟";
 
         const toggle = document.getElementById("toggleRecent");
         toggle.textContent = (state.recentOpen ? "收起逐次作答" : "展開逐次作答") + "（" + rows.length + "）";
@@ -577,6 +705,10 @@
       if (savedPassword()) openReview(savedPassword());
       document.getElementById("from").addEventListener("change", render);
       document.getElementById("to").addEventListener("change", render);
+      document.getElementById("toggleRest").addEventListener("click", () => {
+        state.restOpen = !state.restOpen;
+        render();
+      });
       document.getElementById("toggleRecent").addEventListener("click", () => {
         state.recentOpen = !state.recentOpen;
         render();

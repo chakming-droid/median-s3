@@ -76,6 +76,7 @@
     .how-to li { margin: 4px 0; line-height: 1.5; }
 
     .problem-text { line-height: 1.6; margin: 8px 0 12px; }
+    .choice-label { margin: 10px 0 4px; font-weight: 700; }
     .problem-img { max-width: 100%; height: auto; border: 1px solid #cbd5e1; border-radius: 8px; background: white; display: block; margin: 8px 0 12px; }
 
     .sheet p { margin: 8px 0; font-size: 1.05rem; }
@@ -612,8 +613,7 @@
     @keyframes anim-drop { from { transform: scaleY(0); } to { transform: scaleY(1); } }
     @keyframes anim-rise { from { transform: translateX(-50%) translateY(8px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
     @keyframes anim-pop { to { transform: scale(1); opacity: 1; } }
-    #reviewFrame { width: 100%; height: 70vh; border: 0; background: white; }
-    #reviewCard .review-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
 
     @media (prefers-reduced-motion: reduce) {
       .walk-chip { transition: none !important; }
@@ -647,13 +647,6 @@
   <div id="teacherBar" class="teacher-bar" hidden></div>
   <h1>中位數</h1>
   <p id="progress" class="progress"></p>
-  <div class="card" id="reviewCard" hidden>
-    <div class="review-head">
-      <div class="card-title">作答分析</div>
-      <button type="button" class="btn btn-secondary" id="closeReview">返回練習</button>
-    </div>
-    <iframe id="reviewFrame" title="作答分析" hidden></iframe>
-  </div>
   <div class="card" id="pictureCard"></div>
   <div class="card how-to" id="guideCard">
     <div class="card-title">怎樣做</div>
@@ -726,7 +719,7 @@
       title: "指定中位數",
       header: "數值",
       freqHeader: "個數",
-      stem: "選一個中位數。再從表裡選一個數，用 + 和 − 加上去，直到正中間變成這個中位數。個數裡有 x 時，就用 + 和 − 試出最小和最大。自動加數在最下面。",
+      stem: "選一個中位數。再從表裡選一個數，用 + 和 − 加上去，直到正中間變成這個中位數。自動加數在最下面。",
       bridge: true,
       rows: [
         { val: 1, freq: "1" },
@@ -1145,18 +1138,11 @@
       const button = makeButton(lesson.title, index === lessonIndex ? "btn" : "btn btn-secondary", () => showMode(index));
       bar.appendChild(button);
     });
-    bar.appendChild(makeButton("老師", "btn btn-secondary", openReviewPanel));
+    bar.appendChild(makeButton("老師", "btn btn-secondary", () => { location.href = "teacher.html"; }));
   }
 
   function openReviewPanel() {
-    const card = document.getElementById("reviewCard");
-    const frame = document.getElementById("reviewFrame");
-    card.hidden = false;
-    if (!frame.getAttribute("src")) {
-      frame.src = "teacher.html?embed=1";
-      frame.hidden = false;
-    }
-    card.scrollIntoView({ block: "start" });
+    location.href = "teacher.html";
   }
 
   function teacherStatusText() {
@@ -1173,6 +1159,17 @@
       return "問得太密，問答暫停約一分鐘。學生頁不會說明原因，時間過了會自己恢復。";
     }
     return teacherNote || "免費問答可用。學生頁不會顯示這列。檢查額度會用掉一次免費問答。";
+  }
+
+  function bridgeStemText() {
+    if (lessonHasX()) return "選一個中位數。用 + 和 − 改變 x，試出正中間仍是這個中位數的最小和最大。自動加數在最下面。";
+    return "選一個中位數。再從表裡選一個數，用 + 和 − 加上去，直到正中間變成這個中位數。自動加數在最下面。";
+  }
+
+  function syncProblemStem() {
+    const stem = document.getElementById("problemStem");
+    if (!stem || !current().bridge) return;
+    stem.textContent = bridgeStemText();
   }
 
   function guideLines() {
@@ -1220,6 +1217,7 @@
   }
 
   function renderGuide() {
+    syncProblemStem();
     const card = document.getElementById("guideCard");
     const list = document.getElementById("guideList");
     if (!list || !card) return;
@@ -1271,8 +1269,9 @@
       line.className = "question-line";
       line.setAttribute("aria-live", "polite");
       const stem = document.createElement("p");
+      stem.id = "problemStem";
       stem.className = "problem-text";
-      stem.textContent = lesson.stem;
+      stem.textContent = lesson.bridge ? bridgeStemText() : lesson.stem;
       card.append(line, stem);
       if (lesson.image) {
         const img = document.createElement("img");
@@ -3288,8 +3287,16 @@
     return row;
   }
 
+  function choiceLabel(text) {
+    const label = document.createElement("p");
+    label.className = "choice-label";
+    label.textContent = text;
+    return label;
+  }
+
   function renderBridge(form) {
     const unknown = lessonHasX();
+    if (!unknown && bridgeRun.target != null) form.appendChild(choiceLabel("中位數"));
     form.appendChild(medianChoiceButtons((value) => bridgeChoose(value)));
     if (bridgeRun.target == null) return;
     const note = document.createElement("p");
@@ -3299,9 +3306,10 @@
       form.appendChild(note);
       return;
     }
-    note.textContent = "加哪一個數？表裡的數都可以。用 + 和 − 加上去，直到正中間是 " + bridgeRun.target + "。";
-    form.appendChild(note);
+    form.appendChild(choiceLabel("加這個數"));
     form.appendChild(medianChoiceButtons((value) => bridgePickAdd(value), bridgeRun.addVal));
+    note.textContent = "用 + 和 − 加上去，直到正中間是 " + bridgeRun.target + "。";
+    form.appendChild(note);
   }
 
   function freshInquiry() {
@@ -4224,7 +4232,7 @@
       tutorTitle.textContent = current().id === "pens"
         ? (penMedianOk ? "探究" : "選一個中位數")
         : current().bridge
-          ? (bridgeRun.target == null ? "選一個中位數" : (lessonHasX() ? "試 x" : "加一個數"))
+          ? (lessonHasX() ? (bridgeRun.target == null ? "選一個中位數" : "試 x") : "選一個中位數")
           : "先回答這些問題";
     }
     renderLog();
@@ -6638,15 +6646,6 @@
   }, 5000);
 
   bindAnimTrial();
-  document.getElementById("closeReview").addEventListener("click", () => {
-    document.getElementById("reviewCard").hidden = true;
-  });
-  window.addEventListener("message", (event) => {
-    if (event.origin !== location.origin) return;
-    if (!event.data || event.data.type !== "median-review-height") return;
-    const frame = document.getElementById("reviewFrame");
-    frame.style.height = Math.max(480, Number(event.data.height) || 0) + "px";
-  });
   loadLesson(0);
   if (location.hash === "#teacher") openReviewPanel();
 </script>
