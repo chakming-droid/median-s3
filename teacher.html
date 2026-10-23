@@ -121,6 +121,12 @@
       </div>
       <p id="scopeNote" class="note"></p>
       <p id="countNote"></p>
+      <h2>鎖定練習</h2>
+      <p class="note">鎖定後，這部瀏覽器的學生頁不能打開該頁。Q2 和離散數據表不在這裡鎖。</p>
+      <p class="links">
+        <button type="button" class="btn btn-secondary" id="lockBridge">鎖定指定中位數</button>
+        <button type="button" class="btn btn-secondary" id="lockPens">鎖定 Q8</button>
+      </p>
       <h2>現在最弱</h2>
       <div id="focus"></div>
       <p><button type="button" class="btn btn-secondary" id="toggleRest">其他步驟</button></p>
@@ -681,6 +687,35 @@
         event.preventDefault();
         openReview(document.getElementById("password").value);
       });
+      function lessonLocks() {
+        try { return JSON.parse(localStorage.getItem("median-lesson-lock") || "{}"); }
+        catch (error) { return {}; }
+      }
+
+      function paintLessonLocks() {
+        const locks = lessonLocks();
+        const bridge = document.getElementById("lockBridge");
+        const pens = document.getElementById("lockPens");
+        if (bridge) {
+          bridge.textContent = locks.bridge ? "指定中位數已鎖定" : "鎖定指定中位數";
+          bridge.className = locks.bridge ? "btn" : "btn btn-secondary";
+        }
+        if (pens) {
+          pens.textContent = locks.pens ? "Q8 已鎖定" : "鎖定 Q8";
+          pens.className = locks.pens ? "btn" : "btn btn-secondary";
+        }
+      }
+
+      function toggleLessonLock(id) {
+        const locks = lessonLocks();
+        locks[id] = !locks[id];
+        try { localStorage.setItem("median-lesson-lock", JSON.stringify(locks)); } catch (error) {}
+        paintLessonLocks();
+      }
+
+      paintLessonLocks();
+      document.getElementById("lockBridge").addEventListener("click", () => toggleLessonLock("bridge"));
+      document.getElementById("lockPens").addEventListener("click", () => toggleLessonLock("pens"));
       document.getElementById("lockReview").addEventListener("click", () => {
         forgetPassword();
         document.getElementById("password").value = "";
