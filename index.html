@@ -794,7 +794,7 @@
       bridge: true,
       rows: [
         { val: 1, freq: "1" },
-        { val: 2, freq: "1" },
+        { val: 2, freq: "2" },
         { val: 3, freq: "1" },
         { val: 4, freq: "1" },
         { val: 5, freq: "1" }
@@ -807,7 +807,7 @@
       title: "指定中位數 2",
       header: "數值",
       freqHeader: "個數",
-      stem: "選一個中位數。用右邊的 + 和 −，把 4 加上去，直到正中間變成它。",
+      stem: "指定的中位數是 3。用右邊的 + 和 −，把 4 加上去，直到正中間變成它。",
       bridge: true,
       rows: [
         { val: 1, freq: "1" },
@@ -1252,6 +1252,10 @@
     asking = false;
     bridgeStop();
     bridgeRun = { target: lesson.id === "pens" ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null };
+    if (lesson.id === "bridge2") {
+      bridgeRun.target = 3;
+      bridgeRun.addVal = 4;
+    }
     animTrial.pensOpen = false;
     purpleOpen = false;
     solvedChipsOpen = false;
@@ -1271,7 +1275,7 @@
     if (lesson.bridge) {
       tutor.mode = "bridge";
       tutor.step = 1;
-      tutor.log.push({ kind: "tutor", text: "選一個表裡已有的數值，當作中位數。" });
+      tutor.log.push({ kind: "tutor", text: questionText(), asks: true, step: tutor.step });
       render();
       return;
     }
@@ -1335,7 +1339,10 @@
 
   function bridgeStemText() {
     if (lessonHasX()) return "選一個中位數。用右邊的 + 和 − 改變 x，試出正中間仍是這個中位數的最小和最大。";
-    if (current().id === "bridge2") return "選一個中位數。用右邊的 + 和 −，把 4 加上去，直到正中間變成它。";
+    if (current().id === "bridge2") {
+      const target = bridgeRun.target == null ? 3 : bridgeRun.target;
+      return "指定的中位數是 " + target + "。用右邊的 + 和 −，把 4 加上去，直到正中間變成它。";
+    }
     return "選一個中位數。用右邊的 + 和 −，把這個中位數加上去，直到正中間變成它。";
   }
 
@@ -1356,8 +1363,9 @@
         ];
       }
       const addWhat = id === "bridge2" ? "把 4 加上去" : "把這個中位數加上去";
+      const first = id === "bridge2" ? "指定的中位數是 3。正中間現在是兩個 2。" : "先選一個表裡已有的數，當作中位數。";
       return [
-        "先選一個表裡已有的數，當作中位數。",
+        first,
         "用右邊的 + 和 −，" + addWhat + "，直到正中間是它。",
         "想看自動加上去，按右邊的「看動畫」。"
       ];
@@ -3523,7 +3531,7 @@
     note.textContent = unknown
       ? "用右邊的 + 和 − 改變 x，試出正中間仍是 " + bridgeRun.target + " 的最小和最大。"
       : (current().id === "bridge2"
-        ? "用右邊的 + 和 −，把 4 加上去。"
+        ? "用右邊的 + 和 −，把 4 加上去，直到正中間變成指定的中位數。"
         : "用右邊的 + 和 −，把這個中位數加上去。");
     form.appendChild(note);
   }
@@ -4933,10 +4941,23 @@
     return wrap;
   }
 
+  function bridgeAskText() {
+    if (bridgeRun.target == null) return "選一個表裡已有的數值，當作中位數。";
+    const centers = bridgeCenterValues(bridgePairs());
+    const target = bridgeRun.target;
+    const add = bridgeAddValue();
+    const addName = add.val == null ? "這個數" : String(add.val);
+    const samePair = centers.length === 2 && centers[0] === centers[1];
+    const mid = samePair ? "正中間是兩個 " + centers[0] : "正中間是 " + centers.join(" 和 ");
+    if (centers.length && centers.every((value) => value === target)) return "正中間已是 " + target + "。再按 +，看它會不會離開。";
+    if (centers.length) return mid + "。指定的中位數是 " + target + "。把 " + addName + " 加上去，直到正中間變成 " + target + "。";
+    return "指定的中位數是 " + target + "。把 " + addName + " 加上去，直到正中間變成它。";
+  }
+
   function questionText() {
     if (phase === "type") return "做之前，先判斷：這是離散數據還是連續數據？";
     const lesson = current();
-    if (tutor.mode === "bridge") return "選一個表裡已有的數值，當作中位數。";
+    if (tutor.mode === "bridge") return bridgeAskText();
     if (tutor.mode === "known") {
       const view = knownView();
       if (!view) return "請先填好頻數表。";
