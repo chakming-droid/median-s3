@@ -358,6 +358,8 @@
     .pen-inquiry { margin-top: 14px; padding-top: 10px; border-top: 1px solid #cbd5e1; }
     .pen-inquiry:empty { display: none; }
     .pen-inquiry-title { font-weight: 800; margin: 0 0 8px; }
+    .inq-board { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
+    .inq-board > .inq-scene { width: 100%; margin-top: 0; }
     .inq-scene { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; }
     .inq-pile { flex: 1 1 0; min-width: 0; border-radius: 12px; padding: 8px 6px; text-align: center; }
     .inq-pile.small { background: #e2e8f0; }
@@ -790,7 +792,7 @@
       title: "指定中位數",
       header: "數值",
       freqHeader: "個數",
-      stem: "選一個中位數。用右邊的 + 和 −，把這個中位數加上去，直到正中間變成它。",
+      stem: "指定的中位數是 3。用右邊的 + 和 −，把 3 加上去，直到正中間變成它。",
       bridge: true,
       rows: [
         { val: 1, freq: "1" },
@@ -1252,6 +1254,10 @@
     asking = false;
     bridgeStop();
     bridgeRun = { target: lesson.id === "pens" ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null };
+    if (lesson.id === "bridge") {
+      bridgeRun.target = 3;
+      bridgeRun.addVal = 3;
+    }
     if (lesson.id === "bridge2") {
       bridgeRun.target = 3;
       bridgeRun.addVal = 4;
@@ -1289,7 +1295,9 @@
           kind: "tutor",
           text: model.error === "multi-x"
             ? "只可以有一個未知數。請改好再按繼續。"
-            : "表裡有未知數。請先按表裡的一個數值，當作中位數。"
+            : (lesson.id === "pens"
+              ? "中位數是 " + lesson.target + "。請先填好頻數表。"
+              : "表裡有未知數。請先按表裡的一個數值，當作中位數。")
         });
         render();
         return;
@@ -1297,6 +1305,14 @@
     }
     tutor.mode = lesson.kind === "continuous" ? "continuous" : hasX ? "unknown" : "known";
     tutor.step = tutor.mode === "unknown" ? 2 : 1;
+    if (lesson.id === "pens") {
+      const fixed = Number(lesson.target);
+      penMedianPick = fixed;
+      penMedianOk = true;
+      penInquiry = freshInquiry();
+      bridgeRun.target = fixed;
+      lesson.closing = "該分佈的中位數為 " + fixed + "。";
+    }
     askQuestion();
     render();
   }
@@ -1339,9 +1355,10 @@
 
   function bridgeStemText() {
     if (lessonHasX()) return "選一個中位數。用右邊的 + 和 − 改變 x，試出正中間仍是這個中位數的最小和最大。";
-    if (current().id === "bridge2") {
+    if (current().id === "bridge" || current().id === "bridge2") {
       const target = bridgeRun.target == null ? 3 : bridgeRun.target;
-      return "指定的中位數是 " + target + "。用右邊的 + 和 −，把 4 加上去，直到正中間變成它。";
+      const addWhat = current().id === "bridge2" ? "把 4 加上去" : "把 3 加上去";
+      return "指定的中位數是 " + target + "。用右邊的 + 和 −，" + addWhat + "，直到正中間變成它。";
     }
     return "選一個中位數。用右邊的 + 和 −，把這個中位數加上去，直到正中間變成它。";
   }
@@ -1362,8 +1379,8 @@
           "想看自動加上去，按右邊的「看動畫」。"
         ];
       }
-      const addWhat = id === "bridge2" ? "把 4 加上去" : "把這個中位數加上去";
-      const first = id === "bridge2" ? "指定的中位數是 3。正中間現在是兩個 2。" : "先選一個表裡已有的數，當作中位數。";
+      const addWhat = id === "bridge2" ? "把 4 加上去" : "把 3 加上去";
+      const first = id === "bridge2" ? "指定的中位數是 3。正中間現在是兩個 2。" : "指定的中位數是 3。";
       return [
         first,
         "用右邊的 + 和 −，" + addWhat + "，直到正中間是它。",
@@ -3522,17 +3539,13 @@
 
   function renderBridge(form) {
     prependStepPrompt(form);
-    const unknown = lessonHasX();
-    if (!unknown && bridgeRun.target != null) form.appendChild(choiceLabel("中位數"));
-    form.appendChild(medianChoiceButtons((value) => bridgeChoose(value)));
     if (bridgeRun.target == null) return;
     const note = document.createElement("p");
     note.className = "problem-text";
-    note.textContent = unknown
+    const addWhat = current().id === "bridge2" ? "把 4 加上去" : "把 " + bridgeRun.target + " 加上去";
+    note.textContent = lessonHasX()
       ? "用右邊的 + 和 − 改變 x，試出正中間仍是 " + bridgeRun.target + " 的最小和最大。"
-      : (current().id === "bridge2"
-        ? "用右邊的 + 和 −，把 4 加上去，直到正中間變成指定的中位數。"
-        : "用右邊的 + 和 −，把這個中位數加上去。");
+      : "用右邊的 + 和 −，" + addWhat + "，直到正中間變成指定的中位數。";
     form.appendChild(note);
   }
 
@@ -4009,10 +4022,12 @@
       }
       scene.append(small, mid, big);
     }
-    placeInquiryScene(wrap, scene);
-    if (inquiry.slid && !inquiry.countsOk) {
-      wrap.appendChild(makeButton("人數填好了", "btn", submitInquiryCounts));
-    } else if (inquiry.countsOk && !inquiry.eqOk) {
+    const board = document.createElement("div");
+    board.className = "inq-board";
+    board.appendChild(scene);
+    if (inquiry.slid && !inquiry.countsOk) board.appendChild(makeButton("人數填好了", "btn", submitInquiryCounts));
+    placeInquiryScene(wrap, board);
+    if (inquiry.countsOk && !inquiry.eqOk) {
       const row = document.createElement("div");
       row.className = "form-row";
       const input = document.createElement("input");
@@ -4574,9 +4589,9 @@
     const tutorTitle = document.querySelector("#tutorCard > .card-title");
     if (tutorTitle) {
       tutorTitle.textContent = current().id === "pens"
-        ? (penMedianOk ? "探究" : "選一個中位數")
+        ? "探究"
         : current().bridge
-          ? (lessonHasX() ? (bridgeRun.target == null ? "選一個中位數" : "試 x") : "選一個中位數")
+          ? (lessonHasX() ? (bridgeRun.target == null ? "選一個中位數" : "試 x") : "中位數")
           : "先回答這些問題";
     }
     renderLog();
@@ -4614,23 +4629,13 @@
     }
     prependStepPrompt(form);
     if (current().id === "pens" && tutor.mode === "unknown") {
-      if (!penMedianOk) form.appendChild(medianChoiceButtons(pensChooseMedian, penMedianPick));
       if (penMedianNote) {
         const note = document.createElement("p");
         note.className = "problem-text";
         note.textContent = penMedianNote;
         form.appendChild(note);
       }
-      if (penMedianOk && penInquiry) {
-        form.appendChild(penInquiryPanel());
-        form.appendChild(makeButton("換一個中位數", "btn btn-secondary", () => {
-          penMedianPick = null;
-          penMedianOk = false;
-          penInquiry = null;
-          penMedianNote = "";
-          render();
-        }));
-      }
+      if (penMedianOk && penInquiry) form.appendChild(penInquiryPanel());
     } else if (tutor.mode === "unknown" && tutor.step > 1) {
       renderUnknownControls(form, actions);
     } else if (tutor.mode === "known" && tutor.step === 2) {
@@ -4979,7 +4984,8 @@
     const model = modelOf(lesson);
     const view = !model.error && model.rows ? MedianMath.medianForX(model.rows, currentTrial()) : null;
     if (lesson.id === "pens") {
-      if (!penMedianOk || !penInquiry || penInquiry.stage === "done") return "選一個表裡的數值，當作中位數。";
+      if (penInquiry && penInquiry.stage === "done") return "兩種情況都解出了。";
+      if (!penMedianOk || !penInquiry) return "中位數是 " + lesson.target + "。";
       if (!penInquiry.slid) {
         const shape = inquiryShape();
         const ask = shape && shape.lift && shape.lift.length > 1 ? "點哪兩個 " : "點哪一個 ";
@@ -5002,8 +5008,8 @@
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
     if (tutor.mode === "bridge") {
-      const addWhat = current().id === "bridge2" ? "把 4 加上去" : "把這個中位數加上去";
-      return "同學先選中位數，再用右邊的 + 和 − " + addWhat + "，直到正中間變成它。有 x 時，用 + 和 − 試最小和最大。不要說出要加多少個，也不要說出最小和最大。自動動畫等他按右邊的「看動畫」。";
+      const addWhat = current().id === "bridge2" ? "把 4 加上去" : "把 3 加上去";
+      return "中位數已指定為 3。同學用右邊的 + 和 − " + addWhat + "，直到正中間變成它。有 x 時，用 + 和 − 試最小和最大。不要說出要加多少個，也不要說出最小和最大。自動動畫等他按右邊的「看動畫」。";
     }
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
