@@ -105,11 +105,10 @@
   <div class="container">
     <p class="page-back"><a href="index.html">返回練習</a></p>
     <h1>作答分析</h1>
-    <p class="note">第一眼是次數最多的一項。名稱和次數在橫條左邊。其餘不對的步驟要按開。全對的步驟不列出。這部瀏覽器記住密碼後，重新整理就會更新。不顯示姓名。</p>
-    <form id="gate">
-      <input type="text" name="username" autocomplete="username" value="老師" hidden>
+    <p class="note">第一眼是次數最多的一項。名稱和次數在橫條左邊。其餘不對的步驟要按開。全對的步驟不列出。進入之後，作答會自動更新。關閉這頁就要再輸入密碼。不顯示姓名。</p>
+    <form id="gate" autocomplete="off">
       <label>密碼
-        <input id="password" name="password" type="password" autocomplete="current-password">
+        <input id="password" name="password" type="password" autocomplete="new-password">
       </label>
       <p><button class="btn" type="submit">進入</button></p>
       <p id="gateError" class="gate-error" hidden>密碼不對。試算表若仍是預設密碼，讀取也會被拒絕。</p>
@@ -122,8 +121,9 @@
       <p id="scopeNote" class="note"></p>
       <p id="countNote"></p>
       <h2>上鎖和解鎖</h2>
-      <p class="note">Q2 一直開着。其餘活動可各自上鎖或解鎖。按解鎖會打開該活動。這部瀏覽器已打開的學生頁也會一併進入。上鎖後，學生頁不能再打開它。</p>
+      <p class="note">Q2 一直開着。其餘活動可各自上鎖或解鎖。按解鎖後，已打開公開頁的學生會進入該活動。上鎖後，學生頁不能再打開它。這頁留在這裡。</p>
       <p class="links" id="lessonGates"></p>
+      <p id="releaseNote" class="note"></p>
       <h2>現在最弱</h2>
       <div id="focus"></div>
       <p><button type="button" class="btn btn-secondary" id="toggleRest">其他步驟</button></p>
@@ -238,11 +238,12 @@
         return out;
       }
 
-      function loadSheet(password, action) {
+      let sheetSeq = 0;
+      function loadSheet(password, action, extra) {
         const url = window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.collectUrl;
         if (!url) return Promise.resolve({ skipped: true, ok: true, rows: [] });
         return new Promise((resolve) => {
-          const cb = "medianSheet" + Date.now();
+          const cb = "medianSheet" + Date.now() + "_" + (sheetSeq++);
           let done = false;
           const finish = (payload) => {
             if (done) return;
@@ -256,7 +257,14 @@
           const script = document.createElement("script");
           script.id = cb;
           const join = String(url).indexOf("?") === -1 ? "?" : "&";
-          script.src = url + join + "password=" + encodeURIComponent(password) + "&callback=" + cb + (action ? "&action=" + encodeURIComponent(action) : "");
+          let src = url + join + "password=" + encodeURIComponent(password || "") + "&callback=" + cb;
+          if (action) src += "&action=" + encodeURIComponent(action);
+          if (extra) {
+            Object.keys(extra).forEach((key) => {
+              src += "&" + encodeURIComponent(key) + "=" + encodeURIComponent(extra[key]);
+            });
+          }
+          script.src = src;
           script.onerror = () => finish({ ok: false, rows: [] });
           document.body.appendChild(script);
           setTimeout(() => finish({ ok: false, rows: [], timeout: true }), 20000);
@@ -369,7 +377,7 @@
         const wrong = rows.filter((row) => !row.ok);
         const scope = document.getElementById("scopeNote");
         if (state.sheetNote === "sheet") {
-          scope.textContent = "已合併這部瀏覽器和試算表。重新整理會更新。";
+          scope.textContent = "已合併這部瀏覽器和試算表。這頁開着時會自動更新。";
         } else if (state.sheetNote === "delete-pending") {
           scope.textContent = "這部瀏覽器的記錄已清除。試算表要貼上新程式並部署新版本後，再按一次清除。";
         } else if (state.sheetNote === "denied") {
@@ -626,19 +634,12 @@
         }, 0);
       }
 
-      function savedPassword() {
-        try { return localStorage.getItem("median-review-key") || ""; }
-        catch (error) { return ""; }
-      }
-
-      function rememberPassword(password) {
-        try { localStorage.setItem("median-review-key", password); }
-        catch (error) {}
-      }
+      let sessionPassword = "";
+      try { localStorage.removeItem("median-review-key"); } catch (error) {}
 
       function forgetPassword() {
-        try { localStorage.removeItem("median-review-key"); }
-        catch (error) {}
+        sessionPassword = "";
+        try { localStorage.removeItem("median-review-key"); } catch (error) {}
       }
 
       function showGate(message) {
@@ -670,13 +671,14 @@
             showGate(true);
             return;
           }
-          rememberPassword(typed);
+          sessionPassword = typed;
           const remote = sheetOk && Array.isArray(sheet.rows) ? sheet.rows : [];
           state.rows = merge(local, remote);
           state.sheetNote = sheet && sheet.skipped ? "local" : (sheetOk ? "sheet" : (sheet && sheet.denied ? "denied" : "sheet-fail"));
           document.getElementById("gate").hidden = true;
           document.getElementById("app").hidden = false;
           render();
+          refreshClassRelease();
         });
       }
 
@@ -692,33 +694,52 @@
         { id: "sheet", title: "離散數據表" }
       ];
 
-      function releasedIds() {
-        try { return JSON.parse(localStorage.getItem("median-lesson-release") || "[]"); }
-        catch (error) { return []; }
+      let classRelease = [];
+      function cleanReleaseIds(ids) {
+        const allow = { bridge: true, bridge2: true, pens: true, sheet: true };
+        const list = Array.isArray(ids) ? ids : [];
+        const clean = [];
+        list.forEach((id) => {
+          if (allow[id] && clean.indexOf(id) < 0) clean.push(id);
+        });
+        return clean;
+      }
+
+      function refreshClassRelease() {
+        loadSheet("", "release").then((sheet) => {
+          if (!sheet || !Array.isArray(sheet.ids)) return;
+          classRelease = cleanReleaseIds(sheet.ids);
+          paintRelease();
+        });
       }
 
       function paintRelease() {
         const row = document.getElementById("lessonGates");
         if (!row) return;
-        const released = releasedIds();
         row.textContent = "";
         releaseOrder.forEach((item) => {
           if (item.id === "discrete") return;
-          const open = released.indexOf(item.id) >= 0;
+          const open = classRelease.indexOf(item.id) >= 0;
           const button = document.createElement("button");
           button.type = "button";
           button.className = open ? "btn" : "btn btn-secondary";
           button.textContent = (open ? "上鎖" : "解鎖") + item.title;
           button.addEventListener("click", () => {
-            const ids = releasedIds().filter((id) => id !== item.id);
-            const unlocking = !open;
-            if (unlocking) ids.push(item.id);
-            try { localStorage.setItem("median-lesson-release", JSON.stringify(ids)); } catch (error) {}
-            if (unlocking) {
-              location.href = "index.html?teacher=1&page=" + encodeURIComponent(item.id);
-              return;
-            }
-            paintRelease();
+            if (!sessionPassword) return;
+            const ids = classRelease.filter((id) => id !== item.id);
+            if (!open) ids.push(item.id);
+            button.disabled = true;
+            loadSheet(sessionPassword, "set-release", { ids: JSON.stringify(ids) }).then((sheet) => {
+              const note = document.getElementById("releaseNote");
+              if (!sheet || !Array.isArray(sheet.ids)) {
+                if (note) note.textContent = "iPad 還沒跟上。請先把試算表的程式部署成新版本，再按一次。";
+                paintRelease();
+                return;
+              }
+              classRelease = cleanReleaseIds(sheet.ids);
+              if (note) note.textContent = open ? "已上鎖。學生的公開頁不能再打開它。" : "已解鎖。已打開公開頁的學生會進入該活動。";
+              paintRelease();
+            });
           });
           row.appendChild(button);
         });
@@ -732,7 +753,7 @@
       });
       document.getElementById("clearReview").addEventListener("click", () => {
         if (!window.confirm("確定清除全部作答記錄？")) return;
-        const password = savedPassword() || document.getElementById("password").value;
+        const password = sessionPassword || document.getElementById("password").value;
         try { localStorage.removeItem("median-attempts"); } catch (error) {}
         loadSheet(password, "delete").then((sheet) => {
           if (sheet && sheet.deleted) {
@@ -746,7 +767,16 @@
           render();
         });
       });
-      if (savedPassword()) openReview(savedPassword());
+      setInterval(() => {
+        if (!sessionPassword || document.getElementById("app").hidden) return;
+        loadSheet(sessionPassword).then((sheet) => {
+          if (!sheet || !sheet.ok || !Array.isArray(sheet.rows)) return;
+          state.rows = merge(localRows(), sheet.rows);
+          state.sheetNote = "sheet";
+          render();
+        });
+        refreshClassRelease();
+      }, 15000);
       document.getElementById("from").addEventListener("change", render);
       document.getElementById("to").addEventListener("change", render);
       document.getElementById("toggleRest").addEventListener("click", () => {

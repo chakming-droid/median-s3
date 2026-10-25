@@ -48,13 +48,7 @@
 
     .progress { margin: 0 0 16px; color: #475569; font-weight: bold; }
 
-    .teacher-bar {
-      background: #fff7ed;
-      border: 1px solid #fdba74;
-      border-radius: 10px;
-      padding: 10px 12px;
-      margin-bottom: 14px;
-    }
+    .teacher-bar { display: none !important; }
 
     .teacher-bar p { margin: 8px 0; line-height: 1.5; }
     .teacher-gates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -947,25 +941,52 @@
     return releasedIds().indexOf(lesson.id) >= 0;
   }
 
-  function setLessonOpen(id, open) {
-    const ids = releasedIds().filter((item) => item !== id);
-    if (open) ids.push(id);
-    try { storageSet("median-lesson-release", JSON.stringify(ids)); } catch (error) {}
-    if (teacherView && open) {
-      const index = lessons.findIndex((lesson) => lesson.id === id);
-      if (index >= 0) {
-        const params = new URLSearchParams(location.search);
-        params.set("teacher", "1");
-        params.set("page", id);
-        history.replaceState(null, "", location.pathname + "?" + params.toString());
-        if (index !== lessonIndex) {
-          showMode(index);
-          return;
-        }
-      }
+  function cleanReleaseIds(ids) {
+    const allow = { bridge: true, bridge2: true, pens: true, sheet: true };
+    const list = Array.isArray(ids) ? ids : [];
+    const clean = [];
+    list.forEach((id) => {
+      if (allow[id] && clean.indexOf(id) < 0) clean.push(id);
+    });
+    return clean;
+  }
+
+  function applyServerRelease(ids) {
+    const clean = cleanReleaseIds(ids);
+    try { storageSet("median-lesson-release", JSON.stringify(clean)); } catch (error) {}
+    if (!releaseReady) {
+      releaseSeen = clean.slice();
+      releaseReady = true;
+      if (!canOpen(lessonIndex) && lessonIndex !== 0) showMode(0);
+      else render();
+      return;
     }
-    renderTeacher();
-    render();
+    if (!applyReleaseJump()) render();
+  }
+
+  function pullClassRelease() {
+    if (teacherView || releasePulling) return;
+    const url = window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.collectUrl;
+    if (!url) return;
+    releasePulling = true;
+    const cb = "medianRelease" + Date.now();
+    let done = false;
+    const script = document.createElement("script");
+    const finish = (data) => {
+      if (done) return;
+      done = true;
+      releasePulling = false;
+      try { delete window[cb]; } catch (error) { window[cb] = function () {}; }
+      if (script.parentNode) script.remove();
+      if (!data || !Array.isArray(data.ids)) return;
+      applyServerRelease(data.ids);
+    };
+    window[cb] = finish;
+    script.onerror = () => finish(null);
+    const join = String(url).indexOf("?") === -1 ? "?" : "&";
+    script.src = url + join + "action=release&callback=" + cb;
+    document.body.appendChild(script);
+    setTimeout(() => finish(null), 8000);
   }
 
   function canOpen(index) {
@@ -1491,44 +1512,9 @@
 
   function renderTeacher() {
     const bar = document.getElementById("teacherBar");
-    bar.hidden = !teacherView;
-    if (!teacherView) return;
-    let status = bar.querySelector("#teacherStatus");
-    if (!status) {
-      const heading = document.createElement("strong");
-      heading.textContent = "老師檢視";
-      status = document.createElement("p");
-      status.id = "teacherStatus";
-      const button = document.createElement("button");
-      button.type = "button";
-      button.id = "checkQuota";
-      button.className = "btn btn-secondary";
-      button.textContent = "檢查額度";
-      button.addEventListener("click", checkQuota);
-      const review = makeButton("作答分析", "btn btn-secondary", openReviewPanel);
-      const gates = document.createElement("div");
-      gates.id = "teacherGates";
-      gates.className = "teacher-gates";
-      bar.append(heading, status, gates, button, review);
-    }
-    paintTeacherGates(bar);
-    status.textContent = teacherStatusText();
-  }
-
-  function paintTeacherGates(bar) {
-    const row = bar.querySelector("#teacherGates");
-    if (!row) return;
-    row.textContent = "";
-    lessons.forEach((lesson) => {
-      if (lesson.id === "discrete") return;
-      const open = teacherReleased(lesson);
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = open ? "btn" : "btn btn-secondary";
-      button.textContent = (open ? "上鎖" : "解鎖") + lesson.title;
-      button.addEventListener("click", () => setLessonOpen(lesson.id, !open));
-      row.appendChild(button);
-    });
+    if (!bar) return;
+    bar.hidden = true;
+    bar.textContent = "";
   }
 
   function renderPicture() {
@@ -7117,6 +7103,8 @@
   }
 
   let releaseSeen = releasedIds();
+  let releaseReady = false;
+  let releasePulling = false;
   let lockSnapshot = (storageGet("median-lesson-lock") || "") + "|" + (storageGet("median-lesson-release") || "");
   function syncRelease() {
     lockSnapshot = (storageGet("median-lesson-lock") || "") + "|" + (storageGet("median-lesson-release") || "");
@@ -7130,12 +7118,13 @@
     const open = aiOpen();
     const locks = (storageGet("median-lesson-lock") || "") + "|" + (storageGet("median-lesson-release") || "");
     if (open !== askWasOpen || locks !== lockSnapshot) syncRelease();
-    else if (teacherView) renderTeacher();
-  }, 5000);
+    pullClassRelease();
+  }, 4000);
 
   bindAnimTrial();
   window.matchMedia("(min-width: 1024px)").addEventListener("change", () => render());
   loadLesson(0);
+  pullClassRelease();
   (function openRequestedPage() {
     const requested = new URLSearchParams(location.search).get("page");
     if (!requested) return;

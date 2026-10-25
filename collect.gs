@@ -1,18 +1,16 @@
+var REVIEW_PASSWORD = "請在這裡改成你的密碼"; // 只改這一行引號裡的句子，寫回原本的密碼
+var PLACEHOLDER_PASSWORD = "請在這裡改成你的密碼"; // 這一行不要改
+
 /**
- * 中位數作答收集。這是範本，密碼只是佔位，讀取會被拒絕，直到你改掉它。
+ * 用法：全選這份，貼去 Apps Script，覆蓋原本全部內容。
+ * 貼上之前，先抄下舊程式裡 REVIEW_PASSWORD 引號中的密碼。
+ * 貼上之後，只把第 1 行引號裡的句子改回該密碼。第 2 行不要動。
+ * 然後選「部署」→「管理部署」→ 鉛筆 → 版本選「新版本」→「部署」。
+ * 不要按「新增部署」。不要把改過密碼的這份檔上傳到 GitHub。
  *
- * 1. 開一個新的 Google 試算表。
- * 2. 擴充功能 → Apps Script，把這份貼上，刪去原本的空白函式。
- * 3. 把 REVIEW_PASSWORD 改成和這部電腦 teacher-config.js 裡 reviewPassword 一樣的一句。
- * 4. 部署 → 新增部署 → 類型選「網路應用程式」。
- *    執行身分選你自己，存取權選「任何人」。
- * 5. 複製以 /exec 結尾的網址，貼進 teacher-config.js 的 collectUrl，儲存後重新整理。
- *
- * 學生頁只會 POST，不會帶密碼。讀取要密碼。
- * 不要把改過密碼的這份檔上傳到公開的 GitHub。
+ * 學生頁可讀 action=release，只拿到已解鎖的活動編號，沒有作答。
+ * 改解鎖要用密碼，action=set-release。讀取作答仍要密碼。
  */
-var REVIEW_PASSWORD = "請在這裡改成你的密碼";
-var PLACEHOLDER_PASSWORD = "請在這裡改成你的密碼";
 
 function doPost(e) {
   try {
@@ -26,13 +24,43 @@ function doPost(e) {
   }
 }
 
+function releaseIds_() {
+  var raw = "[]";
+  try { raw = PropertiesService.getScriptProperties().getProperty("lesson-release") || "[]"; }
+  catch (error) { raw = "[]"; }
+  return cleanRelease_(raw);
+}
+
+function cleanRelease_(raw) {
+  var ids = [];
+  try { ids = JSON.parse(raw); } catch (error) { ids = []; }
+  if (!Array.isArray(ids)) ids = [];
+  var allow = { bridge: true, bridge2: true, pens: true, sheet: true };
+  var clean = [];
+  for (var i = 0; i < ids.length; i++) {
+    var id = String(ids[i] || "");
+    if (allow[id] && clean.indexOf(id) < 0) clean.push(id);
+  }
+  return clean;
+}
+
+function writeRelease_(raw) {
+  var clean = cleanRelease_(typeof raw === "string" ? raw : JSON.stringify(raw || []));
+  PropertiesService.getScriptProperties().setProperty("lesson-release", JSON.stringify(clean));
+  return clean;
+}
+
 function doGet(e) {
   var params = e && e.parameter ? e.parameter : {};
   var callback = String(params.callback || "callback").replace(/[^\w]/g, "");
   if (!callback) callback = "callback";
   var allowed = REVIEW_PASSWORD && REVIEW_PASSWORD !== PLACEHOLDER_PASSWORD && params.password === REVIEW_PASSWORD;
   var payload = { ok: false };
-  if (allowed && params.action === "delete") {
+  if (params.action === "release") {
+    payload = { ok: true, ids: releaseIds_() };
+  } else if (allowed && params.action === "set-release") {
+    payload = { ok: true, ids: writeRelease_(params.ids || "[]") };
+  } else if (allowed && params.action === "delete") {
     clearRows_();
     payload = { ok: true, deleted: true, rows: [] };
   } else if (allowed) {
