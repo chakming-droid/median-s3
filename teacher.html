@@ -688,15 +688,15 @@
       });
       const releaseOrder = [
         { id: "discrete", title: "Q2" },
-        { id: "bridge", title: "指定中位數" },
-        { id: "bridge2", title: "指定中位數 2" },
+        { id: "bridge2", title: "指定中位數" },
         { id: "pens", title: "Q8" },
-        { id: "sheet", title: "離散數據表" }
+        { id: "sheet", title: "離散數據表" },
+        { id: "freq", title: "求未知頻數" }
       ];
 
       let classRelease = [];
       function cleanReleaseIds(ids) {
-        const allow = { bridge: true, bridge2: true, pens: true, sheet: true };
+        const allow = { bridge: true, bridge2: true, pens: true, freq: true, sheet: true };
         const list = Array.isArray(ids) ? ids : [];
         const clean = [];
         list.forEach((id) => {

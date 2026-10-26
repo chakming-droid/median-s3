@@ -35,7 +35,7 @@ function cleanRelease_(raw) {
   var ids = [];
   try { ids = JSON.parse(raw); } catch (error) { ids = []; }
   if (!Array.isArray(ids)) ids = [];
-  var allow = { bridge: true, bridge2: true, pens: true, sheet: true };
+  var allow = { bridge: true, bridge2: true, pens: true, freq: true, sheet: true };
   var clean = [];
   for (var i = 0; i < ids.length; i++) {
     var id = String(ids[i] || "");
