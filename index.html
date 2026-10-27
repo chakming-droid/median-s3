@@ -3488,12 +3488,17 @@
         ? "現在正中間是 " + centers.join(" 和 ") + "。用右邊的 + 和 −，把選好的中位數加上去。"
         : "用右邊的 + 和 −，把選好的中位數加上去。";
       wrap.append(note, bridgeBoard());
-    } else if (!add.error) {
+    } else if (!add.error && bridgeRun.think < 4) {
       wrap.appendChild(bridgeBoard());
       const status = document.createElement("p");
       status.className = "problem-text";
       status.textContent = bridgeManualStatus();
       wrap.appendChild(status);
+    } else if (!add.error) {
+      const now = document.createElement("p");
+      now.className = "bridge-now";
+      now.textContent = bridgeMedianText(bridgePairs(bridgeRun.rightCount == null ? bridgeRun.leftCount : bridgeRun.added));
+      wrap.appendChild(now);
     } else {
       const note = document.createElement("p");
       note.className = "problem-text";
@@ -3506,21 +3511,70 @@
       bar.classList.add("near");
       wrap.appendChild(bar);
     }
-    if (!purpleOpen) return wrap;
-    const playing = document.createElement("p");
-    playing.className = "problem-text";
-    if (add.error || add.val == null) playing.textContent = "先選要加的數，再看動畫。";
-    else if (bridgeRun.target != null && !bridgeCanReach(bridgeRun.target)) {
-      playing.textContent = lessonHasX()
-        ? "改 x 也不能使正中間變成 " + bridgeRun.target + "。"
-        : "加上這個數，正中間到不了 " + bridgeRun.target + "。換一個數來加。";
+    if (purpleOpen) {
+      const playing = document.createElement("p");
+      playing.className = "problem-text";
+      if (add.error || add.val == null) playing.textContent = "先選要加的數，再看動畫。";
+      else if (bridgeRun.target != null && !bridgeCanReach(bridgeRun.target)) {
+        playing.textContent = lessonHasX()
+          ? "改 x 也不能使正中間變成 " + bridgeRun.target + "。"
+          : "加上這個數，正中間到不了 " + bridgeRun.target + "。換一個數來加。";
+      }
+      else playing.textContent = bridgeStatus();
+      wrap.appendChild(playing);
+      const actions = document.createElement("div");
+      actions.className = "action-row";
+      appendBridgePhaseButtons(actions);
+      if (actions.childElementCount) wrap.appendChild(actions);
     }
-    else playing.textContent = bridgeStatus();
-    wrap.appendChild(playing);
-    const actions = document.createElement("div");
-    actions.className = "action-row";
-    appendBridgePhaseButtons(actions);
-    if (actions.childElementCount) wrap.appendChild(actions);
+    const summary = bridgeSummaryFigure();
+    if (summary) wrap.appendChild(summary);
+    return wrap;
+  }
+
+  function bridgeSpotPhrase(spot, target) {
+    if (spot === "最左邊") return "第一個 " + target;
+    if (spot === "最右邊") return "最後一個 " + target;
+    if (spot === "中間") return "中間那個 " + target;
+    return "正中間的數";
+  }
+
+  function bridgeMarkedCase(count, title, which) {
+    const pairs = bridgePairs(count);
+    const n = pairs.length;
+    if (!n) return null;
+    const positions = n % 2 === 1 ? [(n + 1) / 2] : [n / 2, n / 2 + 1];
+    const box = document.createElement("div");
+    box.className = "raw-case";
+    const heading = document.createElement("div");
+    heading.className = "raw-case-title";
+    const add = bridgeAddValue();
+    heading.textContent = lessonHasX()
+      ? title + "：" + unknownLetter() + " = " + count + "（" + which + "）"
+      : title + "：加了 " + count + " 個 " + (add.val == null ? "這個數" : add.val) + "（" + which + "）";
+    box.appendChild(heading);
+    box.appendChild(markedLine(pairs.map((item) => item.val), { positions: positions }));
+    return box;
+  }
+
+  function bridgeSummaryFigure() {
+    if (!current().bridge || bridgeRun.think < 4 || bridgeRun.leftCount == null) return null;
+    const target = bridgeRun.target;
+    const hasMax = bridgeRun.phase !== "free" && bridgeRun.rightCount != null;
+    const same = hasMax && bridgeRun.rightCount === bridgeRun.leftCount;
+    const wrap = document.createElement("div");
+    const caption = document.createElement("p");
+    caption.className = "problem-text";
+    const minPhrase = bridgeSpotPhrase(bridgeMedianSpot(bridgeRun.leftCount), target);
+    if (!hasMax || same) caption.textContent = "看這個情況的正中間，核對是不是" + minPhrase + "。";
+    else caption.textContent = "看這兩個情況的正中間，核對是不是" + minPhrase + "和" + bridgeSpotPhrase(bridgeMedianSpot(bridgeRun.rightCount), target) + "。";
+    wrap.appendChild(caption);
+    const minCase = bridgeMarkedCase(bridgeRun.leftCount, "情況一", same ? "最少也最多" : "最少");
+    if (minCase) wrap.appendChild(minCase);
+    if (hasMax && !same) {
+      const maxCase = bridgeMarkedCase(bridgeRun.rightCount, "情況二", "最多");
+      if (maxCase) wrap.appendChild(maxCase);
+    }
     return wrap;
   }
 
@@ -5212,7 +5266,7 @@
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
     if (tutor.mode === "bridge") {
-      return "中位數已指定為 3。正中間還未是 3 時，同學用 + 把 4 加上去。正中間過了 3 就叫他按 −，不要叫他再加 4。找到最少和最多後，先問加最少時中位數在哪一個 3，最左邊、中間，還是最右邊，再問加最多時。不要說出要加多少個，也不要直接說出答案。";
+      return "中位數已指定為 3。正中間還未是 3 時，同學用 + 把 4 加上去。正中間過了 3 就叫他按 −，不要叫他再加 4。找到最少和最多後，先問加最少時中位數在哪一個 3，最左邊、中間，還是最右邊，再問加最多時。不要說出要加多少個，也不要直接說出答案。兩題都答對之後，右邊的圖才顯示兩個情況。";
     }
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
