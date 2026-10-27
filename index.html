@@ -863,7 +863,7 @@
   let tutor = freshTutor();
   let fieldDrafts = {};
   let experiment = null;
-  let bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null };
+  let bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null, seenLeft: false, seenRight: false, leftCount: null, rightCount: null, think: 0, thinkNote: "" };
   let showBlocks = false;
   let guideOpen = false;
   let showBand = true;
@@ -930,12 +930,7 @@
   function pageClearedNow() {
     const lesson = current();
     if (!lesson) return false;
-    if (lesson.bridge) {
-      if (bridgeRun.target == null) return false;
-      const add = bridgeAddValue();
-      if (add.error) return false;
-      return bridgeHit(bridgePairs(), bridgeRun.target);
-    }
+    if (lesson.bridge) return bridgeRun.think >= 4;
     return !!tutor.solved;
   }
 
@@ -1294,6 +1289,7 @@
       startWork();
       return;
     }
+    if (current().bridge) noteBridgeEnds();
     rememberFields();
     if (pageClearedNow()) markDone(current().id);
     renderProgress();
@@ -1333,7 +1329,7 @@
     casesRevealed = false;
     asking = false;
     bridgeStop();
-    bridgeRun = { target: penPage(lesson) ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null };
+    bridgeRun = { target: penPage(lesson) ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null, seenLeft: false, seenRight: false, leftCount: null, rightCount: null, think: 0, thinkNote: "" };
     if (lesson.id === "bridge2") {
       bridgeRun.target = 3;
       bridgeRun.addVal = 4;
@@ -2150,6 +2146,12 @@
     bridgeRun.minAdded = null;
     bridgeRun.maxAdded = null;
     bridgeRun.addVal = null;
+    bridgeRun.seenLeft = false;
+    bridgeRun.seenRight = false;
+    bridgeRun.leftCount = null;
+    bridgeRun.rightCount = null;
+    bridgeRun.think = 0;
+    bridgeRun.thinkNote = "";
     if (penPage()) {
       penProbes = [];
       penMessage = "";
@@ -3249,7 +3251,7 @@
         ? "正中間已經是 " + bridgeRun.target + "。這是最少。"
         : "已加上 " + bridgeRun.minAdded + " 個 " + x.val + "。這是最少。";
     }
-    if (bridgeRun.maxAdded === bridgeRun.minAdded) return "再多一個就離開。已停在前一個。最少同時是最多。";
+    if (bridgeRun.maxAdded === bridgeRun.minAdded) return "再多一個就離開。已停在前一個。這一次同時是最少和最多。";
     return "已加上 " + bridgeRun.maxAdded + " 個 " + x.val + "。再多一個就離開。這是最多。";
   }
 
@@ -3341,6 +3343,12 @@
     bridgeRun.view = "min";
     bridgeRun.minAdded = null;
     bridgeRun.maxAdded = null;
+    bridgeRun.seenLeft = false;
+    bridgeRun.seenRight = false;
+    bridgeRun.leftCount = null;
+    bridgeRun.rightCount = null;
+    bridgeRun.think = 0;
+    bridgeRun.thinkNote = "";
     purpleOpen = false;
     render();
   }
@@ -3353,6 +3361,12 @@
     bridgeRun.view = "min";
     bridgeRun.minAdded = null;
     bridgeRun.maxAdded = null;
+    bridgeRun.seenLeft = false;
+    bridgeRun.seenRight = false;
+    bridgeRun.leftCount = null;
+    bridgeRun.rightCount = null;
+    bridgeRun.think = 0;
+    bridgeRun.thinkNote = "";
     purpleOpen = false;
     render();
   }
@@ -3387,15 +3401,16 @@
     if (!hit) {
       const centers = bridgeCenterValues(bridgePairs(count));
       if (!centers.length) return where + "。還沒有數據。";
+      if (centers.every((value) => value > target)) return where + "。正中間是 " + centers.join(" 和 ") + "，過了 " + target + "。按 − 回去。";
       return where + "。正中間是 " + centers.join(" 和 ") + "，還不是 " + target + "。";
     }
     const prevOff = count === 0 || !bridgeHit(bridgePairs(count - 1), target);
     const nextHit = bridgeHit(bridgePairs(count + 1), target);
-    if (lessonHasX() && add.val === target && count >= 3 && nextHit) return where + "。正中間仍是 " + target + "。再加仍留在這裡，沒有最大。";
-    if (prevOff && !nextHit) return where + "。正中間是 " + target + "。再少一個或再多一個都會離開。";
-    if (prevOff) return where + "。正中間是 " + target + "。這是最少，還可以再加。";
-    if (!nextHit) return where + "。正中間是 " + target + "。這是最多。";
-    return where + "。正中間是 " + target + "。還可以再加或再減。";
+    if (lessonHasX() && add.val === target && count >= 3 && nextHit) return where + "。正中間仍是 " + target + "。再加仍留在這裡，沒有最多。";
+    if (prevOff && !nextHit) return where + "。正中間是 " + target + "。再少一個或再多一個都會離開。這一次同時是最少和最多。";
+    if (prevOff) return where + "。正中間是 " + target + "。再少一個就離開。這是最少。";
+    if (!nextHit) return where + "。正中間是 " + target + "。再多一個就離開。這是最多。";
+    return where + "。正中間是 " + target + "。還在最少和最多之間。";
   }
 
   function bridgeManualStepper() {
@@ -3631,12 +3646,39 @@
   function renderBridge(form) {
     prependStepPrompt(form);
     if (bridgeRun.target == null) return;
+    if (bridgeRun.thinkNote) {
+      const feedback = document.createElement("p");
+      feedback.className = "problem-text";
+      feedback.textContent = bridgeRun.thinkNote;
+      form.appendChild(feedback);
+    }
+    const past = bridgeCentersPast();
+    if (past && bridgeRun.think < 4) {
+      const back = document.createElement("p");
+      back.className = "problem-text";
+      back.textContent = "正中間過了指定的中位數。按 − 回去。";
+      form.appendChild(back);
+      return;
+    }
+    if (bridgeRun.think === 1 || bridgeRun.think === 2) {
+      const row = document.createElement("div");
+      row.className = "action-row";
+      ["最左邊", "中間", "最右邊"].forEach((name) => {
+        row.appendChild(makeButton(name, "btn", () => answerBridgeThink(name)));
+      });
+      form.appendChild(row);
+      return;
+    }
+    if (bridgeRun.think >= 4) return;
     const note = document.createElement("p");
     note.className = "problem-text";
-    const addWhat = current().id === "bridge2" ? "把 4 加上去" : "把 " + bridgeRun.target + " 加上去";
-    note.textContent = lessonHasX()
-      ? "用右邊的 + 和 − 改變 x，試出正中間仍是 " + bridgeRun.target + " 的最小和最大。"
-      : "用右邊的 + 和 −，" + addWhat + "，直到正中間變成指定的中位數。";
+    const centers = bridgeCenterValues(bridgePairs());
+    const target = bridgeRun.target;
+    const onTarget = centers.length > 0 && centers.every((value) => value === target);
+    if (past) note.textContent = "正中間過了指定的中位數。按 − 回去。";
+    else if (onTarget) note.textContent = "正中間已是指定的中位數。再找出最少和最多。";
+    else if (lessonHasX()) note.textContent = "用右邊的 + 和 − 改變 x，試出正中間仍是 " + target + " 的最小和最大。";
+    else note.textContent = "用右邊的 + 和 −，把 " + (current().id === "bridge2" ? "4" : String(target)) + " 加上去，直到正中間變成指定的中位數。";
     form.appendChild(note);
   }
 
@@ -5020,16 +5062,105 @@
     return wrap;
   }
 
-  function bridgeAskText() {
-    if (bridgeRun.target == null) return "選一個表裡已有的數值，當作中位數。";
-    const centers = bridgeCenterValues(bridgePairs());
+  function bridgeEndAt(count) {
     const target = bridgeRun.target;
+    if (target == null) return { hit: false, left: false, right: false };
+    const hit = bridgeHit(bridgePairs(count), target);
+    if (!hit) return { hit: false, left: false, right: false };
+    const prevOff = count === 0 || !bridgeHit(bridgePairs(count - 1), target);
+    const nextOn = bridgeHit(bridgePairs(count + 1), target);
+    return { hit: true, left: prevOff, right: !nextOn };
+  }
+
+  function bridgeCentersPast() {
+    const target = bridgeRun.target;
+    const centers = bridgeCenterValues(bridgePairs());
+    return centers.length > 0 && target != null && centers.every((value) => value > target);
+  }
+
+  function bridgeMedianSpot(count) {
+    const target = bridgeRun.target;
+    if (target == null || count == null) return "";
+    const pairs = bridgePairs(count);
+    const n = pairs.length;
+    if (!n || n % 2 === 0) return "";
+    const mid = (n - 1) / 2;
+    if (pairs[mid].val !== target) return "";
+    const hits = [];
+    pairs.forEach((pair, index) => {
+      if (pair.val === target) hits.push(index);
+    });
+    const place = hits.indexOf(mid);
+    if (place < 0) return "";
+    if (place === 0) return "最左邊";
+    if (place === hits.length - 1) return "最右邊";
+    return "中間";
+  }
+
+  function noteBridgeEnds() {
+    if (!current().bridge || bridgeRun.target == null) return;
+    const ends = bridgeEndAt(bridgeRun.added);
+    if (ends.left) {
+      bridgeRun.seenLeft = true;
+      bridgeRun.leftCount = bridgeRun.added;
+    }
+    if (ends.right) {
+      bridgeRun.seenRight = true;
+      bridgeRun.rightCount = bridgeRun.added;
+    }
+    if ((bridgeRun.phase === "min" || bridgeRun.phase === "done" || bridgeRun.phase === "free") && bridgeRun.minAdded != null) {
+      bridgeRun.seenLeft = true;
+      bridgeRun.leftCount = bridgeRun.minAdded;
+    }
+    if (bridgeRun.phase === "done" && bridgeRun.maxAdded != null) {
+      bridgeRun.seenRight = true;
+      bridgeRun.rightCount = bridgeRun.maxAdded;
+    }
+    if (bridgeRun.phase === "free") bridgeRun.seenRight = true;
+    if (!bridgeRun.seenLeft || !bridgeRun.seenRight || bridgeRun.think) return;
+    const phase = bridgeRun.phase;
+    if (phase !== "idle" && phase !== "min" && phase !== "done" && phase !== "free") return;
+    bridgeRun.think = 1;
+    if (bridgeRun.leftCount != null) {
+      bridgeRun.view = "min";
+      bridgeRun.added = bridgeRun.leftCount;
+    }
+  }
+
+  function answerBridgeThink(choice) {
+    const target = bridgeRun.target;
+    const askingMax = bridgeRun.think === 2;
+    const spot = bridgeMedianSpot(askingMax ? bridgeRun.rightCount : bridgeRun.leftCount);
+    const which = askingMax ? "最多" : "最少";
+    if (spot && choice === spot) {
+      bridgeRun.thinkNote = "對。加" + which + "時，正中間是" + spot + "那個 " + target + "。";
+      if (!askingMax && bridgeRun.phase !== "free" && bridgeRun.rightCount != null) {
+        bridgeRun.think = 2;
+        bridgeRun.view = "max";
+        bridgeRun.added = bridgeRun.rightCount;
+      } else bridgeRun.think = 4;
+    } else bridgeRun.thinkNote = "再看正中間那個 " + target + "，它在這幾個 " + target + " 的哪一邊。";
+    render();
+  }
+
+  function bridgeAskText() {
+    noteBridgeEnds();
+    if (bridgeRun.target == null) return "選一個表裡已有的數值，當作中位數。";
+    const target = bridgeRun.target;
+    const centers = bridgeCenterValues(bridgePairs());
     const add = bridgeAddValue();
     const addName = add.val == null ? "這個數" : String(add.val);
     const samePair = centers.length === 2 && centers[0] === centers[1];
-    const mid = samePair ? "正中間是兩個 " + centers[0] : "正中間是 " + centers.join(" 和 ");
-    if (centers.length && centers.every((value) => value === target)) return "正中間已是 " + target + "。再按 +，看它會不會離開。";
-    if (centers.length) return mid + "。指定的中位數是 " + target + "。把 " + addName + " 加上去，直到正中間變成 " + target + "。";
+    const mid = samePair ? "正中間是兩個 " + centers[0] : (centers.length ? "正中間是 " + centers.join(" 和 ") : "");
+    if (bridgeCentersPast() && bridgeRun.think < 4) return mid + "。指定的中位數是 " + target + "。正中間過了 " + target + "。按 − 回到仍是 " + target + " 的位置。";
+    if (bridgeRun.think === 1) return "加最少時，中位數在哪一個 " + target + "？最左邊、中間，還是最右邊？";
+    if (bridgeRun.think === 2) return "加最多時，中位數在哪一個 " + target + "？最左邊、中間，還是最右邊？";
+    if (bridgeRun.think >= 4) return bridgeRun.phase === "free"
+      ? "加最少時，要看正中間落在哪一個 " + target + "。沒有最多。"
+      : "加最少和加最多，都要看正中間落在哪一個 " + target + "。";
+    if (centers.length && centers.every((value) => value === target)) return "正中間已是 " + target + "。再按 + 或 −，找出最少和最多。";
+    if (centers.length && centers.every((value) => value < target)) return mid + "。指定的中位數是 " + target + "。把 " + addName + " 加上去，直到正中間變成 " + target + "。";
+    if (centers.length) return mid + "。指定的中位數是 " + target + "。試 + 或 −，直到正中間變成 " + target + "。";
     return "指定的中位數是 " + target + "。把 " + addName + " 加上去，直到正中間變成它。";
   }
 
@@ -5081,7 +5212,7 @@
   function conceptText() {
     if (phase === "type") return "幫同學分辨分開逐個點算的數據，和有組界、用累積頻數曲線表示的數據。不要直接說出是離散還是連續。";
     if (tutor.mode === "bridge") {
-      return "中位數已指定為 3。同學用右邊的 + 和 − 把 4 加上去，直到正中間變成它。不要說出要加多少個，也不要說出最小和最大。自動動畫等他按右邊的「看動畫」。";
+      return "中位數已指定為 3。正中間還未是 3 時，同學用 + 把 4 加上去。正中間過了 3 就叫他按 −，不要叫他再加 4。找到最少和最多後，先問加最少時中位數在哪一個 3，最左邊、中間，還是最右邊，再問加最多時。不要說出要加多少個，也不要直接說出答案。";
     }
     if (tutor.mode === "known") {
       if (tutor.step === 1) return "幫他明白總數是把頻數相加。不要說出總數。";
