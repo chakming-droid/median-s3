@@ -1261,6 +1261,37 @@
     } catch (error) {}
   }
 
+  function gradedStepNow() {
+    if (tutor.mode === "known") {
+      if (tutor.step === 1) return "總數";
+      if (tutor.step === 2) return "單雙";
+      if (tutor.step === 3) return "第幾項";
+      return "中位數";
+    }
+    if (tutor.mode === "continuous") {
+      if (tutor.step === 1) return "總頻數";
+      if (tutor.step === 2) return "累積頻數";
+      return "中位數";
+    }
+    if (penPage(current()) && penInquiry && penMedianOk) {
+      if (!penInquiry.slid) return "正中間";
+      return "數式";
+    }
+    if (tutor.mode === "unknown") {
+      if (tutor.step <= 1) return "第幾項";
+      if (tutor.step === 3) return "最小 x";
+      return "最大 x";
+    }
+    return "";
+  }
+
+  function recordSupport(kind, detail) {
+    const stepName = gradedStepNow();
+    const head = stepName ? stepName + "｜" : "";
+    const body = head + String(detail || "").slice(0, Math.max(0, 80 - head.length));
+    recordAttempt({ step: kind, input: body, ok: true });
+  }
+
   function loadLesson(index) {
     lessons[index] = JSON.parse(JSON.stringify(lessonTemplates[index]));
     lessonIndex = index;
@@ -2766,6 +2797,7 @@
     } else {
       if (level === 2 && !tutor.hints.picture[1]) return;
       tutor.hints.picture[level] = true;
+      recordSupport("看提示", level === 1 ? "提示一" : "提示二");
     }
     showBlocks = true;
     render();
@@ -4548,11 +4580,13 @@
 
   function togglePurple() {
     purpleOpen = !purpleOpen;
+    if (purpleOpen) recordSupport("看提示", "探究圖");
     renderQueue();
   }
 
   function toggleSolvedChips() {
     solvedChipsOpen = !solvedChipsOpen;
+    if (solvedChipsOpen) recordSupport("看提示", "已解的圖");
     renderQueue();
   }
 
@@ -6465,6 +6499,7 @@
     const input = document.getElementById("askInput");
     const message = normalizeTyped(input.value).slice(0, 200);
     if (!message) return;
+    recordSupport("提問", message);
     input.value = "";
     fieldDrafts.askInput = "";
     tutor.log.push({ kind: "student", text: message });

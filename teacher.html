@@ -126,6 +126,9 @@
       <p id="releaseNote" class="note"></p>
       <h2>現在最弱</h2>
       <div id="focus"></div>
+      <h2>支援</h2>
+      <p class="note">同一部機、同一頁、同一步。改對之前看過提示或問過，算支援後改對。這是先後，不是證明提示令他明白。</p>
+      <div id="support"></div>
       <p><button type="button" class="btn btn-secondary" id="toggleRest">其他步驟</button></p>
       <div id="rest" hidden>
         <h2>其他難點</h2>
@@ -372,8 +375,85 @@
         });
       }
 
+      function isSupportStep(row) {
+        return row.step === "看提示" || row.step === "提問";
+      }
+
+      function supportStats(graded, support) {
+        const hints = support.filter((row) => row.step === "看提示").length;
+        const asks = support.filter((row) => row.step === "提問");
+        const buckets = { fixed: 0, still: 0, alone: 0, first: 0 };
+        const groups = new Map();
+        const touch = (row, step, kind) => {
+          if (!step || step === "跟哪一堆") return;
+          const key = row.device + "\n" + row.lesson + "\n" + step;
+          if (!groups.has(key)) groups.set(key, { step: step, attempts: [], supports: [] });
+          const group = groups.get(key);
+          if (kind === "support") group.supports.push(row.at);
+          else group.attempts.push(row);
+        };
+        graded.forEach((row) => touch(row, row.step, "attempt"));
+        support.forEach((row) => {
+          const input = String(row.input || "");
+          const cut = input.indexOf("｜");
+          touch(row, cut > 0 ? input.slice(0, cut) : "", "support");
+        });
+        groups.forEach((group) => {
+          const attempts = group.attempts.slice().sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+          const times = group.supports.slice().sort();
+          if (!attempts.length) return;
+          const wrongs = attempts.filter((row) => !row.ok);
+          const firstCorrect = attempts.find((row) => row.ok);
+          const before = (at) => times.some((time) => time < at);
+          if (firstCorrect && wrongs.some((row) => row.at < firstCorrect.at) && before(firstCorrect.at)) buckets.fixed += 1;
+          else if (firstCorrect && !before(firstCorrect.at)) {
+            if (!wrongs.length && (group.step === "最小 x" || group.step === "最大 x")) return;
+            buckets.alone += 1;
+          } else if (firstCorrect && before(firstCorrect.at)) buckets.first += 1;
+          else if (wrongs.length && times.length) buckets.still += 1;
+        });
+        return { hints: hints, asks: asks, buckets: buckets };
+      }
+
+      function renderSupport(graded, support) {
+        const box = document.getElementById("support");
+        box.textContent = "";
+        const stats = supportStats(graded, support);
+        const summary = document.createElement("p");
+        summary.textContent = "看提示 " + stats.hints + " 次 · 提問 " + stats.asks.length + " 次";
+        box.appendChild(summary);
+        const lines = [
+          ["支援後改對", stats.buckets.fixed],
+          ["支援後仍錯", stats.buckets.still],
+          ["未用支援已對", stats.buckets.alone]
+        ];
+        if (stats.buckets.first) lines.push(["先用支援才答對", stats.buckets.first]);
+        const maxCount = Math.max.apply(null, lines.map((line) => line[1]).concat([1]));
+        lines.forEach((line) => {
+          box.appendChild(weakRow(line[0], line[1] + " 次", line[1] / maxCount));
+        });
+        const questions = stats.asks.slice().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 6);
+        if (questions.length) {
+          const caption = document.createElement("p");
+          caption.className = "note";
+          caption.textContent = "最近的提問";
+          const list = document.createElement("ul");
+          list.className = "input-list";
+          questions.forEach((row) => {
+            const item = document.createElement("li");
+            const input = String(row.input || "");
+            const cut = input.indexOf("｜");
+            item.textContent = row.lesson + "：" + (cut >= 0 ? input.slice(cut + 1) : input);
+            list.appendChild(item);
+          });
+          box.append(caption, list);
+        }
+      }
+
       function render() {
-        const rows = selectedRows().filter((row) => row.step !== "選擇中位數");
+        const picked = selectedRows().filter((row) => row.step !== "選擇中位數");
+        const support = picked.filter(isSupportStep);
+        const rows = picked.filter((row) => !isSupportStep(row));
         const wrong = rows.filter((row) => !row.ok);
         const scope = document.getElementById("scopeNote");
         if (state.sheetNote === "sheet") {
@@ -458,6 +538,7 @@
           }
           focus.appendChild(card);
         }
+        renderSupport(rows, support);
 
         const gaps = document.getElementById("gaps");
         gaps.textContent = "";
@@ -593,11 +674,11 @@
         restButton.textContent = state.restOpen ? "收起其他步驟" : "其他步驟";
 
         const toggle = document.getElementById("toggleRecent");
-        toggle.textContent = (state.recentOpen ? "收起逐次作答" : "展開逐次作答") + "（" + rows.length + "）";
+        toggle.textContent = (state.recentOpen ? "收起逐次作答" : "展開逐次作答") + "（" + picked.length + "）";
         const recent = document.getElementById("recent");
         recent.hidden = !state.recentOpen;
         recent.textContent = "";
-        const latest = rows.slice(-40).reverse();
+        const latest = picked.slice(-40).reverse();
         if (!latest.length) {
           const empty = document.createElement("p");
           empty.className = "note";
@@ -612,12 +693,15 @@
           const head = document.createElement("p");
           head.textContent = formatTime(row.at) + " · " + row.source + " · " + row.lesson + " · " + row.step;
           const body = document.createElement("p");
-          body.textContent = "輸入：" + (row.input || "（空白）") + " · ";
-          const mark = document.createElement("span");
-          mark.className = row.ok ? "right" : "wrong";
-          mark.textContent = row.ok ? "對" : "錯";
-          body.appendChild(mark);
-          if (!row.ok) body.appendChild(document.createTextNode(" · " + row.gap));
+          body.textContent = "輸入：" + (row.input || "（空白）");
+          if (!isSupportStep(row)) {
+            body.appendChild(document.createTextNode(" · "));
+            const mark = document.createElement("span");
+            mark.className = row.ok ? "right" : "wrong";
+            mark.textContent = row.ok ? "對" : "錯";
+            body.appendChild(mark);
+            if (!row.ok) body.appendChild(document.createTextNode(" · " + row.gap));
+          }
           const id = document.createElement("p");
           id.className = "note";
           id.textContent = "編號 " + (row.device || "—");
