@@ -382,7 +382,7 @@
     .inq-eq .inq-chips { flex-wrap: nowrap; }
     .inq-sign { line-height: 1; }
     .inq-count { display: block; margin-top: 8px; font-size: 0.82rem; font-weight: 800; }
-    .inq-count input { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px; font: inherit; text-align: center; border: 1px solid #94a3b8; border-radius: 6px; }
+    .inq-count input { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px 6px; font-size: 16px; font-weight: 800; text-align: center; border: 1px solid #94a3b8; border-radius: 6px; }
     @keyframes inq-join { from { transform: translateX(var(--inq-from, 0)); } to { transform: none; } }
     .trial-readout { font-weight: 800; font-size: 1.2rem; min-width: 4.8rem; text-align: center; }
     .trial-stepper { display: inline-flex; align-items: center; gap: 6px; }
@@ -690,6 +690,8 @@
       }
       .workspace:not(:has(.col-side .card:not([hidden]))) { grid-template-columns: minmax(0, 1fr); }
       .col-main, .col-side { min-height: 0; overflow: auto; }
+      body.typing .col-main,
+      body.typing .col-side { padding-bottom: 42vh; }
       .card { padding: 6px 8px; margin-bottom: 6px; }
       .card-title { font-size: 1rem; margin-bottom: 4px; }
       .problem-text { margin: 2px 0 4px; }
@@ -703,7 +705,7 @@
       #dataLine .raw-plain, .bridge-row { white-space: nowrap; }
       .bridge-row { flex-wrap: nowrap; justify-content: flex-start; gap: 6px; width: 100%; }
       .bridge-chip { flex: 1 1 0; width: auto; min-width: 0; height: 46px; font-size: 1.2rem; }
-      .bridge-group { flex: 1 1 0; min-width: 0; }
+      .bridge-group { flex: var(--chips, 1) 1 0; min-width: 0; }
       .bridge-group .bridge-chip { flex: 1 1 0; height: 46px; }
       .question-line { display: none; }
       #tutorActions.tutor-dock { position: static; box-shadow: none; padding: 8px 0 0; }
@@ -959,17 +961,28 @@
     return clean;
   }
 
+  function sameRelease(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
+    return true;
+  }
+
   function applyServerRelease(ids) {
     const clean = cleanReleaseIds(ids);
+    const previous = releasedIds();
+    const changed = !sameRelease(previous, clean);
     try { storageSet("median-lesson-release", JSON.stringify(clean)); } catch (error) {}
+    lockSnapshot = (storageGet("median-lesson-lock") || "") + "|" + (storageGet("median-lesson-release") || "");
     if (!releaseReady) {
       releaseSeen = clean.slice();
       releaseReady = true;
       if (!canOpen(lessonIndex) && lessonIndex !== 0) showMode(0);
-      else render();
+      else if (changed) renderIfIdle();
       return;
     }
-    if (!applyReleaseJump()) render();
+    // An unchanged lock used to rebuild the page every few seconds and drop the iPad keyboard.
+    if (!changed) return;
+    if (!applyReleaseJump()) renderIfIdle();
   }
 
   function pullClassRelease() {
@@ -1313,6 +1326,7 @@
   }
 
   function render() {
+    renderAfterTyping = false;
     if (!teacherView && !canOpen(lessonIndex)) {
       lessonIndex = 0;
       const card = document.getElementById("pictureCard");
@@ -3678,6 +3692,7 @@
     let group = null;
     const flush = () => {
       if (!group) return;
+      group.style.setProperty("--chips", String(group.childElementCount));
       row.appendChild(group);
       group = null;
     };
@@ -4388,6 +4403,9 @@
     input.id = id;
     input.type = "text";
     input.autocomplete = "off";
+    input.autocapitalize = "off";
+    input.spellcheck = false;
+    input.setAttribute("autocorrect", "off");
     input.setAttribute("aria-label", "人數");
     restoreField(input);
     input.addEventListener("keydown", (event) => {
@@ -7337,11 +7355,41 @@
   let releaseSeen = releasedIds();
   let releaseReady = false;
   let releasePulling = false;
+  let renderAfterTyping = false;
   let lockSnapshot = (storageGet("median-lesson-lock") || "") + "|" + (storageGet("median-lesson-release") || "");
   function syncRelease() {
     lockSnapshot = (storageGet("median-lesson-lock") || "") + "|" + (storageGet("median-lesson-release") || "");
-    if (!applyReleaseJump()) render();
+    if (!applyReleaseJump()) renderIfIdle();
   }
+  function renderIfIdle() {
+    const active = document.activeElement;
+    if (active && active.matches && active.matches("input, textarea") && !active.readOnly && active.type !== "hidden") {
+      renderAfterTyping = true;
+      return;
+    }
+    render();
+  }
+  function typingField(node) {
+    if (!node || !node.closest) return null;
+    const label = node.closest("label");
+    const field = node.closest("input, textarea") || (label && label.querySelector("input, textarea"));
+    if (!field || field.readOnly || field.disabled || field.type === "hidden") return null;
+    return field;
+  }
+  document.addEventListener("pointerdown", (event) => {
+    if (typingField(event.target)) document.body.classList.add("typing");
+  }, true);
+  let typingLeave = 0;
+  document.addEventListener("focusout", () => {
+    clearTimeout(typingLeave);
+    typingLeave = setTimeout(() => {
+      if (typingField(document.activeElement)) return;
+      document.body.classList.remove("typing");
+      if (!renderAfterTyping) return;
+      renderAfterTyping = false;
+      render();
+    }, 350);
+  });
   window.addEventListener("storage", (event) => {
     if (event.key !== "median-lesson-release" && event.key !== "median-lesson-lock") return;
     syncRelease();
@@ -7354,7 +7402,7 @@
   }, 4000);
 
   bindAnimTrial();
-  window.matchMedia("(min-width: 1024px)").addEventListener("change", () => render());
+  window.matchMedia("(min-width: 1024px)").addEventListener("change", () => renderIfIdle());
   loadLesson(0);
   pullClassRelease();
   (function openRequestedPage() {
