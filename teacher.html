@@ -105,10 +105,11 @@
   <div class="container">
     <p class="page-back"><a href="index.html">返回練習</a></p>
     <h1>作答分析</h1>
-    <p class="note">第一眼是次數最多的一項。名稱和次數在橫條左邊。其餘不對的步驟要按開。全對的步驟不列出。進入之後，作答會自動更新。關閉這頁就要再輸入密碼。不顯示姓名。</p>
-    <form id="gate" autocomplete="off">
+    <p class="note">第一眼是次數最多的一項。名稱和次數在橫條左邊。其餘不對的步驟要按開。全對的步驟不列出。進入之後，作答會自動更新。這部瀏覽器會記住密碼，重新載入仍在這頁。不顯示姓名。</p>
+    <form id="gate" autocomplete="on">
+      <input type="text" name="username" autocomplete="username" value="老師" hidden>
       <label>密碼
-        <input id="password" name="password" type="password" autocomplete="new-password">
+        <input id="password" name="password" type="password" autocomplete="current-password">
       </label>
       <p><button class="btn" type="submit">進入</button></p>
       <p id="gateError" class="gate-error" hidden>密碼不對。試算表若仍是預設密碼，讀取也會被拒絕。</p>
@@ -127,7 +128,7 @@
       <h2>現在最弱</h2>
       <div id="focus"></div>
       <h2>支援</h2>
-      <p class="note">同一部機、同一頁、同一步。改對之前看過提示或問過，算支援後改對。這是先後，不是證明提示令他明白。</p>
+      <p class="note">同一部機、同一頁、同一步。改對之前看過提示、看過動畫或問過，算支援後改對。這是先後，不是證明這些支援令他明白。</p>
       <div id="support"></div>
       <p><button type="button" class="btn btn-secondary" id="toggleRest">其他步驟</button></p>
       <div id="rest" hidden>
@@ -144,7 +145,6 @@
       <p class="links">
         <a href="index.html">課堂練習</a>
         <button type="button" class="btn btn-secondary" id="clearReview">清除全部作答</button>
-        <button type="button" class="btn btn-secondary" id="lockReview">鎖定</button>
       </p>
     </div>
   </div>
@@ -376,11 +376,12 @@
       }
 
       function isSupportStep(row) {
-        return row.step === "看提示" || row.step === "提問";
+        return row.step === "看提示" || row.step === "看動畫" || row.step === "提問";
       }
 
       function supportStats(graded, support) {
         const hints = support.filter((row) => row.step === "看提示").length;
+        const anims = support.filter((row) => row.step === "看動畫").length;
         const asks = support.filter((row) => row.step === "提問");
         const buckets = { fixed: 0, still: 0, alone: 0, first: 0 };
         const groups = new Map();
@@ -412,7 +413,7 @@
           } else if (firstCorrect && before(firstCorrect.at)) buckets.first += 1;
           else if (wrongs.length && times.length) buckets.still += 1;
         });
-        return { hints: hints, asks: asks, buckets: buckets };
+        return { hints: hints, anims: anims, asks: asks, buckets: buckets };
       }
 
       function renderSupport(graded, support) {
@@ -420,7 +421,7 @@
         box.textContent = "";
         const stats = supportStats(graded, support);
         const summary = document.createElement("p");
-        summary.textContent = "看提示 " + stats.hints + " 次 · 提問 " + stats.asks.length + " 次";
+        summary.textContent = "看提示 " + stats.hints + " 次 · 看動畫 " + stats.anims + " 次 · 提問 " + stats.asks.length + " 次";
         box.appendChild(summary);
         const lines = [
           ["支援後改對", stats.buckets.fixed],
@@ -719,7 +720,15 @@
       }
 
       let sessionPassword = "";
-      try { localStorage.removeItem("median-review-key"); } catch (error) {}
+
+      function savedPassword() {
+        try { return localStorage.getItem("median-review-key") || ""; } catch (error) { return ""; }
+      }
+
+      function rememberPassword(value) {
+        sessionPassword = value;
+        try { localStorage.setItem("median-review-key", value); } catch (error) {}
+      }
 
       function forgetPassword() {
         sessionPassword = "";
@@ -747,6 +756,8 @@
           return;
         }
         document.getElementById("gateError").hidden = true;
+        document.getElementById("gate").hidden = true;
+        document.getElementById("app").hidden = false;
         const local = localRows();
         loadSheet(typed).then((sheet) => {
           const sheetOk = !!(sheet && sheet.ok && !sheet.skipped);
@@ -755,7 +766,8 @@
             showGate(true);
             return;
           }
-          sessionPassword = typed;
+          rememberPassword(typed);
+          document.getElementById("password").value = "";
           const remote = sheetOk && Array.isArray(sheet.rows) ? sheet.rows : [];
           state.rows = merge(local, remote);
           state.sheetNote = sheet && sheet.skipped ? "local" : (sheetOk ? "sheet" : (sheet && sheet.denied ? "denied" : "sheet-fail"));
@@ -830,11 +842,6 @@
       }
 
       paintRelease();
-      document.getElementById("lockReview").addEventListener("click", () => {
-        forgetPassword();
-        document.getElementById("password").value = "";
-        showGate(false);
-      });
       document.getElementById("clearReview").addEventListener("click", () => {
         if (!window.confirm("確定清除全部作答記錄？")) return;
         const password = sessionPassword || document.getElementById("password").value;
@@ -871,6 +878,8 @@
         state.recentOpen = !state.recentOpen;
         render();
       });
+      const saved = savedPassword();
+      if (saved) openReview(saved);
     })();
   </script>
 </body>

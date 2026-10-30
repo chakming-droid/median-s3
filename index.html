@@ -1286,6 +1286,7 @@
       if (tutor.step === 2) return "累積頻數";
       return "中位數";
     }
+    if (tutor.mode === "bridge") return "中位數";
     if (penPage(current()) && penInquiry && penMedianOk) {
       if (!penInquiry.slid) return "正中間";
       return "數式";
@@ -3513,6 +3514,7 @@
       render();
       return;
     }
+    recordSupport("看動畫", "看動畫");
     startBridgeAnim();
   }
 
@@ -7348,6 +7350,7 @@
     if (open) open.addEventListener("click", () => {
       animTrial.closed = false;
       animTrial.seen = false;
+      recordSupport("看動畫", "看動畫");
       syncAnimCard();
     });
   }
