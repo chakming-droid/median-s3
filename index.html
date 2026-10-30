@@ -4486,7 +4486,16 @@
       wait.className = "problem-text";
       if (planNow && penMedianOk && !planNow.fixed) wait.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
       else if (planNow && penMedianOk && planNow.none) wait.textContent = "按現在這張表，沒有正整數能使中位數是 " + target + "。";
-      else if (penMedianOk) wait.textContent = letter + " 仍留在數列裡。先用左邊的數式算出 " + letter + "，再回來核對正中間落在哪一個 " + target + "。";
+      else if (penMedianOk && inquiry) {
+        const shape = inquiryShape();
+        const many = shape && shape.lift && shape.lift.length > 1;
+        if (!inquiry.slid) {
+          const which = inquiry.stage === "max" ? "x 最大" : "x 最小";
+          wait.textContent = which + "時，在上面點" + (many ? "哪兩個 " : "哪一個 ") + target + " 是正中間。不用先算 " + letter + "。";
+        } else if (!inquiry.countsOk) {
+          wait.textContent = "數上面兩堆的人數。正中間那個不要加進任何一堆。有 " + letter + " 的那一堆，人數要寫上 " + letter + "。";
+        } else wait.textContent = "兩堆人數相等了。解出 " + letter + "。";
+      }
       else wait.textContent = "先選一個表裡的中位數，再用數式算出 " + letter + "。";
       fragment.appendChild(wait);
       return fragment;
