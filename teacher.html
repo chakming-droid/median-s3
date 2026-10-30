@@ -268,7 +268,7 @@
             });
           }
           script.src = src;
-          script.onerror = () => finish({ ok: false, rows: [] });
+          script.onerror = () => finish({ ok: false, rows: [], offline: true });
           document.body.appendChild(script);
           setTimeout(() => finish({ ok: false, rows: [], timeout: true }), 20000);
         });
@@ -735,14 +735,11 @@
         try { localStorage.removeItem("median-review-key"); } catch (error) {}
       }
 
-      function showGate(message) {
+      function showGate(message, reason) {
         const error = document.getElementById("gateError");
         error.hidden = !message;
-        if (message && !expectedPassword()) {
-          error.textContent = "公開頁讀不到試算表，所以進不去。請開老師電腦的本機頁，用 teacher-config.js 裡的密碼。";
-        } else if (message) {
-          error.textContent = "密碼不對。";
-        }
+        if (message && reason === "offline") error.textContent = "這次連不到試算表。再按一次進入。";
+        else if (message) error.textContent = "密碼不對。";
         document.getElementById("gate").hidden = false;
         document.getElementById("app").hidden = true;
       }
@@ -750,9 +747,14 @@
       function openReview(typed) {
         const expected = expectedPassword();
         const url = window.MEDIAN_TEACHER && window.MEDIAN_TEACHER.collectUrl;
-        if (!typed || (expected && typed !== expected) || (!expected && !url)) {
+        if (!typed || (expected && typed !== expected)) {
           forgetPassword();
           showGate(true);
+          return;
+        }
+        if (!url) {
+          forgetPassword();
+          showGate(true, "offline");
           return;
         }
         document.getElementById("gateError").hidden = true;
@@ -763,7 +765,7 @@
           const sheetOk = !!(sheet && sheet.ok && !sheet.skipped);
           if (!expected && !sheetOk) {
             forgetPassword();
-            showGate(true);
+            showGate(true, sheet && (sheet.timeout || sheet.offline) ? "offline" : "");
             return;
           }
           rememberPassword(typed);
