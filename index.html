@@ -4028,14 +4028,10 @@
       penInquiry.slid = false;
       penInquiry.note = missedMiddleNote(index);
     } else {
-      const target = current().target;
       penInquiry.which = "ok";
       penInquiry.slid = true;
       penInquiry.animateSlide = !!(shape.earlier || shape.later);
-      if (shape.earlier && shape.later) penInquiry.note = "剩下的，前面的跟住比 " + target + " 小，後面的跟住比 " + target + " 大。";
-      else if (shape.later) penInquiry.note = "剩下的在正中間後面，跟住比 " + target + " 大。";
-      else if (shape.earlier) penInquiry.note = "剩下的在正中間前面，跟住比 " + target + " 小。";
-      else penInquiry.note = shape.lift.length > 1 ? "這兩個是正中間，不加入任何一堆。" : "這 1 個是正中間，不加入任何一堆。";
+      penInquiry.note = "";
     }
     render();
   }
@@ -4056,9 +4052,7 @@
     recordAttempt({ step: "跟哪一堆", input: stageName + " " + piles.join("、"), ok: true });
     penInquiry.slid = true;
     penInquiry.animateSlide = true;
-    if (shape.earlier && shape.later) penInquiry.note = "剩下的，前面的跟住比 " + target + " 小，後面的跟住比 " + target + " 大。";
-    else if (shape.later) penInquiry.note = "剩下的在正中間後面，跟住比 " + target + " 大。";
-    else penInquiry.note = "剩下的在正中間前面，跟住比 " + target + " 小。";
+    penInquiry.note = "";
     render();
   }
 
@@ -4280,7 +4274,7 @@
     if (inquiry.slid) {
       const banner = document.createElement("p");
       banner.className = "inq-banner";
-      banner.textContent = shape.lift.length > 1 ? "這兩個是正中間，不加入任何一堆。" : "是正中間，不加入任何一堆。";
+      banner.textContent = (shape.lift.length > 1 ? "這兩個 " : "這個 ") + target + " 是正中間，不加入任何一堆。";
       wrap.appendChild(banner);
     }
     const scene = document.createElement("div");
