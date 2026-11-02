@@ -743,6 +743,7 @@
   <div class="card" id="queueCard" hidden>
     <div class="card-title">動畫</div>
     <div id="inquiryStage" hidden></div>
+    <div id="howSlot"></div>
     <div id="blocksWrapper"></div>
     <div class="result-box" id="resultBox" hidden>
       <div class="result-title">中位數</div>
@@ -3937,6 +3938,19 @@
     return "未對";
   }
 
+  function missedMiddleNote(groupIndex) {
+    const parts = penBalance();
+    const count = parts && parts.midFreq ? parts.midFreq.c : 0;
+    if (!parts || groupIndex < 0 || groupIndex >= count) return middleNote();
+    const place = unknownPlacement();
+    if (place === "left") {
+      if (parts.right.k !== 0) return middleNote();
+      return middleNote() + "。右方有 " + (parts.right.c + (count - 1 - groupIndex)) + " 個。";
+    }
+    if (parts.left.k !== 0) return middleNote();
+    return middleNote() + "。左方有 " + (parts.left.c + groupIndex) + " 個。";
+  }
+
   function middleDemoCase() {
     const model = modelOf(current());
     if (!model || model.error || !model.rows || !penInquiry || penInquiry.stage === "done") return null;
@@ -3952,6 +3966,7 @@
   function toggleMiddleDemo() {
     middleDemoOpen = !middleDemoOpen;
     middleDemoPick = null;
+    if (middleDemoOpen) recordSupport("提示", "左右人數");
     render();
   }
 
@@ -3961,7 +3976,9 @@
   }
 
   function appendMiddleDemo(parent) {
-    parent.appendChild(foldBar(middleDemoOpen, "收起示範", "看示範", toggleMiddleDemo, "toggleMiddleDemo"));
+    const bar = foldBar(middleDemoOpen, "收起提示", "提示", toggleMiddleDemo, "toggleMiddleDemo");
+    bar.classList.add("near");
+    parent.appendChild(bar);
     if (!middleDemoOpen) return;
     const spec = middleDemoCase();
     if (!spec) return;
@@ -3977,23 +3994,12 @@
       const isTarget = value === spec.target;
       const chip = document.createElement(isTarget ? "button" : "div");
       if (isTarget) chip.type = "button";
-      const same = picked === index && index === spec.values.length - 1 - index;
-      chip.className = "chip" + (isTarget ? " target" : "") + (picked === index ? " picked" : "") + (same ? " same" : "");
+      chip.className = "chip" + (isTarget ? " target" : "") + (picked === index ? " picked" : "");
       chip.textContent = String(value);
       if (isTarget) chip.addEventListener("click", () => pickMiddleDemo(index));
       row.appendChild(chip);
     });
     box.append(say, row);
-    if (picked != null) {
-      const left = picked;
-      const right = spec.values.length - 1 - picked;
-      const status = document.createElement("p");
-      status.className = "problem-text";
-      status.textContent = left === right
-        ? "這個 " + spec.target + "：左 " + left + " 個，右 " + right + " 個。左右一樣多。回到上面點這個。"
-        : "這個 " + spec.target + "：左 " + left + " 個，右 " + right + " 個。左右還未一樣多。再點另一個 " + spec.target + "。";
-      box.appendChild(status);
-    }
     parent.appendChild(box);
   }
 
@@ -4020,7 +4026,7 @@
     if (!ok) {
       penInquiry.which = "";
       penInquiry.slid = false;
-      penInquiry.note = middleNote();
+      penInquiry.note = missedMiddleNote(index);
     } else {
       const target = current().target;
       penInquiry.which = "ok";
@@ -4189,6 +4195,8 @@
       penInquiry.countRight = "";
       penInquiry.eqText = "";
       purpleOpen = false;
+      middleDemoOpen = false;
+      middleDemoPick = null;
       recordAttempt({ step: "最小 x", input: String(answer), ok: true });
       const plan = inquiryPlan();
       if (plan && plan.max && !plan.max.outside) {
@@ -4337,6 +4345,8 @@
     const board = document.createElement("div");
     board.className = "inq-board";
     board.appendChild(scene);
+    const howSlot = document.getElementById("howSlot");
+    if (howSlot) howSlot.replaceChildren(inquiryHowSide());
     if (inquiry.slid && !inquiry.countsOk) board.appendChild(makeButton("人數填好了", "btn", submitInquiryCounts));
     placeInquiryScene(wrap, board);
     if (inquiry.eqOk) {
@@ -4359,6 +4369,10 @@
       wrap.appendChild(solve);
     }
     appendInquiryNote(wrap, inquiry.note);
+    if (inquiry.slid) {
+      middleDemoOpen = false;
+      middleDemoPick = null;
+    }
     return wrap;
   }
 
@@ -4489,17 +4503,44 @@
     return label;
   }
 
-  function appendInquiryNote(parent, message) {
-    if (message !== middleNote()) {
-      middleDemoOpen = false;
-      middleDemoPick = null;
+  function inquiryHowText() {
+    const inquiry = penInquiry;
+    const letter = unknownLetter();
+    const target = String(current().target);
+    const planNow = inquiryPlan();
+    if (planNow && penMedianOk && !planNow.fixed) return "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
+    if (planNow && penMedianOk && planNow.none) return "按現在這張表，沒有正整數能使中位數是 " + target + "。";
+    if (penMedianOk && inquiry) {
+      const shape = inquiryShape();
+      const many = shape && shape.lift && shape.lift.length > 1;
+      if (!inquiry.slid) {
+        const which = inquiry.stage === "max" ? "x 最大" : "x 最小";
+        return which + "時，在上面點" + (many ? "哪兩個 " : "哪一個 ") + target + " 是正中間。不用先算 " + letter + "。";
+      }
+      if (!inquiry.countsOk) return "數上面兩堆的人數。正中間那個不要加進任何一堆。有 " + letter + " 的那一堆，人數要寫上 " + letter + "。";
+      return "兩堆人數相等了。解出 " + letter + "。";
     }
+    return "先選一個表裡的中位數，再用數式算出 " + letter + "。";
+  }
+
+  function inquiryHowSide() {
+    const section = document.createElement("section");
+    section.className = "fold-section how-side";
+    section.appendChild(foldBar(purpleOpen, "怎樣做（收起）", "怎樣做", togglePurple, "togglePurple"));
+    if (!purpleOpen) return section;
+    const wait = document.createElement("p");
+    wait.className = "problem-text";
+    wait.textContent = inquiryHowText();
+    section.appendChild(wait);
+    return section;
+  }
+
+  function appendInquiryNote(parent, message) {
     if (!message) return;
     const note = document.createElement("p");
     note.className = "problem-text";
     note.textContent = message;
     parent.appendChild(note);
-    if (message === middleNote()) appendMiddleDemo(parent);
   }
 
   function pensExplorer() {
@@ -4552,26 +4593,19 @@
     }
     const inquiry = penInquiry;
     const target = String(current().target);
-    fragment.appendChild(foldBar(purpleOpen, "收起提示", "看提示", togglePurple, "togglePurple"));
-    if (!purpleOpen) return fragment;
     if (!inquiry || inquiry.stage !== "done" || inquiry.minX == null) {
       const planNow = inquiryPlan();
-      const wait = document.createElement("p");
-      wait.className = "problem-text";
-      if (planNow && penMedianOk && !planNow.fixed) wait.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
-      else if (planNow && penMedianOk && planNow.none) wait.textContent = "按現在這張表，沒有正整數能使中位數是 " + target + "。";
-      else if (penMedianOk && inquiry) {
-        const shape = inquiryShape();
-        const many = shape && shape.lift && shape.lift.length > 1;
-        if (!inquiry.slid) {
-          const which = inquiry.stage === "max" ? "x 最大" : "x 最小";
-          wait.textContent = which + "時，在上面點" + (many ? "哪兩個 " : "哪一個 ") + target + " 是正中間。不用先算 " + letter + "。";
-        } else if (!inquiry.countsOk) {
-          wait.textContent = "數上面兩堆的人數。正中間那個不要加進任何一堆。有 " + letter + " 的那一堆，人數要寫上 " + letter + "。";
-        } else wait.textContent = "兩堆人數相等了。解出 " + letter + "。";
+      if (planNow && penMedianOk && !planNow.fixed) {
+        const wait = document.createElement("p");
+        wait.className = "problem-text";
+        wait.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
+        fragment.appendChild(wait);
+      } else if (planNow && penMedianOk && planNow.none) {
+        const wait = document.createElement("p");
+        wait.className = "problem-text";
+        wait.textContent = "按現在這張表，沒有正整數能使中位數是 " + target + "。";
+        fragment.appendChild(wait);
       }
-      else wait.textContent = "先選一個表裡的中位數，再用數式算出 " + letter + "。";
-      fragment.appendChild(wait);
       return fragment;
     }
     const plan = inquiryPlan();
@@ -4684,7 +4718,7 @@
   function togglePurple() {
     purpleOpen = !purpleOpen;
     if (purpleOpen) recordSupport("看提示", "探究圖");
-    renderQueue();
+    render();
   }
 
   function toggleSolvedChips() {
@@ -4893,6 +4927,8 @@
       stage.replaceChildren();
       stage.hidden = true;
     }
+    const howSlot = document.getElementById("howSlot");
+    if (howSlot) howSlot.replaceChildren();
     const tutorTitle = document.querySelector("#tutorCard > .card-title");
     if (tutorTitle) {
       tutorTitle.textContent = penPage()
