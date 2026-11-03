@@ -357,11 +357,17 @@
     .inq-board { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
     .inq-board > .inq-scene { width: 100%; margin-top: 0; }
     .inq-scene { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; }
-    .inq-pile { flex: 1 1 0; min-width: 0; border-radius: 12px; padding: 8px 6px; text-align: center; }
+    .inq-pile { container-type: inline-size; flex: 1 1 0; min-width: 0; border-radius: 12px; padding: 8px 6px; text-align: center; }
     .inq-pile.small { background: #e2e8f0; }
     .inq-pile.big { background: #ede9fe; }
     .inq-name { font-weight: 800; font-size: 0.82rem; margin-bottom: 6px; }
+    .inq-parts { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+    .inq-part { min-width: 0; }
     .inq-flow { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+    @container (min-width: 240px) {
+      .inq-parts.pair { flex-direction: row; align-items: flex-start; justify-content: center; gap: 10px; }
+      .inq-parts.pair .inq-part { flex: 1 1 0; }
+    }
     .inq-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
     .inq-groupline { width: 100%; box-sizing: border-box; padding: 4px 4px; border-radius: 7px; background: white; font-weight: 800; font-size: 0.78rem; line-height: 1.35; display: flex; flex-wrap: wrap; justify-content: center; column-gap: 4px; }
     .inq-groupline.lift { background: #dcfce7; box-shadow: inset 0 0 0 2px #15803d; color: #166534; }
@@ -812,7 +818,7 @@
         { val: 2, freq: "6" },
         { val: 3, freq: "3" },
         { val: 4, freq: "1" },
-        { val: 5, freq: "1" }
+        { val: 5, freq: "2" }
       ],
       structure: 0
     },
@@ -4073,13 +4079,11 @@
   }
 
   function missingXNote(expected, leftRaw, rightRaw) {
-    const target = current().target;
     const letter = unknownLetter();
     const small = expected.left.k > 0 && missesLetter(leftRaw);
     const big = expected.right.k > 0 && missesLetter(rightRaw);
-    if (small && big) return "兩堆都有 " + letter + "，人數要寫上 " + letter + "。";
-    if (small) return "比 " + target + " 小這一堆有 " + letter + "，人數要寫上 " + letter + "。";
-    if (big) return "比 " + target + " 大這一堆有 " + letter + "，人數要寫上 " + letter + "。";
+    if (small && big) return "兩邊都有 " + letter + "，人數要寫上 " + letter + "。";
+    if (small || big) return "有 " + letter + " 的一邊，人數要寫上 " + letter + "。";
     return "";
   }
 
@@ -4101,7 +4105,7 @@
     const parsed = MedianMath.parseEquation(leftRaw + "=" + rightRaw);
     if (!expected || !inquirySame(parsed, expected)) {
       recordAttempt({ step: "數式", input: stageName + " 人數 " + (leftRaw || "（空白）") + " = " + (rightRaw || "（空白）"), ok: false, gap: "兩堆人數還沒相等" });
-      penInquiry.note = "兩堆的人數還沒有相等。再數一次。";
+      penInquiry.note = "兩邊的人數還沒有相等。再數一次。";
       render();
       return;
     }
@@ -4124,14 +4128,14 @@
     const stageName = penInquiry.stage === "max" ? "情況二" : "情況一";
     if (needsX && missesLetter(raw)) {
       recordAttempt({ step: "數式", input: stageName + " 條式 " + (raw || "（空白）"), ok: false, gap: "兩堆人數還沒相等" });
-      penInquiry.note = "條式漏了 " + letter + "。有 " + letter + " 的那一堆要寫上 " + letter + "。";
+      penInquiry.note = "條式漏了 " + letter + "。有 " + letter + " 的那一邊要寫上 " + letter + "。";
       render();
       return;
     }
     const parsed = MedianMath.parseEquation(raw);
     if (!expected || !inquirySame(parsed, expected)) {
       recordAttempt({ step: "數式", input: stageName + " 條式 " + (raw || "（空白）"), ok: false, gap: "兩堆人數還沒相等" });
-      penInquiry.note = "條式和兩堆人數不一樣。再寫一次。";
+      penInquiry.note = "條式和兩邊人數不一樣。再寫一次。";
       render();
       return;
     }
@@ -4164,7 +4168,7 @@
     const writtenInput = stageName + " 比" + current().target + "小 " + (leftRaw || "（空白）") + " = 比" + current().target + "大 " + (rightRaw || "（空白）") + "，x = " + (answerRaw || "（空白）");
     if (!equationOk) {
       recordAttempt({ step: "數式", input: writtenInput, ok: false, gap: "兩堆人數還沒相等" });
-      penInquiry.note = "兩堆的人數還沒有相等。再數一次。";
+      penInquiry.note = "兩邊的人數還沒有相等。再數一次。";
       render();
       return;
     }
@@ -4251,8 +4255,8 @@
       const note = document.createElement("p");
       note.className = "problem-text";
       if (parts.left.k + parts.right.k + parts.midFreq.k === 0) note.textContent = "表裡要有一個 x，才可以探究。";
-      else if (plan.unbounded) note.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。這個中位數沒有最大的 x。";
-      else note.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
+      else if (plan.unbounded) note.textContent = "中位數這一組的個數要是固定的數目，才用兩邊人數相等來計算。這個中位數沒有最大的 x。";
+      else note.textContent = "中位數這一組的個數要是固定的數目，才用兩邊人數相等來計算。";
       wrap.appendChild(note);
       return;
     }
@@ -4274,19 +4278,31 @@
     if (inquiry.slid) {
       const banner = document.createElement("p");
       banner.className = "inq-banner";
-      banner.textContent = (shape.lift.length > 1 ? "這兩個 " : "這個 ") + target + " 是正中間，不加入任何一堆。";
+      banner.textContent = (shape.lift.length > 1 ? "等號上的兩個 " : "等號上的 ") + target + " 是正中間，不加入任何一邊。";
       wrap.appendChild(banner);
     }
     const scene = document.createElement("div");
     scene.className = "inq-scene";
-    const small = inquiryPile("small", "比 " + target + " 小");
-    const big = inquiryPile("big", "比 " + target + " 大");
+    const small = inquiryPile("small");
+    const big = inquiryPile("big");
     const animate = !!inquiry.animateSlide;
     inquiry.animateSlide = false;
-    fillInquiryPile(small, parts.leftRows, letter);
-    if (inquiry.slid && shape.earlier) appendInquirySpare(small, shape.earlier, target, animate, "40px");
-    if (inquiry.slid && shape.later) appendInquirySpare(big, shape.later, target, animate, "-40px");
-    fillInquiryPile(big, parts.rightRows, letter);
+    if (inquiryRowsShow(parts.leftRows)) {
+      inquiryPart(small, "比 " + target + " 小");
+      fillInquiryPile(small, parts.leftRows, letter);
+    }
+    if (inquiry.slid && shape.earlier) {
+      inquiryPart(small, "其餘的 " + target);
+      appendInquirySpare(small, shape.earlier, target, animate, "40px");
+    }
+    if (inquiry.slid && shape.later) {
+      inquiryPart(big, "其餘的 " + target);
+      appendInquirySpare(big, shape.later, target, animate, "-40px");
+    }
+    if (inquiryRowsShow(parts.rightRows)) {
+      inquiryPart(big, "比 " + target + " 大");
+      fillInquiryPile(big, parts.rightRows, letter);
+    }
     if (inquiry.slid) {
       small.appendChild(inquiryCountField("inqSmall"));
       big.appendChild(inquiryCountField("inqBig"));
@@ -4381,16 +4397,36 @@
     return node;
   }
 
-  function inquiryPile(kind, name) {
+  function inquiryPile(kind) {
     const pile = document.createElement("div");
     pile.className = "inq-pile " + kind;
+    const parts = document.createElement("div");
+    parts.className = "inq-parts";
+    pile.appendChild(parts);
+    return pile;
+  }
+
+  function inquiryPart(pile, name) {
+    const parts = pile.querySelector(".inq-parts");
+    if (parts.children.length) parts.classList.add("pair");
+    const part = document.createElement("div");
+    part.className = "inq-part";
     const title = document.createElement("div");
     title.className = "inq-name";
     title.textContent = name;
     const flow = document.createElement("div");
     flow.className = "inq-flow";
-    pile.append(title, flow);
-    return pile;
+    part.append(title, flow);
+    parts.appendChild(part);
+    return part;
+  }
+
+  function inquiryFlow(pile) {
+    return pile.querySelector(".inq-part:last-child .inq-flow");
+  }
+
+  function inquiryRowsShow(rows) {
+    return rows.some((row) => row.freq.c > 0 || row.freq.k > 0);
   }
 
   function inquiryChipBox(flow) {
@@ -4414,7 +4450,7 @@
   }
 
   function fillInquiryPile(pile, rows, letter) {
-    const flow = pile.querySelector(".inq-flow");
+    const flow = inquiryFlow(pile);
     rows.forEach((row) => {
       if (row.freq.c > 8) {
         flow.appendChild(inquiryGroupLine(row.val, row.freq.c));
@@ -4430,7 +4466,7 @@
 
   function appendInquirySpare(pile, n, target, animate, from) {
     if (n <= 0) return;
-    const flow = pile.querySelector(".inq-flow");
+    const flow = inquiryFlow(pile);
     const extra = "lift" + (animate ? " inq-join" : "");
     if (n > 8) {
       const line = inquiryGroupLine(target, n, extra);
@@ -4502,7 +4538,7 @@
     const letter = unknownLetter();
     const target = String(current().target);
     const planNow = inquiryPlan();
-    if (planNow && penMedianOk && !planNow.fixed) return "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
+    if (planNow && penMedianOk && !planNow.fixed) return "中位數這一組的個數要是固定的數目，才用兩邊人數相等來計算。";
     if (planNow && penMedianOk && planNow.none) return "按現在這張表，沒有正整數能使中位數是 " + target + "。";
     if (penMedianOk && inquiry) {
       const shape = inquiryShape();
@@ -4511,8 +4547,8 @@
         const which = inquiry.stage === "max" ? "x 最大" : "x 最小";
         return which + "時，在上面點" + (many ? "哪兩個 " : "哪一個 ") + target + " 是正中間。不用先算 " + letter + "。";
       }
-      if (!inquiry.countsOk) return "數上面兩堆的人數。正中間那個不要加進任何一堆。有 " + letter + " 的那一堆，人數要寫上 " + letter + "。";
-      return "兩堆人數相等了。解出 " + letter + "。";
+      if (!inquiry.countsOk) return "數兩邊的人數。其餘的 " + target + " 也要數進那一邊。正中間那個不要加進任何一邊。有 " + letter + " 的一邊，人數要寫上 " + letter + "。";
+      return "兩邊人數相等了。解出 " + letter + "。";
     }
     return "先選一個表裡的中位數，再用數式算出 " + letter + "。";
   }
@@ -4592,7 +4628,7 @@
       if (planNow && penMedianOk && !planNow.fixed) {
         const wait = document.createElement("p");
         wait.className = "problem-text";
-        wait.textContent = "中位數這一組的個數要是固定的數目，才用兩堆人數相等來計算。";
+        wait.textContent = "中位數這一組的個數要是固定的數目，才用兩邊人數相等來計算。";
         fragment.appendChild(wait);
       } else if (planNow && penMedianOk && planNow.none) {
         const wait = document.createElement("p");
@@ -5420,7 +5456,7 @@
         const caseName = penInquiry.stage === "max" ? "情況二：x 最大。" : "情況一：x 最小。";
         return caseName + ask;
       }
-      if (!penInquiry.countsOk) return "數兩堆的人數。有 " + letter + " 的那一堆，人數要寫上 " + letter + "。";
+      if (!penInquiry.countsOk) return "數兩邊的人數。其餘的 " + lesson.target + " 也要數進那一邊。有 " + letter + " 的一邊，人數要寫上 " + letter + "。";
       return "解出 " + letter + "。";
     }
     if (tutor.step === 1) {
