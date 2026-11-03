@@ -880,7 +880,7 @@
   let tutor = freshTutor();
   let fieldDrafts = {};
   let experiment = null;
-  let bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null, seenLeft: false, seenRight: false, leftCount: null, rightCount: null, think: 0, thinkNote: "" };
+  let bridgeRun = { target: null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null, seenLeft: false, seenRight: false, leftCount: null, rightCount: null, think: 0, thinkWait: false, thinkNote: "" };
   let showBlocks = false;
   let guideOpen = false;
   let showBand = true;
@@ -1392,7 +1392,7 @@
     casesRevealed = false;
     asking = false;
     bridgeStop();
-    bridgeRun = { target: penPage(lesson) ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null, seenLeft: false, seenRight: false, leftCount: null, rightCount: null, think: 0, thinkNote: "" };
+    bridgeRun = { target: penPage(lesson) ? Number(lesson.target) : null, added: 0, timer: 0, phase: "idle", view: "min", minAdded: null, maxAdded: null, addVal: null, seenLeft: false, seenRight: false, leftCount: null, rightCount: null, think: 0, thinkWait: false, thinkNote: "" };
     if (lesson.id === "bridge2") {
       bridgeRun.target = 3;
       bridgeRun.addVal = 4;
@@ -2214,6 +2214,7 @@
     bridgeRun.leftCount = null;
     bridgeRun.rightCount = null;
     bridgeRun.think = 0;
+    bridgeRun.thinkWait = false;
     bridgeRun.thinkNote = "";
     if (penPage()) {
       penProbes = [];
@@ -3206,6 +3207,7 @@
   function bridgeStop() {
     if (bridgeRun.timer) clearTimeout(bridgeRun.timer);
     bridgeRun.timer = 0;
+    bridgeRun.thinkWait = false;
   }
 
   function bridgeAddValue() {
@@ -3412,6 +3414,7 @@
     bridgeRun.leftCount = null;
     bridgeRun.rightCount = null;
     bridgeRun.think = 0;
+    bridgeRun.thinkWait = false;
     bridgeRun.thinkNote = "";
     purpleOpen = false;
     render();
@@ -3430,6 +3433,7 @@
     bridgeRun.leftCount = null;
     bridgeRun.rightCount = null;
     bridgeRun.think = 0;
+    bridgeRun.thinkWait = false;
     bridgeRun.thinkNote = "";
     purpleOpen = false;
     render();
@@ -5374,14 +5378,24 @@
       bridgeRun.rightCount = bridgeRun.maxAdded;
     }
     if (bridgeRun.phase === "free") bridgeRun.seenRight = true;
-    if (!bridgeRun.seenLeft || !bridgeRun.seenRight || bridgeRun.think) return;
+    if (!bridgeRun.seenLeft || !bridgeRun.seenRight || bridgeRun.think || bridgeRun.thinkWait) return;
     const phase = bridgeRun.phase;
     if (phase !== "idle" && phase !== "min" && phase !== "done" && phase !== "free") return;
-    bridgeRun.think = 1;
-    if (bridgeRun.leftCount != null) {
-      bridgeRun.view = "min";
-      bridgeRun.added = bridgeRun.leftCount;
-    }
+    const waitFor = bridgeRun;
+    bridgeStop();
+    waitFor.thinkWait = true;
+    waitFor.timer = setTimeout(() => {
+      if (bridgeRun !== waitFor) return;
+      waitFor.timer = 0;
+      waitFor.thinkWait = false;
+      if (waitFor.think || !waitFor.seenLeft || !waitFor.seenRight) return;
+      waitFor.think = 1;
+      if (waitFor.leftCount != null) {
+        waitFor.view = "min";
+        waitFor.added = waitFor.leftCount;
+      }
+      render();
+    }, 2000);
   }
 
   function answerBridgeThink(choice) {
